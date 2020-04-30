@@ -1,4 +1,31 @@
-	;;  User-defined graphics and Egypt-themed character set
+	;; Tut-tut for Jupiter Ace
+	;; Original Game by David Stephenson 2019
+	;; Ported to Jupiter Ace by George Beckett 2020
+	;;
+	;; This file contains the data for the character bitmaps
+	;; of the game, in a format that can be inserted into the
+	;; Forth word CHARSET, which is allocated in tut-tut.fs.
+	;; To work out how much space is required, assemble this
+	;; file with label-file output enabled. The value of the
+	;; label END will confirm the number of bytes, xxx, that
+	;; should be assigned with:
+	;;
+	;; CREATE CHARSET xxx ALLOT
+	;;
+	;; The (assembled) binary file needs to then be loaded
+	;; into Ace memory at the address reported by:
+	;;
+	;; CHARSET .
+	;; 
+	;; In casse of problems, contact:
+	;; markgbeckett@gmail.com
+
+	;; User-defined graphics and Egypt-themed character set
+	;; Each row contains
+	;;   ASCII code, Row 0, Row 1, ..., Row 7
+
+	org 0x0000
+	
 CHARSET:
 	db   1,127, 65, 91, 67,109,111,127,  0	; Wall 1
 	db   2,127, 65, 91, 67,109,111,127,  0 	; Wall 2

@@ -1,3 +1,27 @@
+	;; Tut-tut for Jupiter Ace
+	;; Original Game by David Stephenson 2019
+	;; Ported to Jupiter Ace by George Beckett 2020
+	;;
+	;; This file contains the data for the text displayed on
+	;; the splash screens of the game, in a format that can
+	;; be inserted into the Forth word MESSAGES, which is
+	;; allocated in tut-tut.fs.
+	;; 
+	;; To work out how much space is required, assemble this
+	;; file with label-file output enabled. The value of the
+	;; label END will confirm the number of bytes, xxx, that
+	;; should be assigned with:
+	;;
+	;; CREATE MESSAGES xxx ALLOT
+	;;
+	;; The (assembled) binary file needs to then be loaded
+	;; into Ace memory at the address reported by:
+	;;
+	;; MESSAGES .
+	;; 
+	;; In case of problems, contact:
+	;; markgbeckett@gmail.com
+
 	org 0x0000
 
 MESSAGES:

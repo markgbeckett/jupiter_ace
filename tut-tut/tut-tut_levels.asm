@@ -1,3 +1,26 @@
+	;; Tut-tut for Jupiter Ace
+	;; Original Game by David Stephenson 2019
+	;; Ported to Jupiter Ace by George Beckett 2020
+	;;
+	;; This file contains the data for the game levels, in
+	;; a format that can be inserted into the Forth word
+	;; GAMELEVELS, which is allocated in tut-tut.fs.
+	;; 
+	;; To work out how much space is required, assemble this
+	;; file with label-file output enabled. The value of the
+	;; label END will confirm the number of bytes, xxx, that
+	;; should be assigned with:
+	;;
+	;; CREATE GAMELEVELS xxx ALLOT
+	;;
+	;; The (assembled) binary file needs to then be loaded
+	;; into Ace memory at the address reported by:
+	;;
+	;; GAMELEVELS .
+	;; 
+	;; In case of problems, contact:
+	;; markgbeckett@gmail.com
+
 	org 0x0000
 
 	GAMELEVELS:
@@ -422,6 +445,5 @@ LEVEL29:
 	defb 32,240,16,240,48,240,32,0,17,0,32,240,48,240,16,240
 	defb 32,240,48,1,48,240,32,240,16,240,48,240,32,0,17,14
 	defb 6,30,25,255
-
 END:	
 
