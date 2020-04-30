@@ -1,10 +1,10 @@
 # Tut-tut for the Jupiter Ace
 
-Tut-tut is an Egyptian-themed retro-arcade game, written by David Stephenson, for the Sinclair ZX Spectrum and subsequently Sinclair ZX81 microcomputers.
+[Tut-tut](http://www.zx81keyboardadventure.com/2019/10/zx81-game-tut-tut.html) is an Egyptian-themed retro-arcade game, written by David Stephenson, for the Sinclair ZX Spectrum and subsequently Sinclair ZX81 microcomputers.
 
 As an intrepid archaeologist, you have to work your way through successively more challenging levels, working out a path to the exit, finding keys to let you slide moveable walls, collecting treasure, and avoiding the mummies that guard the tombs.
 
-This version is a further port of Tut-tut to the [Jupiter Ace] microcomputer(https://en.wikipedia.org/wiki/Jupiter_Ace). A less well-known contemporary of the Sinclair machines, the Ace stood out for its choice of built-in language; using Forth instead of the otherwise ubiquitous BASIC.
+This version is a further port of Tut-tut to the [Jupiter Ace microcomputer](https://en.wikipedia.org/wiki/Jupiter_Ace). A less well-known contemporary of the Sinclair machines, the Ace stood out for its choice of built-in language; using Forth instead of the otherwise ubiquitous BASIC.
 
 The Ace designers' expectation was that Forth would allow programmers to develop effective and performant applications within the constrained resources of a microcomputer, in a way that was not possible for sluggish and bloated BASIC program.
 
