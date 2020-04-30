@@ -10,6 +10,16 @@ The Ace designers' expectation was that Forth would allow programmers to develop
 
 Hopefully, Tut-tut for the Jupiter Ace--which is written almost entirely in Forth--demonstrates they were right even if the choice of Forth looks to have condemned the Ace to weak sales and its producers (Jupiter Cantab) to a relatively short existence.
 
-If you wish to just play the game, you can download a pre-compiled tape archive 'tut-tut.tap', which should work on a range of emulators, including the [EightyOne emulator](https://sourceforge.net/projects/eightyone-sinclair-emulator/). However, I have also published the source code in the hope that some people will be inspired to type it in themselves (as was common practice in the early 1980s) and then adapt/ improve on the basic game.
+If you wish to just play the game, you can download a pre-compiled tape archive 'tut-tut.tap', which should work on a range of emulators, including the [EightyOne emulator](https://sourceforge.net/projects/eightyone-sinclair-emulator/).
+
+Once you have started the emulator, (if necessary) switch to Jupiter Ace emulation mode, make sure the 16kb RAM pack is enabled, open the tape archive 'tut-tut.tap', and type the following commands:
+
+`load TUTTUT`
+
+`tuttut`
+
+Ace Forth is not usually case-sensitive, though the file-name in the 'TUTTUT' in the `load` command is.
+
+However, I have also published the source code in the hope that some people will be inspired to type it in themselves (as was common practice in the early 1980s) and then adapt/ improve on the basic game.
 
 Enjoy!
