@@ -6,7 +6,7 @@ As an intrepid archaeologist, you have to work your way through successively mor
 
 This version is a further port of Tut-tut to the [Jupiter Ace microcomputer](https://en.wikipedia.org/wiki/Jupiter_Ace). A less well-known contemporary of the Sinclair machines, the Ace stood out for its choice of built-in language; using Forth instead of the otherwise ubiquitous BASIC.
 
-The Ace designers' expectation was that Forth would allow programmers to develop effective and performant applications within the constrained resources of a microcomputer, in a way that was not possible for sluggish and bloated BASIC program.
+The Ace designers' expectation was that Forth would allow programmers to develop effective and performant applications within the constrained resources of a microcomputer, in a way that was not possible for sluggish and bloated BASIC programs.
 
 Hopefully, Tut-tut for the Jupiter Ace--which is written almost entirely in Forth--demonstrates they were right even if the choice of Forth looks to have condemned the Ace to weak sales and its producers (Jupiter Cantab) to a relatively short existence.
 
@@ -18,7 +18,7 @@ Once you have started the emulator, (if necessary) switch to Jupiter Ace emulati
 
 `tuttut`
 
-Ace Forth is not usually case-sensitive, though the file-name in the 'TUTTUT' in the `load` command is.
+Ace Forth is not usually case-sensitive, though the file-name 'TUTTUT' in the `load` command is.
 
 However, I have also published the source code in the hope that some people will be inspired to type it in themselves (as was common practice in the early 1980s) and then adapt/ improve on the basic game.
 
