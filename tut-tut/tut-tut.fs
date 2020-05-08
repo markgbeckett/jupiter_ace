@@ -33,7 +33,7 @@
       NEWGAME
       PRINTKEYS
       PRINTSCORE
-      PRINTSAIR
+      PRINTAIR
       
       SPLASHSCREEN
 
