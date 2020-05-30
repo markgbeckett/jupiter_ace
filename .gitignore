@@ -1,3 +1,5 @@
 
 *.asm~
 *.md~
+*.bin
+serial_int/Makefile~

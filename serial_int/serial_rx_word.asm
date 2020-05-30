@@ -31,8 +31,5 @@ READ_BYTE:
 
 	rst 0x10		; Push DE onto stack
 	
-	ld a, RTS_HIGH
-	out (0x80), a		; Indicate read
-
 	jp (iy)			; Return to FORTH
 RX_END:	

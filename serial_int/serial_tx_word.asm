@@ -10,8 +10,6 @@
 	;;   FLAG = 0xFFFF (Operation timed out)
 
 MAX_RETRY: EQU 10000
-RTS_HIGH:  EQU     0xD6
-RTS_LOW:   EQU     0x96
 
 TX:	rst 0x18		; Pop stack into DE
 	push de			; Save value to be transmitted
