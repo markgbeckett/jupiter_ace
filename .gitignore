@@ -3,3 +3,4 @@
 *.md~
 *.bin
 serial_int/Makefile~
+*.fs~
