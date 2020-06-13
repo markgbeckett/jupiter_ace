@@ -4,3 +4,4 @@
 *.bin
 serial_int/Makefile~
 *.fs~
+*.bin#
