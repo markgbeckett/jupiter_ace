@@ -1,39 +1,52 @@
-	;; Parameters
+	;; Serial interface parameters
+CTRL_PORT:	equ 0x80
+DATA_PORT:	equ 0x81
+RTS_LOW:	equ 0x16 	; Clock div: +64, 8+1-bit
+RTS_HIGH:	equ 0x56	; Clock div: +64, 8+1-bit
+RESET:		equ 0x57	; 8+1-bit, interrupt off, RTS low
+	
+	;; XMODEM protocol parameters
 XMODEM_SOH:	equ 0x01
 XMODEM_EOT:	equ 0x04
 XMODEM_ACK:	equ 0x06
 XMODEM_NAK:	equ 0x15
 XMODEM_BS:	equ 0x80
-CTRL_PORT:	equ 0x80
-DATA_PORT:	equ 0x81
 
+	;; Miscellaneous params
+CR:		equ 0x0d
+	
 	org 0xf800		      ; Start at 63,488 (dec)
 	
-	;; Receive byte from serial port
+	;; (Non-blocking) receive byte from serial port
+	;; 
 	;; On entry:
-	;;     B = no. seconds before timeout
+	;; 	None
 	;; On exit,
-	;;     Carry Flag Set - Timed out
-	;;     Carry Flag Clear - A = value read
-	;;     Always - B, DE corrupt
+	;;     	Carry Set 	- No data
+	;;     	Carry Clear 	- A, value read
+	;;     	Always 		- A' corrupt
 	
-RECV:	ld de, 0xBBBB		; Equiv. of 1 second
-CHECKR:	xor a
+RECV:	ld a, RTS_LOW		; Set RTS low
+	out (CTRL_PORT),a  	; Confirm ready to receive
+
 	in a,(CTRL_PORT)	; Check if byte ready
 	and 0x01		; Bit zero set, if so
+
 	jr nz, READ_BYTE
-	dec de
-	ld a,d
-	or e
-	jr nz, CHECKR
-	djnz CHECKR
 
 	scf			; Set carry, to indicate timeout
-
 	ret
+	
 READ_BYTE:
-	xor a
-	in a, (DATA_PORT)
+	in a, (DATA_PORT)	; Read byte
+	
+	ex af,af'		; Save character
+	ld a, RTS_HIGH		; Set RTS high
+	out (CTRL_PORT),a	; Hold receiver
+	pop af
+
+	ex af,af'		; Restore character
+	
 	and a 			; Reset carry, to indicate success
 	ret
 	
@@ -46,7 +59,9 @@ READ_BYTE:
 	;;     Always - AF, BC corrupted
 	
 SEND:	ld bc, 0xBBBB		; Maximum retries
+	
 	push af			; Save byte to send
+	
 CHECKS:	xor a			; Check if ready to send
 	in a, (CTRL_PORT)
 	bit 1,a
@@ -89,10 +104,12 @@ SEND_BLOCK:
 	pop af			; Retrieve block number
 	pop hl			; Restore block address
 	push af			; Store block number
-	add a,'0'		; Transform to ASCII
+	add a,'0'		; Transform to ASCII (assume 1-digit)
 	rst 0x08
-	ld a, 0x0d
+	ld a, CR
 	rst 0x08
+	
+	;; Send header
 	ld a, XMODEM_SOH
 	call SEND
 	
@@ -125,18 +142,62 @@ SB_LOOP:
 	call SEND
 
 	;; Get acknowledgement
-	ld b,4			; Wait for up to four seconds
+	ld bc,0x8000		; Number of retries
+
+SB_LOOP_2:
 	call RECV
 
-	;; Check for error
-	ret c 			; Carry set indicates error
+	jr nc, SB_CONT
 
+	dec bc
+	ld a, b
+	or c
+	jr nz, SB_LOOP_2
+
+	scf			; Carry set indicates error
+
+	ret  
+
+SB_CONT:	
 	cp XMODEM_ACK		; If successful, carry flag clear
-	ret nc
+	ret z
 
 	scf			; Otherwise, indicate fail
 	ret
 
+RX:
+	call RECV
+	
+	jr c, RX_NO_BYTE
+
+	ld e,a
+	ld d,0
+	rst 0x10
+
+	jp (iy)
+	
+RX_NO_BYTE:
+	ld de, 0xffff
+	
+	rst 0x10
+
+	jp (iy)
+
+TX:
+	ld DE,0x0000
+	call SEND
+
+	jr c,TX_NO_SEND
+
+	rst 0x10
+	jp (iy)
+
+TX_NO_SEND:
+	dec DE
+
+	rst 0x10
+	jp (iy)
+	
 	;; Print status message to console
 	;; On entry:
 	;; 	HL points to start of message
