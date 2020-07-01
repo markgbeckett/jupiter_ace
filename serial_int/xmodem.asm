@@ -184,7 +184,11 @@ RX_NO_BYTE:
 	jp (iy)
 
 TX:
-	ld DE,0x0000
+	rst 0x18		; Retrieve value from stack
+	ld a,e
+	
+	ld de,0x0000
+	
 	call SEND
 
 	jr c,TX_NO_SEND
@@ -217,14 +221,24 @@ PRINT_MSG:
 TEST:	
 	ld a,1			; Block number
 	ld hl,0x0000		; Start of block to send
+TEST_LOOP:	
 	ld b,5			; Number of retries
-TEST_LOOP:
+TEST_LOOP_2:
+	push af
 	push bc
+	push hl
 	call SEND_BLOCK
+	pop hl
 	pop bc
 	jr nc, TEST_CONT_1
-	djnz TEST_LOOP
+	pop af
+	djnz TEST_LOOP_2
 TEST_CONT_1:
+	pop af
+	inc a
+	cp 0x10
+	jr nz, TEST_LOOP
+	
 	ld a, XMODEM_EOT
 	call SEND
 
