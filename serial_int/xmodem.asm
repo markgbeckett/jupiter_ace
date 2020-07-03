@@ -104,9 +104,8 @@ SEND_BLOCK:
 	pop af			; Retrieve block number
 	pop hl			; Restore block address
 	push af			; Store block number
-	add a,'0'		; Transform to ASCII (assume 1-digit)
-	rst 0x08
-	ld a, CR
+	call PRINT_HEX		; Print it
+	ld a, CR		; Followed by carriage return
 	rst 0x08
 	
 	;; Send header
@@ -202,6 +201,29 @@ TX_NO_SEND:
 	rst 0x10
 	jp (iy)
 	
+	;; Print contents of A register as a two-digit hex number
+	;; On entry:
+	;; 	A contains value to be printed
+	;; On exit:
+	;; 	
+PRINT_HEX:	
+	push af			; Save number for later
+	srl a			; Shift high nibble into low nibble
+	srl a
+	srl a
+	srl a
+	call PRINT_DGT
+	pop af			; Retrieve number
+	and 0x0F		; Isolate low nibble
+PRINT_DGT:
+	cp 0x0a			; Is it higher than '9'
+	jr c, PRINT_CNT		; If not, skip forward
+	add a, 0x07		; Correction for letters
+PRINT_CNT:
+	add a, '0'		; Convert to ASCII code
+	rst 0x08		; Print it
+	ret			; Return to next digit or calling routine
+
 	;; Print status message to console
 	;; On entry:
 	;; 	HL points to start of message
@@ -224,19 +246,20 @@ TEST:
 TEST_LOOP:	
 	ld b,5			; Number of retries
 TEST_LOOP_2:
+	push hl
 	push af
 	push bc
-	push hl
 	call SEND_BLOCK
-	pop hl
 	pop bc
 	jr nc, TEST_CONT_1
 	pop af
+	pop hl		
 	djnz TEST_LOOP_2
 TEST_CONT_1:
 	pop af
+	pop de 			; Effectively discard old value of HL
 	inc a
-	cp 0x10
+	cp 0x40
 	jr nz, TEST_LOOP
 	
 	ld a, XMODEM_EOT
