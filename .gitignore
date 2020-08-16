@@ -5,3 +5,5 @@
 serial_int/Makefile~
 *.fs~
 *.bin#
+serial_int/Makefile.xmodem~
+*.sym
