@@ -512,9 +512,6 @@ W_XBGET:
 	
 	rst 0x18		; Retrieve TOS into DE
 
-	;; Send initiation string
-	ld a, XMODEM_NAK	; Initiate transfer with NAK
-
 .next_packet	
 	ld bc, (CURR_PACKET)	; Expect next packet
 	inc bc
