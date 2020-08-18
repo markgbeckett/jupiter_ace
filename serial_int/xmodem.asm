@@ -19,7 +19,8 @@ ERROR_TO:	equ 0xF0	; Indicates timeout
 ERROR_PE:	equ 0xF1	; Indicates packet error
 	
 	;; Minstrel System Variables
-FLAGS:		equ 0x3c3e
+EXWRCH:		equ 0x3C29	; Address of alternative print routine
+FLAGS:		equ 0x3c3e	; System flags
 
 	;; Miscellaneous params and workspace
 CR:		equ 0x0d
@@ -231,7 +232,35 @@ SEND_BLOCK:
 	
 	ret
 
+	;; ========================================================
+	;; Alternative printing routine to echo screen output to
+	;; serial device.
+	;;
+	;; Accessed from ROM print routine, by setting system variable
+	;; EXSRCH to the address of the entry point TEE_KERNEL.
+	;; 
+	;; On entry, A contains the character to send. Serial card must
+	;; previously have been initialised.
+	;; ========================================================
 	
+TEE_KERNEL:
+	ld d,a			; Save A
+	
+	call SENDW
+	jr c, .done		; Exit, if serial device not ready
+
+	ld a,d			; Restore A
+	cp CR			; Check if carriage return
+	jr nz, .done		; Skip forward, if not
+	
+	ld a, LF		; Otherwise issue line feed
+	call SENDW
+	ld a, CR		; Restore CR for ROM printing
+
+.done:
+	jp 0x03ff		; Continue with ROM printing routine
+
+
 	;; ========================================================
 	;; Print contents of A register as a two-digit hex number
 	;; 
@@ -501,6 +530,40 @@ W_TX:
 	jp (iy)
 .word_end:
 	
+
+	;; ========================================================
+	;; Enable echoing of screen output to serial device.
+	;;
+	;; On entry:
+	;;   N/A
+	;; 
+	;; On exit:
+	;;   N/A
+	;; ========================================================
+W_TEE:
+	FORTH_WORD "TEE"
+	ld hl, TEE_KERNEL
+	ld (EXWRCH), hl
+
+	jp (iy)
+.word_end:
+
+	;; ========================================================
+	;; Disable echoing of screen output to serial device.
+	;;
+	;; On entry:
+	;;   N/A
+	;; 
+	;; On exit:
+	;;   N/A
+	;; ========================================================
+W_UNTEE:
+	FORTH_WORD "UNTEE"
+	ld hl, 0x0000
+	ld (EXWRCH), hl
+
+	jp (iy)
+.word_end:
 	
 	;; ========================================================
 	;; Receive a block of memory via serial interface, using
