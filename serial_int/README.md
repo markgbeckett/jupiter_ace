@@ -33,19 +33,19 @@ Once assembled, you will have a binary image called xmodem.bin, which you need t
 
 `16 BASE C! ( MUCH EASIER TO WORK IN HEXIDECIMAL )`
 
-`3F83 3C3B ! ( RELOCATE STACK TO MAKE SPACE FOR NEW WORDS )`
+`3FBE 3C3B ! ( RELOCATE STACK TO MAKE SPACE FOR NEW WORDS )`
 
-`3F77 3C37 ! ( WILL BE THE END OF THE DICTIONARY, ONCE LOADED )`
+`3FB2 3C37 ! ( WILL BE THE END OF THE DICTIONARY, ONCE LOADED )`
 
 - Load the xmodem.bin file into memory at location 0x3C51 (immediately after the FORTH word)
 
 - Then, type
 
-`3EC0 3C39 ! ( UPDATE FORTH VOCAB )`
+`3EFF 3C39 ! ( UPDATE FORTH VOCAB )`
 
-`3EC0 3C39 ! ( UPDATE DICT SYSTEM VARIABLE )`
+`3EFB 3C39 ! ( UPDATE DICT SYSTEM VARIABLE )`
 
-`0000 3EC0 ! ( RESET LENGTH FIELD IN NEWEST WORD )`
+`0000 3EFB ! ( RESET LENGTH FIELD IN NEWEST WORD )`
 
 Having done this, you should VLIST to confirm the new words have appeared correctly in the dictionary, and then save the words to a tape archive, ready to load into a real Minstrel.
 
