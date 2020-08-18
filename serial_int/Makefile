@@ -1,15 +1,21 @@
-ASM = \opt\bin\z80asm
-AFLAGS = -L
+ASM = sjasmplus
+AFLAGS = --sym=xmodem.sym
 
-SRC = serial_rx_word.asm serial_tx_word.asm tee_kernel.asm
-HEADERS = serial_comm.asm
+ifeq ($(OS),Windows_NT)
+	ERASE = erase
+	else
+	ERASE = rm
+endif
+
+SRC = xmodem.asm
+HEADERS = 
 
 OBJS = $(SRC:.asm=.bin)
 
 all: $(OBJS)
 
-%.bin:	%.asm Makefile $(HEADERS)
-	$(ASM) $(AFLAGS) -o $@ $<
+%.bin:	%.asm forth-word-macro.asm Makefile $(HEADERS)
+	$(ASM) $(AFLAGS) $<
 
 clean:
-	erase *.bin
+	$(ERASE) $(OBJS)

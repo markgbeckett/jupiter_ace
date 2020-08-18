@@ -23,7 +23,7 @@ For XBPUT, a size of 0 will be interpretted as 64kb (that is, as size = 0x10000)
 
 Source code and precompiled binaries are available on GitHub [https://github.com/markgbeckett/jupiter_ace/tree/master/serial_int]. The easiest way to obtain the code is to download the pre-assembled tape image (xmodem.tap or xmodem.wav), ready to load into your Minstrel. The words contain non-relocatable machine code, so most be loaded into memory first, before any other words are defined or created.
 
-If you want to build your own version of the tools, the source code and a Makefile (named Makefile.xmodem) are also available from GitHub. You will need the SJASMPLUS cross-assembler to assemble the source.
+If you want to build your own version of the tools, the source code and a Makefile are also available from GitHub. You will need the SJASMPLUS cross-assembler to assemble the source.
 
 Once assembled, you will have a binary image called xmodem.bin, which you need to load into an emulator (such as EightyOne) using the following slightly convoluted procedure:
 
