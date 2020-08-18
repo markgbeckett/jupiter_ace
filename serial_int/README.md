@@ -1,17 +1,19 @@
-# XMODEM support for Minstrel 4th with an Tynemouth Software 6850 serial-port interface
+# XMODEM support for Minstrel 4th with a Tynemouth Software 6850 serial-port interface
 
-A set of Forth words that can be used to transfer data between the Minstrel 4th and a host PC using the XMODEM protocol, with a typical badnwidth of 4--5 Kilobytes/ second.
+A set of Forth words that can be used to transfer data between the Minstrel 4th and a host PC using the XMODEM protocol, with a typical badnwidth of 4--5 Kilobytes/ second, plus some basic utilites.
 
 # Usage
 
 All functions can be accessed directly from FORTH. Included words are:
 
- * SRESET - reset serial interface (required before any other commands)
- * XBGET - download block of data to Minstrel 4th using XMODEM protocol. Syntax is `<address> XBGET`. On exit, TOS contains 0, if transfer succeeded, and -1, otherwise.
- * XBPUT - upload block of memory from Minstrel 4th using XMODEM protocol. Syntax is `<address> <size> XBPUT`. On exit, TOS contains 0, if transfer succeeded and -1 otherwise.
- * RX - receive a byte via serial interface (on return, byte received is on TOS (or -1, if no byte available).
- * TX - transmit a byte via serial interface (on return, TOS indicates outcome: 0 means success, -1 means failure).
- * XMODEM - a (CREATE'ed) array used to hold library code with other words. This word is not intended to be used directly from FORTH.
+- SRESET - reset serial interface (required before any other commands)
+- XBGET - download block of data to Minstrel 4th using XMODEM protocol. Syntax is `<address> XBGET`. On exit, TOS contains 0, if transfer succeeded, and -1, otherwise.
+- XBPUT - upload block of memory from Minstrel 4th using XMODEM protocol. Syntax is `<address> <size> XBPUT`. On exit, TOS contains 0, if transfer succeeded and -1 otherwise.
+- RX - receive a byte via serial interface (on return, byte received is on TOS (or -1, if no byte available).
+- TX - transmit a byte via serial interface (on return, TOS indicates outcome: 0 means success, -1 means failure).
+- TEE - echo screen output to serial interface. Useful for capturing FORTH word listings or the transcript of an adventure game, for example.
+- UNTEE - disable echoing of screen output to the serial interface.
+- XMODEM - a (CREATE'ed) array used to hold library code with other words. This word is not intended to be used directly from FORTH.
 
 The progress of XBPUT and XPBGET is logged to the screen, unless you surpress it using INVIS. 
 
