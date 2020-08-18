@@ -1,6 +1,6 @@
 # XMODEM support for Minstrel 4th with a Tynemouth Software 6850 serial-port interface
 
-A set of Forth words that can be used to transfer data between the Minstrel 4th and a host PC using the XMODEM protocol, with a typical badnwidth of 4--5 Kilobytes/ second, plus some basic utilites.
+A set of Forth words that can be used to transfer data between the Minstrel 4th and a host PC using the XMODEM protocol, with a typical bandwidth of 4--5 Kilobytes/ second, plus some basic utilites.
 
 # Usage
 
@@ -8,7 +8,7 @@ All functions can be accessed directly from FORTH. Included words are:
 
 - SRESET - reset serial interface (required before any other commands)
 - XBGET - download block of data to Minstrel 4th using XMODEM protocol. Syntax is `<address> XBGET`. On exit, TOS contains 0, if transfer succeeded, and -1, otherwise.
-- XBPUT - upload block of memory from Minstrel 4th using XMODEM protocol. Syntax is `<address> <size> XBPUT`. On exit, TOS contains 0, if transfer succeeded and -1 otherwise.
+- XBPUT - upload block of memory from Minstrel 4th using XMODEM protocol. Syntax is `<address> <size> XBPUT`. On exit, TOS contains 0, if transfer succeeded, and -1 otherwise.
 - RX - receive a byte via serial interface (on return, byte received is on TOS (or -1, if no byte available).
 - TX - transmit a byte via serial interface (on return, TOS indicates outcome: 0 means success, -1 means failure).
 - TEE - echo screen output to serial interface. Useful for capturing FORTH word listings or the transcript of an adventure game, for example.
@@ -19,9 +19,11 @@ The progress of XBPUT and XPBGET is logged to the screen, unless you surpress it
 
 For XBPUT, a size of 0 will be interpretted as 64kb (that is, as size = 0x10000). This can be used to create a snapshot of the entire Minstrel memory, using `0 0 XBPUT`.
 
+You will need to run some kind of terminal program on your PC, such as TeraTerm, and configure the program to connect to the correct serial port at 115,200 baud with hardware flow control. The XMODEM protocol uses a (one-byte) checksum rather than CRC.
+
 ## Obtaining
 
-Source code and precompiled binaries are available on GitHub [https://github.com/markgbeckett/jupiter_ace/tree/master/serial_int]. The easiest way to obtain the code is to download the pre-assembled tape image (xmodem.tap or xmodem.wav), ready to load into your Minstrel. The words contain non-relocatable machine code, so most be loaded into memory first, before any other words are defined or created.
+Source code and precompiled binaries are available on GitHub [https://github.com/markgbeckett/jupiter_ace/tree/master/serial_int]. The easiest way to obtain the code is to download the pre-assembled tape image (xmodem.tap or xmodem.wav), ready to load into your Minstrel 4th. The words contain non-relocatable machine code, so most be loaded into memory first, before any other words are defined or created.
 
 If you want to build your own version of the tools, the source code and a Makefile are also available from GitHub. You will need the SJASMPLUS cross-assembler to assemble the source.
 
