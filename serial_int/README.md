@@ -1,31 +1,31 @@
 # XMODEM support for Minstrel 4th with a Tynemouth Software 6850 serial-port interface
 
-A set of Forth words that can be used to transfer data between the Minstrel 4th and a host PC using the XMODEM protocol, with a typical bandwidth of 4--5 Kilobytes/ second, plus some basic utilites.
+A set of Forth words that help you to use the Tynemouth Software 6850 serial-port interface with your Minstrel 4th. The most significant functionality is support for transferring data between the Minstrel 4th and a host PC using the XMODEM protocol, with a typical bandwidth of 4--5 Kilobytes/ second. There are also some basic functionalities that help with code development.
 
-# Usage
+## Usage
 
 All functions can be accessed directly from FORTH. Included words are:
 
-- SRESET - reset serial interface (required before any other commands)
-- XBGET - download block of data to Minstrel 4th using XMODEM protocol. Syntax is `<address> XBGET`. On exit, TOS contains 0, if transfer succeeded, and -1, otherwise.
-- XBPUT - upload block of memory from Minstrel 4th using XMODEM protocol. Syntax is `<address> <size> XBPUT`. On exit, TOS contains 0, if transfer succeeded, and -1 otherwise.
-- RX - receive a byte via serial interface (on return, byte received is on TOS (or -1, if no byte available).
-- TX - transmit a byte via serial interface (on return, TOS indicates outcome: 0 means success, -1 means failure).
-- TEE - echo screen output to serial interface. Useful for capturing FORTH word listings or the transcript of an adventure game, for example.
-- UNTEE - disable echoing of screen output to the serial interface.
-- XMODEM - a (CREATE'ed) array used to hold library code with other words. This word is not intended to be used directly from FORTH.
-
-The progress of XBPUT and XPBGET is logged to the screen, unless you surpress it using INVIS. 
+- `SRESET ( -- )` - reset serial interface (required before any other commands)
+- `XBGET ( nnnn -- nn )` - download block of data to Minstrel 4th using XMODEM protocol. Syntax is `<address> XBGET`, where <address> is the starting address in memory to write data to. On exit, TOS contains 0, if transfer succeeded, and -1 otherwise. Progress is logged to the screen, unless you surpress it using INVIS. 
+- `XBPUT ( nnnn nnnn -- nn )` - upload block of memory from Minstrel 4th using XMODEM protocol. Syntax is `<address> <size> XBPUT`, where <address> is the start of the block and <size> is the length. On exit, TOS contains 0, if transfer succeeded, and -1 otherwise. Progress is logged to the screen, unless you surpress it using INVIS. 
+- `RX ( -- nn )` - receive a byte via serial interface. On exit, the byte received will be on Top Of Stack (or -1, if no byte available).
+- `TX ( nn -- nn )` - transmit a byte via serial interface. On exit, TOS indicates outcome: 0 means success, -1 means failure.
+- `TEE ( -- )` - echo screen output to serial interface. Useful for capturing FORTH word listings or the transcript of an adventure game, for example.
+- `UNTEE ( -- )` - disable echoing of screen output to the serial interface.
+- `XMODEM` - a (CREATE'ed) array used to hold library code with other words. This word is not intended to be used directly from FORTH. If you use it, the address of the start of the code library code will be added to TOS.
 
 For XBPUT, a size of 0 will be interpretted as 64kb (that is, as size = 0x10000). This can be used to create a snapshot of the entire Minstrel memory, using `0 0 XBPUT`.
 
 You will need to run some kind of terminal program on your PC, such as TeraTerm, and configure the program to connect to the correct serial port at 115,200 baud with hardware flow control. The XMODEM protocol uses a (one-byte) checksum rather than CRC.
 
+XBPUT and XBGET provide a crude way to save the contents of a user's dictionary. You can capture a snapshot of the words in RAM plus relevant system variables using the command `3C31 HERE 3C31 - XBPUT` and restore the words into the Minstrel 4th using `3C31 XBGET`. The process relies on having this serial toolkit loaded into memory at the beginning of the user dictionary and only works with standard dictionary words. If in doubt, you should also save your work to tape, in the usual way, as a backup.
+
 ## Obtaining
 
-Source code and precompiled binaries are available on GitHub [https://github.com/markgbeckett/jupiter_ace/tree/master/serial_int]. The easiest way to obtain the code is to download the pre-assembled tape image (xmodem.tap or xmodem.wav), ready to load into your Minstrel 4th. The words contain non-relocatable machine code, so most be loaded into memory first, before any other words are defined or created.
+Source code and precompiled binaries are available on GitHub [https://github.com/markgbeckett/jupiter_ace/tree/master/serial_int]. The easiest way to obtain the code is to download the pre-assembled tape image (xmodem.tap or xmodem.wav), ready to load into your Minstrel 4th. The toolkit contains non-relocatable machine code, so most be loaded into memory first, before any other words are defined or created.
 
-If you want to build your own version of the tools, the source code and a Makefile are also available from GitHub. You will need the SJASMPLUS cross-assembler to assemble the source.
+If you want to build your own version of the tools, the source code and a Makefile are also available from GitHub. You will need the SJASMPLUS cross-assembler [https://github.com/z00m128/sjasmplus] to assemble the source.
 
 Once assembled, you will have a binary image called xmodem.bin, which you need to load into an emulator (such as EightyOne) using the following slightly convoluted procedure:
 
@@ -58,7 +58,7 @@ XMODEM routines are inspired by original CP/M code by Ward Christensen, availabl
 
 http://www.vintagecomputer.net/fjkraan/comp/mirror/z80cpu.eu/archive/rlee/L/LOOSECPM/224/MODEM.ASM
 
---and by proof of concept in FORTH from John Kennedy (@JohnKennedyMSFT).
+--and by proof of concept in FORTH from John Kennedy (@JohnKennedyMSFT) [https://github.com/GrantMeStrength/Forth].
 
 FORTH-word macro was created by Alexander Sharihin (@nihirash).
 
