@@ -226,32 +226,31 @@
 ;
 
 : GETMOVE ( X Y -- X Y NX NY 1 / X Y 0 )
-    INKEY DUP
-    IF
-      >R 2DUP R> DUP
+  INKEY DUP
+  IF
+    >R 2DUP R> 
 
-      112 = ( 'p' - RIGHT )
-      IF
-        SWAP 1+ SWAP EXIT
-      THEN
+    CASE
+      112 OF ( 'p' - RIGHT )
+        1+ 1
+      ENDOF
 
-      DUP 111 = ( 'o' - LEFT )
-      IF
-        SWAP 1- SWAP EXIT
-      THEN
+      111 OF ( 'o' - LEFT )
+        1- 1
+      ENDOF
 
-      DUP 113 = ( 'q' - UP )
-      IF
-        ROT 1- ROT ROT EXIT
-      THEN
+      113 OF ( 'q' - UP )
+        SWAP 1- SWAP 1
+      ENDOF
 
-      97 = ( 'a' - DOWN )
-      IF
-        SWAP 1+ SWAP 1 EXIT
-      THEN
+      97 OF ( 'a' - DOWN )
+        SWAP 1+ SWAP 1
+      ENDOF
 
-      DROP DROP      
-      0 ( INDICATES KEY PRESSED )
+      OTHERWISE
+        DROP DROP      
+        0 ( INDICATES KEY PRESSED )
+    ENDCASE
   THEN
 ;
 
