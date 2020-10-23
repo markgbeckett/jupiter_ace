@@ -4,7 +4,7 @@ Minstrel 4th can be configured to run at either 3.25 MHz or 6.5 MHz. Sometimes y
 
 This machine code routine can be CALL-ed from Forth and will return a value from which the (approximate) clock speed can be calculated, using the following simple formula:
 
-Clock speed = ( (VALUE + 300) * 1250
+Clock speed = ( (VALUE + 300) * 25 * 50
 
 This is assuming a 50 Hz display (for 60 Hz models, replace the 50 above by 60).
 
