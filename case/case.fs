@@ -20,7 +20,7 @@
 (   RESPECTING SYNTAX                           )
 
 ( CHECK SYNTAX GUIDES MATCH )
-: ?PAIRS ( M N -- )
+: ?PAIRS ( M N -- FLAG )
   = 0= ( ARE THEY NOT EQUAL? )
   IF
     ." ERROR 5" CR ABORT ( ABORT COMPILATION, IF NOT EQUAL )
