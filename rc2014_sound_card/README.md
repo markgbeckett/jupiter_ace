@@ -10,7 +10,7 @@ The ["YM2149 Sound Card for RC2014 Retro Computer"](https://www.tindie.com/produ
 
 Build the card following the instructions for the RC2014 computer, using the same jumper settings. The only jumper, on the sound card, that may need adjusting is the clock-divide setting (JP5). If you run your Minstrel 4th at 6.5 MHz then you should select divide-by-4 option. Whereas, if you run your Minstrel 4th at 3.25 MHz, you should select divide-by-2.
 
-You also need to configure the Z80 Clock jumper on the Minstrel 4th board to pass through the clock signal to the RC2014 bus. Do this by shorting out pins 5 and 6 (labelled RC2014/1). You also need to connect either pins 1 and 2 (for 3.25 MHz clock) or pins 3 and 4 (for 6.5 MHz) clock.
+You also need to configure the Z80 Clock jumper on the Minstrel 4th board to pass through the clock signal to the RC2014 bus. Do this by bridging pins 5 and 6 (labelled RC2014/1). You also need to bridge either pins 1 and 2 (for 3.25 MHz clock) or pins 3 and 4 (for 6.5 MHz clock).
 
 ![Minstrel 4th Clock Configuration](minstrel_4th_clock-config.png)
 
