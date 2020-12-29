@@ -2,7 +2,9 @@
 
 ## Introduction
 
-The ["YM2149 Sound Card for RC2014 Retro Computer"](https://www.tindie.com/products/semachthemonkey/ym2149-sound-card-for-rc2014-retro-computer/) can be plugged into the Minstrel 4th, via the RC2014 edge connector to boost the audio capabilities of the computer.
+The ["YM2149 Sound Card for RC2014 Retro Computer"](https://www.tindie.com/products/semachthemonkey/ym2149-sound-card-for-rc2014-retro-computer/) can be plugged into the Minstrel 4th, via the RC2014 edge connector, to boost the audio capabilities of the computer.
+
+![Minstrel 4th with YM2149 sound card](minstrel_4th_with_sound_card.jpg)
 
 ## Building the Card
 
@@ -25,9 +27,14 @@ DEFINER CODE DOES> CALL ;
 CODE HALT 118 C, 253 C, 233 C,
 
 : TEST
- 7 REG OUT 62 DAT
- OUT 8 REG OUT 15
- DAT OUT 0 REG OUT
+ 7 REG OUT
+ 62 DAT OUT
+
+ 8 REG OUT
+ 15 DAT OUT
+
+ 0 REG OUT
+
  BEGIN
   255 1
   DO
@@ -40,7 +47,7 @@ CODE HALT 118 C, 253 C, 233 C,
 
 You can also use S.V.Bulba's PT2/PT3 player, which is available from Ed Brindley's repository, to provide a more interesting test of the sound card.
 
-Assemble the source code, using the RC2014 configuration (set `RC=1` at the beginning of the source). However, you also need to disable interrupts, by inserting the `DI` command immediately after the `ORG` directive. This is to work around the fact that they player makes extensive use of the IX register pair, which is also used by Minstrel 4th's built-in monitor program.
+Assemble the source code, using the RC2014 configuration (set `RC=1` at the beginning of the source). However, you also need to disable interrupts, by inserting the `DI` command immediately after the `ORG` directive. This is to work around the fact that the player makes extensive use of the IX register pair, which is also used by Minstrel 4th's built-in monitor program.
 
 ## Usage
 
