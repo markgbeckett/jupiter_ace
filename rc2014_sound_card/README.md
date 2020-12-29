@@ -2,7 +2,7 @@
 
 ## Introduction
 
-The ["YM2149 Sound Card for RC2014 Retro Computer"](https://www.tindie.com/products/semachthemonkey/ym2149-sound-card-for-rc2014-retro-computer/) can be plugged into the Minstrel 4th, via the RC2014 edge connector, to boost the audio capabilities of the computer.
+The ["YM2149 Sound Card for RC2014 Retro Computer"](https://www.tindie.com/products/semachthemonkey/ym2149-sound-card-for-rc2014-retro-computer/), a 3-channel sound add-on for retrocomputers, designed by Ed Brindley, can be plugged into the Minstrel 4th, via the RC2014 edge connector, to boost the audio capabilities of the computer.
 
 ![Minstrel 4th with YM2149 sound card](minstrel_4th_with_sound_card.jpg)
 
