@@ -18,36 +18,43 @@ AY_VOL_3:	EQU 0x08
 
 AY_MAX_VOL:	EQU 0x0F
 AY_MAX_CHANNEL:	EQU 0x03	; Three channels
-AY_WAIT_UNIT:	EQU 0x0030	; Basic unit of duration
+AY_WAIT_UNIT:	EQU 0x004b	; Basic unit of duration
 	
 	org 0xC000
 	
-START:	di			; IY is corrupted, so disable interrupts
-	ld (IY_SAVE),iy		; and save original value
+START:	di			; Disable interrupts (break-check incl.)
+	ld (IY_SAVE),iy		; and save monitor copy of IY
 
-	call INIT_AY		; Initial sound card
+	;; Initialise sound card
+	call INIT_AY		
 
-	;; Activate channel 0 for sound
-	xor a			; Start with channel 0
-	ld (CUR_CH),a		; Store for later
-
+	;; Initialise each channel
+	xor a			; Start with Channel 0
+	
 INIT:	push af
 	call INIT_CHANNEL	; Initialise channel
 	pop af
-	inc a	
-	cp AY_MAX_CHANNEL
-	jr nz, INIT
 
-LOOP:
-	call GET_CHAN_POINTER
-				; Check if note being played
-	ld e,(IY+CH_CNT)	; Retrieve counter
-	ld d,(IY+CH_CNT+1)
+	inc a			; Next channel
+	cp AY_MAX_CHANNEL	; Check if done
+	jr nz, INIT		; Loop, if not
+
+LOOP:				
+	call GET_CHAN_POINTER	; Set IY to point to channel info
+
+	;;  Check if channel is active
+	ld a, (IY + CH_N)
+	and 0x80		; Bit 7 set indicates inactive
+	jr nz, NEXT_CHAN
+	
+	;; Check if note being played
+	ld e,(IY + CH_CNT)	; Retrieve counter
+	ld d,(IY + CH_CNT+1)
 	
 	ld a,d			; Check if zero
 	or e
 
-	jr nz, DEC_COUNT
+	jr nz, DEC_COUNT	; Jump forward, if not
 	
 	call NEXT_COMM		; Get next Play string value
 	jr c, NEXT_CHAN	       	; Advance of no play data
@@ -56,8 +63,8 @@ LOOP:
 	
 DEC_COUNT:
 	dec de			; Decrement counter and save
-	ld (IY+CH_CNT),e
-	ld (IY+CH_CNT+1),d
+	ld (IY + CH_CNT),e
+	ld (IY + CH_CNT+1),d
 
 ACT_CHAN:
 	ld hl,ACT_CH		; Confirm channel active
@@ -86,8 +93,18 @@ NEXT_CHAN:
 	
 NEXT_COMM:
 	call GET_NEXT_NOTE	; Retrieve next note, if available
-	ret c			; Carry set, indicates end of channel
+	jr nc, PROCESS_COMM	; Carry set, indicates end of channel
 
+	;;  Close down channel and associated play string
+	ld a,(CUR_CH)		; Retrieve channel number
+	call CLOSE_CHANNEL
+	
+	set 7,(IY + CH_N)	; Set bit 7 to indicate channel inactive
+
+	scf			; Done
+	ret			
+	
+PROCESS_COMM:
 	cp '1'			; Check if 1, ..., 9 (new note duration)
 	jr c, CONT_1
 	cp '9'+1
@@ -118,17 +135,34 @@ ADD_TO_DUR:
 CONT_1:	
 	call NOTE_TO_FREQ
 
+	ld b,(IY + CH_VOL)
+
+	jr nc, NO_REST
+	ld b, 0x00		; Mute channel
+
+NO_REST:
+	push bc			; Save volume
+	;; Set tone
 	ld a,(CUR_CH)
 	sla a
 	
 	ld e,l
-	ld d,a			; Channel 1 fine
+	ld d,a	
 	call WRITE_TO_AY
 
 	ld e,h
 	inc d
 	call WRITE_TO_AY
+
+	;;  Set volume
+	pop bc			; Restore volume
+	ld a, (CUR_CH)
+	add a, AY_VOL_1
+	ld d,a
+	ld e,b			; Volume / mute
+	call WRITE_TO_AY
 	
+RESET_COUNT:
 	ld e,(IY+7)		; Reset duration counter
 	ld d,(IY+8)
 	ld (IY+9),e
@@ -213,12 +247,20 @@ CHECK_SHARP:
 
 CHECK_FLAT:
 	cp '$'
-	jr nz, CHECK_NOTE
+	jr nz, CHECK_REST
 
 	dec c
 	call GET_NEXT_NOTE
 	jr CHECK_SHARP
 
+CHECK_REST:
+	cp '&'
+	jr nz, CHECK_NOTE
+
+	ld hl, 0x0000
+	scf
+	ret
+	
 CHECK_NOTE:
 	bit 5,a	; Is note lower case?
 	jr nz, LOWER_CASE
@@ -255,6 +297,8 @@ LOWER_CASE:
 	ld d,(hl)
 
 	ex de,hl		; Put result in HL
+
+	and a			; Reset carry
 	
 	ret
 
@@ -341,6 +385,9 @@ MU_LOOP:
 INIT_AY:
 	call SND_OFF
 
+	xor a			; Start with channel 0
+	ld (CUR_CH),a		; Store for later
+
 	xor a			; Reset active channel count
 	ld (ACT_CH),a
 
@@ -363,6 +410,25 @@ GET_CHAN_POINTER:
 
 	ret
 	
+CLOSE_CHANNEL:
+	ld b,a			; Move current channel to B
+	inc b
+	ld a, %10000000		; Mixer mask
+
+CL_ROT:	rlca			; Rotate activation bit to
+	djnz CL_ROT		; correct channel
+
+	ld hl, MIX_MA		; Apply mask
+	or (hl)
+
+	ld (hl),a		; Update record of mask
+
+	ld d,AY_MIXER		; Update sound card
+	ld e,a			; with new mask
+	call WRITE_TO_AY
+
+	ret
+
 INIT_CHANNEL:
 	push af			; Save channel number
 	
@@ -379,10 +445,12 @@ INIT_CHANNEL:
 	push bc			; Transfer to IY
 	pop iy
 
-	;;  Activate sound on channel
+	;; Note channel as active 
 	pop af			; Recover channel number
 	push af			; and save again
 
+	ld (iy + CH_N),a	; Bit 7 reset indicates channel active
+	
 	ld b,a			; Move to B
 	inc b
 	ld a, %01111111		; Mixer mask
@@ -412,10 +480,21 @@ ROT:	rlca			; Rotate activation bit to
 	ld a,(iy + CH_STA + 1)
 	ld (iy + CH_CUR + 1),a
 
-	;; Set note duration to zero
+	;; Set counter to zero
 	ld (iy+CH_CNT), 0
 	ld (iy+CH_CNT+1), 0
 
+	;; Set default note to a crochet
+	ld de, AY_WAIT_UNIT	; Basic unit of duration
+	ld hl, 0x000		; Reset duration
+	ld b, 0x18
+ADD_TO:
+	add hl,de
+	djnz ADD_TO
+	
+	ld (iy + CH_DUR),l
+	ld (iy + CH_DUR+1),h
+	
 	ret
 
 	;; Mute sound/ noise on all channels
@@ -636,35 +715,44 @@ CH_VOL:	EQU 12
 	
 CHANNEL_0_INFO:
 	db 0x00			; Channel number
-	dw TEST_STRING		; Start of Play string
+	dw TEST_STRING_0	; Start of Play string
 	dw 0x0000		; Current location in Play string
-	dw TEST_STRING_END	; End of Play string
+	dw TEST_STRING_0_END	; End of Play string
+	dw 0xFFFF		; Default note duration
+	dw 0x0000		; Current note counter
+	db 0x18			; Octave 6 by default
+	db 0x0F			; Volume
+
+CHANNEL_1_INFO:
+	db 0x01			; Channel number
+	dw TEST_STRING_1	; Start of Play string
+	dw 0x0000		; Current location in Play string
+	dw TEST_STRING_1_END	; End of Play string
 	dw 0xFFFF		; Default note duration
 	dw 0x0000		; Current note counter
 	db 0x30			; Octave 5 by default
 	db 0x0F			; Volume
 
-CHANNEL_1_INFO:
-	db 0x01			; Channel number
-	dw TEST_STRING		; Start of Play string
-	dw 0x0000		; Current location in Play string
-	dw TEST_STRING_END	; End of Play string
-	dw 0xFFFF		; Default note duration
-	dw 0x0000		; Current note counter
-	db 0x24			; Octave 3 by default
-	db 0x0F			; Volume
-
 CHANNEL_2_INFO:
 	db 0x01			; Channel number
-	dw TEST_STRING		; Start of Play string
+	dw TEST_STRING_2	; Start of Play string
 	dw 0x0000		; Current location in Play string
-	dw TEST_STRING_END	; End of Play string
+	dw TEST_STRING_2_END	; End of Play string
 	dw 0xFFFF		; Default note duration
 	dw 0x0000		; Current note counter
-	db 0x18			; Octave 3 by default
+	db 0x30			; Octave 6 by default
 	db 0x0F			; Volume
 
 
-TEST_STRING:			; Simple scale
-	dm "3cdefgabC"
-TEST_STRING_END:	
+TEST_STRING_0:			; Simple scale
+	dm "cCcCgGgG"
+TEST_STRING_0_END:
+	
+TEST_STRING_1:			; Simple scale
+	dm "CaCe$bd$bD"
+TEST_STRING_1_END:
+	
+TEST_STRING_2:			; Simple scale
+	dm "3"
+TEST_STRING_2_END:
+	
