@@ -18,7 +18,7 @@ AY_VOL_3:	EQU 0x08
 
 AY_MAX_VOL:	EQU 0x0F
 AY_MAX_CHANNEL:	EQU 0x03	; Three channels
-AY_WAIT_UNIT:	EQU 0x004b	; Basic unit of duration
+AY_WAIT_UNIT:	EQU 0x0042	; Basic unit of duration
 	
 	org 0xC000
 	
@@ -31,19 +31,21 @@ START:	di			; Disable interrupts (break-check incl.)
 	;; Initialise each channel
 	xor a			; Start with Channel 0
 	
-INIT:	push af
+INIT:	push af			; Store channel number
 	call INIT_CHANNEL	; Initialise channel
-	pop af
+	pop af			; Retrieve channel number
 
 	inc a			; Next channel
 	cp AY_MAX_CHANNEL	; Check if done
 	jr nz, INIT		; Loop, if not
 
-LOOP:				
+	;; Iterative over each channel's Play string, until all are
+	;; done
+LOOP:
 	call GET_CHAN_POINTER	; Set IY to point to channel info
-
+	
 	;;  Check if channel is active
-	ld a, (IY + CH_N)
+	ld a,(IY + CH_N)	; Retrieve channel number
 	and 0x80		; Bit 7 set indicates inactive
 	jr nz, NEXT_CHAN
 	
@@ -55,10 +57,10 @@ LOOP:
 	or e
 
 	jr nz, DEC_COUNT	; Jump forward, if not
-	
-	call NEXT_COMM		; Get next Play string value
-	jr c, NEXT_CHAN	       	; Advance of no play data
 
+	;; Retrieve next note (and any preceeding commands)
+	call NEXT_COMM		; Get next Play string value
+	jr c, NEXT_CHAN	       	; Channel ended
 	jr ACT_CHAN
 	
 DEC_COUNT:
@@ -86,6 +88,7 @@ NEXT_CHAN:
 	and a
 	jr z, DONE
 
+	;; Reset active channel count
 	xor a
 	ld (ACT_CH),a
 	
@@ -106,9 +109,9 @@ NEXT_COMM:
 	
 PROCESS_COMM:
 	cp '1'			; Check if 1, ..., 9 (new note duration)
-	jr c, CONT_1
+	jr c, NOT_NUM
 	cp '9'+1
-	jr nc, CONT_1
+	jr nc, NOT_NUM
 
 	;; If number, update default note duration
 	sub '1'			; Normalise number
@@ -130,9 +133,43 @@ ADD_TO_DUR:
 	ld (IY+8),h
 	
 	jr NEXT_COMM		; Get next note
+	
+NOT_NUM:
+	;; Get relevant command
+	ld hl, PLAY_COMMANDS
+	ld bc, 0x0004
+	cpir
+	
+	sla c			; Multiply C by two to get offset
+	ld hl, PLAY_COMM_JUMPS
+	add hl, bc		; Work out offset
 
-	;; Assume is note
-CONT_1:	
+	;; Retrieve routine address and move to HL
+	ld e, (hl)
+	inc hl
+	ld d, (hl)
+	ex de,hl
+
+	;; Call routine
+	call JUMP_TO_IT
+
+	ret nc			; Return if new note set
+ 	jr NEXT_COMM		; Otherwise process next command
+
+DONE:	call SND_OFF
+
+	ld iy, (IY_SAVE)	; Recover return address
+	ei
+
+	
+	IFDEF ZXSPECTRUM
+	ret			; Return to BASIC
+	ELSE
+	jp (iy)			; Return to FORTH
+	ENDIF
+
+	
+NEW_NOTE:
 	call NOTE_TO_FREQ
 
 	ld b,(IY + CH_VOL)
@@ -170,20 +207,57 @@ RESET_COUNT:
 
 	and a			; Clear carry
 	ret
+
+CHANGE_VOL:
+	call GET_NUM
+	ld a, (CUR_CH)		; Retrieve current channel number
+	add a, AY_VOL_1		; Work out corresponding sound card register
+
+	ld d,a
+	ld e,l
+	call WRITE_TO_AY
+
+	;; Save in channel info
+	ld (iy + CH_VOL),l	; Move volume to A
 	
-DONE:	call SND_OFF
+	scf			; Indicates need to read another command
+	ret
 
-	ld iy, (IY_SAVE)	; Recover return address
-	ei
-
+DUMMY_NOTE:
+	scf
+	ret
 	
-	IFDEF ZXSPECTRUM
-	ret			; Return to BASIC
-	ELSE
-	jp (iy)			; Return to FORTH
-	ENDIF
+CHANGE_OCTAVE:
+	call GET_NUM		; Retrieve desired octave number
+	dec l			; Subtract two
+	dec l
+	
+	;; Multiply by 12 to work out offset in semi-tones
+	xor a
+	ld b, 0x0C		; Twelve semi-tones in an octave
+CO_LOOP:
+	add l
+	djnz CO_LOOP
 
+	;; Save new octave info
+	ld (iy + CH_OCT), a
+	
+	scf
+	ret
+	
+PLAY_COMMANDS:
+	dm "OVN"			; List of recognised Play commands
 
+PLAY_COMM_JUMPS:
+	dw NEW_NOTE		; Process note
+	dw DUMMY_NOTE		; 'N' - Separator to avoid ambiguity
+	dw CHANGE_VOL		; 'V' - New volume
+	dw CHANGE_OCTAVE	; 'O' - New octave
+
+	;;  Allows CALL (HL)
+JUMP_TO_IT:
+	jp (hl)
+	
 	;; Read next character from play string and update play
 	;; string pointer.
 	;;
@@ -393,13 +467,25 @@ INIT_AY:
 
 	ret
 
+	;; -------------------------------------------------------------
+	;; Calculate address of channel's information and store in IY.
+	;;
+	;; On entry:
+	;;   -
+	;;
+	;; On exit:
+	;;   A - current channel number
+	;;   IY - address
+	;;   BC, HL are corrupted
+	;; -------------------------------------------------------------
 GET_CHAN_POINTER:
-	ld hl, PLAY_INFO	; Start of play info
+	;; Compute address of channel pointer
 	ld a,(CUR_CH)		; Retrieve channel number
-	sla a			; Multiply A by two to get offset
-	ld c,a			; Compute address of channel pointer
+	ld hl, PLAY_INFO	; Start of play info
+	ld c,a			; Move channel number to C
+	sla c			; Multiply C by two to get offset
 	ld b,0
-	add hl, bc
+	add hl, bc		; Pointer stored at PLAY_INFO + 2*CHAN
 	
 	ld c, (hl)		; Retrieve channel pointer
 	inc hl
@@ -409,7 +495,16 @@ GET_CHAN_POINTER:
 	pop iy
 
 	ret
-	
+
+	;; -------------------------------------------------------------
+	;; Close channel, disable sound and noise of mixer.
+	;;
+	;; On entry:
+	;;   A = channel number to close
+	;;
+	;; On exit:
+	;;   Current registers corrupted
+	;; -------------------------------------------------------------
 CLOSE_CHANNEL:
 	ld b,a			; Move current channel to B
 	inc b
@@ -429,9 +524,23 @@ CL_ROT:	rlca			; Rotate activation bit to
 
 	ret
 
+	;; -------------------------------------------------------------
+	;; Initialise sound card channel: set IY to point to channel
+	;; info; set mixer to play sound on channel; set volume to
+	;; default; set note duration to crochet; set current-pointer to
+	;; start of play string; and set current counter to zero.
+	;;
+	;; On entry:
+	;;   A = channel number to initialise
+	;;
+	;; On exit:
+	;;   IY = address of channel info
+	;;   current registers are corrupted
+	;; -------------------------------------------------------------
 INIT_CHANNEL:
 	push af			; Save channel number
-	
+
+	;; Calculate pointer to channel information
 	ld hl, PLAY_INFO	; Start of play info
 	sla a			; Multiply A by two to get offset
 	ld c,a			; Compute address of channel pointer
@@ -445,25 +554,26 @@ INIT_CHANNEL:
 	push bc			; Transfer to IY
 	pop iy
 
-	;; Note channel as active 
+	;; Set channel as active 
 	pop af			; Recover channel number
 	push af			; and save again
 
-	ld (iy + CH_N),a	; Bit 7 reset indicates channel active
+	ld (iy + CH_N),a	; N.B. Bit 7 is reset,
+				; indicating channel is active
 	
 	ld b,a			; Move to B
-	inc b
+	inc b			; Need to complete CH_N+1 rotations to
+				; get channel mask
 	ld a, %01111111		; Mixer mask
 
-ROT:	rlca			; Rotate activation bit to
-	djnz ROT		; correct channel
+IC_ROT:	rlca			; Rotate activation bit to
+	djnz IC_ROT		; correct channel
 
 	ld hl, MIX_MA		; Apply mask
 	and (hl)
-
 	ld (hl),a		; Update record of mask
 
-	ld d, AY_MIXER		; Update sound card
+	ld d, AY_MIXER		; Also, update sound card
 	ld e,a			; with new mask
 	call WRITE_TO_AY
 
@@ -471,8 +581,9 @@ ROT:	rlca			; Rotate activation bit to
 	add AY_VOL_1 		; Find volume register for channel
 	
 	ld d,a 			; Set initial volume
-	ld e, AY_MAX_VOL		; Maximum volume
+	ld e, AY_MAX_VOL	; Maximum volume
 	call WRITE_TO_AY
+	ld (IY + CH_VOL), e	; Also store in channel info
 		
 	;; Set current posn to start of play string
 	ld a,(iy + CH_STA)		
@@ -480,22 +591,23 @@ ROT:	rlca			; Rotate activation bit to
 	ld a,(iy + CH_STA + 1)
 	ld (iy + CH_CUR + 1),a
 
-	;; Set counter to zero
-	ld (iy+CH_CNT), 0
-	ld (iy+CH_CNT+1), 0
+	;; Set (duration) counter to zero -- i.e., no note playing
+	ld (iy+CH_CNT), 0x00
+	ld (iy+CH_CNT+1), 0x00
 
 	;; Set default note to a crochet
 	ld de, AY_WAIT_UNIT	; Basic unit of duration
 	ld hl, 0x000		; Reset duration
 	ld b, 0x18
-ADD_TO:
+CH_ADD_TO:
 	add hl,de
-	djnz ADD_TO
-	
+	djnz CH_ADD_TO
+
+	;; Store note duration
 	ld (iy + CH_DUR),l
 	ld (iy + CH_DUR+1),h
 	
-	ret
+	ret			; Done
 
 	;; Mute sound/ noise on all channels
 SND_OFF:
@@ -745,14 +857,15 @@ CHANNEL_2_INFO:
 
 
 TEST_STRING_0:			; Simple scale
-	dm "cCcCgGgG"
+	dm "O5N3e#fgabg5b3#a#f5#a3af5a3e#fgabgbEDbgb7D"
 TEST_STRING_0_END:
 	
 TEST_STRING_1:			; Simple scale
-	dm "CaCe$bd$bD"
+	dm "O5V8N3b#C#DE#F#D5#FN3G#D5G3#F#D5#FN3b#C#DE#F#D5#FN3G#D5G7#F"
 TEST_STRING_1_END:
 	
 TEST_STRING_2:			; Simple scale
-	dm "3"
+	dm "N"
 TEST_STRING_2_END:
+	
 	
