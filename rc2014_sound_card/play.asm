@@ -872,15 +872,15 @@ CHANNEL_2_INFO:
 
 
 TEST_STRING_0:			; Simple scale
-	dm "O5N3e#fgabg5b&&&3#a#f5#a3af5a3e#fgabgbEDbgb7D"
+	dm "O5N3e#fgabg5b3#a#f5#a3af5aN3e#fgabgbENDbgb7D"
 TEST_STRING_0_END:
 	
 TEST_STRING_1:			; Simple scale
-	dm "O5V8N3b#C#DE#F#D5#F&&&N3G#D5G3#F#D5#FN3b#C#DE#F#D5#FN3G#D5G7#F"
+	dm "O5V10N3b#C#DE#F#D5#FN3G#D5G3#F#D5#FN3b#C#DE#F#D5#FN3G#D5G7#F"
 TEST_STRING_1_END:
 	
 TEST_STRING_2:			; Simple scale
-	;; 	dm "N"
+	dm "O5V8N3Dbgb7DN5&E7&N5&E7&N3e#fgabgbE" ;  N#Db#D#F7E" 
 TEST_STRING_2_END:
 	
 	
