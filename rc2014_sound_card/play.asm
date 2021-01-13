@@ -22,6 +22,11 @@ AY_WAIT_UNIT:	EQU 0x0042	; Basic unit of duration
 	
 	org 0xC000
 	
+PLAY_INFO:
+	dw CHANNEL_0_INFO	; Address of Channel 0 info
+	dw CHANNEL_1_INFO	; Address of Channel 1 info
+	dw CHANNEL_2_INFO	; Address of Channel 2 info
+
 START:	di			; Disable interrupts (break-check incl.)
 	ld (IY_SAVE),iy		; and save monitor copy of IY
 
@@ -47,16 +52,25 @@ LOOP:
 	;;  Check if channel is active
 	ld a,(IY + CH_N)	; Retrieve channel number
 	and 0x80		; Bit 7 set indicates inactive
-	jr nz, NEXT_CHAN
-	
-	;; Check if note being played
-	ld e,(IY + CH_CNT)	; Retrieve counter
-	ld d,(IY + CH_CNT+1)
-	
-	ld a,d			; Check if zero
-	or e
+	jr z, CHANNEL_ACTIVE 	; (T=12/ 7)
 
-	jr nz, DEC_COUNT	; Jump forward, if not
+	;; Add timing delay here for T=129-7-12=110 T states
+	ld b, 0x06		; (T=7)
+NN_WAIT:
+	nop 			; (T=4)
+	djnz NN_WAIT		; (T=13 / 8)
+	
+	jr NEXT_CHAN		; (T=12)
+
+	;; Check if note being played
+CHANNEL_ACTIVE:
+	ld e,(IY + CH_CNT)	; Retrieve countdown timer (T=19)
+	ld d,(IY + CH_CNT+1)	; (T=19)
+	
+	ld a,d			; Check if zero (T=4)
+	or e			; (T=4)
+
+	jr nz, DEC_COUNT	; Jump forward, if not (T=12)
 
 	;; Retrieve next note (and any preceeding commands)
 	call NEXT_COMM		; Get next Play string value
@@ -64,13 +78,13 @@ LOOP:
 	jr ACT_CHAN
 	
 DEC_COUNT:
-	dec de			; Decrement counter and save
-	ld (IY + CH_CNT),e
-	ld (IY + CH_CNT+1),d
+	dec de			; Decrement counter and save (T=6)
+	ld (IY + CH_CNT),e	; (T=19)
+	ld (IY + CH_CNT+1),d	; (T=19)
 
 ACT_CHAN:
-	ld hl,ACT_CH		; Confirm channel active
-	inc (hl)
+	ld hl,ACT_CH		; Confirm channel active (T=10)
+	inc (hl)		; (T=11)
 	
 NEXT_CHAN:
 	ld a, (CUR_CH)
@@ -229,8 +243,6 @@ DUMMY_NOTE:
 	
 CHANGE_OCTAVE:
 	call GET_NUM		; Retrieve desired octave number
-	dec l			; Subtract two
-	dec l
 	
 	;; Multiply by 12 to work out offset in semi-tones
 	xor a
@@ -307,9 +319,11 @@ NOTE_TO_FREQ:
 	;;   A = current character in Play string
 	;;
 	;; On exit:
-	;;   DE = frequency value for sound chip
-	
-	ld c, 0x00		; Start from 'c' in current octave
+	;;   Carry Flag cleared, if valid note
+	;;   HL = frequency value for sound chip (or 0x0000 for rest)
+	;; or:
+	;;   Carry Flag set, invalid note
+	ld c, 0x00		; Start from lower 'c' in current octave
 
 CHECK_SHARP:	
 	cp '#'			; Check for Sharp
@@ -360,9 +374,11 @@ LOWER_CASE:
 
 	;; Now adjust octave
 	add (IY + 11)	; Add octave offset
+	sub 0x15	; Remove 21 semitones, as Octave 1
+			; contains only three notes
 	sla a		; Multiply by two to get address offset
 
-	ld HL, NOTES+6
+	ld HL, NOTES
 	ld e,a
 	ld d,0
 	add hl,de
@@ -808,10 +824,6 @@ PLAY_COUNT:	EQU 0x09
 PLAY_OCTAVE:	EQU 0x0B
 PLAY_VOL:	EQU 0x0C
 
-PLAY_INFO:
-	dw CHANNEL_0_INFO	; Address of Channel 0 info
-	dw CHANNEL_1_INFO	; Address of Channel 1 info
-	dw CHANNEL_2_INFO	; Address of Channel 2 info
 MIX_MA:	db 0xFF			; Mixer mask
 CUR_CH:	db 0x00			; Current channel
 ACT_CH:	db 0x00			; Number of active channels
@@ -865,7 +877,7 @@ TEST_STRING_1:			; Simple scale
 TEST_STRING_1_END:
 	
 TEST_STRING_2:			; Simple scale
-	dm "N"
+	;; 	dm "N"
 TEST_STRING_2_END:
 	
 	
