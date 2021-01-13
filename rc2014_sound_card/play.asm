@@ -188,7 +188,11 @@ NEW_NOTE:
 
 	ld b,(IY + CH_VOL)
 
-	jr nc, NO_REST
+	;; Check for rest
+	ld a,h
+	or l
+	jr nz, NO_REST
+	
 	ld b, 0x00		; Mute channel
 
 NO_REST:
@@ -346,7 +350,6 @@ CHECK_REST:
 	jr nz, CHECK_NOTE
 
 	ld hl, 0x0000
-	scf
 	ret
 	
 CHECK_NOTE:
@@ -869,11 +872,11 @@ CHANNEL_2_INFO:
 
 
 TEST_STRING_0:			; Simple scale
-	dm "O5N3e#fgabg5b3#a#f5#a3af5a3e#fgabgbEDbgb7D"
+	dm "O5N3e#fgabg5b&&&3#a#f5#a3af5a3e#fgabgbEDbgb7D"
 TEST_STRING_0_END:
 	
 TEST_STRING_1:			; Simple scale
-	dm "O5V8N3b#C#DE#F#D5#FN3G#D5G3#F#D5#FN3b#C#DE#F#D5#FN3G#D5G7#F"
+	dm "O5V8N3b#C#DE#F#D5#F&&&N3G#D5G3#F#D5#FN3b#C#DE#F#D5#FN3G#D5G7#F"
 TEST_STRING_1_END:
 	
 TEST_STRING_2:			; Simple scale
