@@ -29,7 +29,8 @@ PLAY_INFO:
 
 START:	di			; Disable interrupts (break-check incl.)
 	ld (IY_SAVE),iy		; and save monitor copy of IY
-
+	ld (SP_SAVE),sp		; Save SP in case of exit on error
+	
 	;; Initialise sound card
 	call INIT_AY		
 
@@ -228,6 +229,14 @@ RESET_COUNT:
 
 CHANGE_VOL:
 	call GET_NUM
+	;; Check is valid volume (0...15)
+	ld a,h
+	and a
+	jp nz, ERR_NUM
+	ld a,l
+	cp 0x10
+	jp nc, ERR_NUM
+	
 	ld a, (CUR_CH)		; Retrieve current channel number
 	add a, AY_VOL_1		; Work out corresponding sound card register
 
@@ -247,7 +256,14 @@ DUMMY_NOTE:
 	
 CHANGE_OCTAVE:
 	call GET_NUM		; Retrieve desired octave number
-	
+
+	;; Check is in range (1...10)
+	ld a,l
+	cp 0x0B	    ; Octave 10 is highest
+	jp nc, ERR_NUM
+	and a	    ; Octave 1 is lowest
+	jp z, ERR_NUM
+
 	;; Multiply by 12 to work out offset in semi-tones
 	xor a
 	ld b, 0x0C		; Twelve semi-tones in an octave
@@ -365,6 +381,9 @@ CHECK_NOTE:
 LOWER_CASE:
 	and 0xDF	; Convert note to upper case
 	sub 'A'		; Normalise value
+	jp c, ERR_NOTE	; Error, if below 'A'
+	cp 0x07
+	jp nc, ERR_NOTE		; Error, if above 'G'
 	
 	ld hl, SEMITONES	; Start of lookup table
 
@@ -379,7 +398,16 @@ LOWER_CASE:
 	add (IY + 11)	; Add octave offset
 	sub 0x15	; Remove 21 semitones, as Octave 1
 			; contains only three notes
-	sla a		; Multiply by two to get address offset
+	jr nc, COMP_OFFSET
+	ld hl, 0x0fbf		; Notes below 21 cannot be played
+				; accurately, so default to O1, A
+	ret
+
+COMP_OFFSET:
+	cp 0x6c		       	; Check is in range
+	jp nc, ERR_NOTE
+	
+	sla a			; Multiply by two to get address offset
 
 	ld HL, NOTES
 	ld e,a
@@ -665,7 +693,7 @@ WRITE_TO_AY:
 	ret
 
 IY_SAVE:	dw 0x0000
-
+SP_SAVE:	dw 0x0000
 NOTE_DURATIONS:
         db $06          ; Semi-quaver          (sixteenth note).
         db $09          ; Dotted semi-quaver   (3/32th note).
@@ -817,6 +845,20 @@ NOTES:
         dw $0009        ; Octave 10, Note 127 - G  (12315.63 Hz, Ideal=12544.00 Hz, Error=-1.82%)
         dw $0008        ; Octave 10, Note 128 - G# (13855.08 Hz, Ideal=13289.60 Hz, Error=+4.26%)
 
+	;; Error codes
+ERR_NUM:
+	call SND_OFF
+	ld sp,(SP_SAVE)
+	ld iy,(IY_SAVE)
+	rst 0x08
+	db #0a			; Number out of range
+
+ERR_NOTE:
+	call SND_OFF
+	ld sp,(SP_SAVE)
+	ld iy,(IY_SAVE)
+	rst 0x08
+	db #26			; Invalid note name
 
 PLAY_CHAN:	EQU 0x00
 PLAY_START:	EQU 0x01
@@ -872,7 +914,7 @@ CHANNEL_2_INFO:
 
 
 TEST_STRING_0:			; Simple scale
-	dm "O5N3e#fgabg5b3#a#f5#a3af5aN3e#fgabgbENDbgb7D"
+ 	dm "O5N3e#fgabg5b3#a#f5#a3af5aN3e#fgabgbENDbgb7D"
 TEST_STRING_0_END:
 	
 TEST_STRING_1:			; Simple scale
@@ -880,7 +922,7 @@ TEST_STRING_1:			; Simple scale
 TEST_STRING_1_END:
 	
 TEST_STRING_2:			; Simple scale
-	dm "O5V8N3Dbgb7DN5&E7&N5&E7&N3e#fgabgbE" ;  N#Db#D#F7E" 
+	dm "O5V8N3Dbgb7DN5&E7&N5&E7&N3e#fgabgbE" ; N#Db#D#F7E" 
 TEST_STRING_2_END:
 	
 	
