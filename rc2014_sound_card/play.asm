@@ -29,7 +29,8 @@ PLAY_INFO:
 
 START:	di			; Disable interrupts (break-check incl.)
 	ld (IY_SAVE),iy		; and save monitor copy of IY
-	ld (SP_SAVE),sp		; Save SP in case of exit on error
+	ld (SP_SAVE),sp		; Save SP to allow stack to be easily
+				; balanced, in case of exit on error
 	
 	;; Initialise sound card
 	call INIT_AY		
@@ -47,12 +48,12 @@ INIT:	push af			; Store channel number
 
 	;; Iterative over each channel's Play string, until all are
 	;; done
+	xor a			; Start with Channel 0
 LOOP:
 	call GET_CHAN_POINTER	; Set IY to point to channel info
 	
 	;;  Check if channel is active
-	ld a,(IY + CH_N)	; Retrieve channel number
-	and 0x80		; Bit 7 set indicates inactive
+	bit 7,(IY + CH_N)	; Bit 7 set indicates inactive
 	jr z, CHANNEL_ACTIVE 	; (T=12/ 7)
 
 	;; Add timing delay here for T=129-7-12=110 T states
@@ -74,6 +75,7 @@ CHANNEL_ACTIVE:
 	jr nz, DEC_COUNT	; Jump forward, if not (T=12)
 
 	;; Retrieve next note (and any preceeding commands)
+	call MUTE_CHAN
 	call NEXT_COMM		; Get next Play string value
 	jr c, NEXT_CHAN	       	; Channel ended
 	jr ACT_CHAN
@@ -395,7 +397,7 @@ LOWER_CASE:
 	add a,c			; Add modifier
 
 	;; Now adjust octave
-	add (IY + 11)	; Add octave offset
+	add (IY + CH_OCT)	; Add octave offset
 	sub 0x15	; Remove 21 semitones, as Octave 1
 			; contains only three notes
 	jr nc, COMP_OFFSET
@@ -631,7 +633,10 @@ IC_ROT:	rlca			; Rotate activation bit to
 	ld e, AY_MAX_VOL	; Maximum volume
 	call WRITE_TO_AY
 	ld (IY + CH_VOL), e	; Also store in channel info
-		
+
+	ld a, 5*0x0c	   	; Set default octave to O5
+	ld (IY + CH_OCT), a
+	
 	;; Set current posn to start of play string
 	ld a,(iy + CH_STA)		
 	ld (iy + CH_CUR),a		
@@ -679,6 +684,15 @@ SND_OFF:
 	call WRITE_TO_AY
 
 	ret			
+
+MUTE_CHAN:
+	ld a, AY_VOL_1
+	add (IY + CH_N)
+
+	ld d,a
+	ld e,0
+	call WRITE_TO_AY
+	ret
 
 	;; Write data in E to sound-card register D
 WRITE_TO_AY:
@@ -914,15 +928,15 @@ CHANNEL_2_INFO:
 
 
 TEST_STRING_0:			; Simple scale
- 	dm "O5N3e#fgabg5b3#a#f5#a3af5aN3e#fgabgbENDbgb7D"
+ 	dm "cccO5N3e#fgabg5b3#a#f5#a3af5aN3e#fgabgbENDbgb7D"
 TEST_STRING_0_END:
 	
 TEST_STRING_1:			; Simple scale
-	dm "O5V10N3b#C#DE#F#D5#FN3G#D5G3#F#D5#FN3b#C#DE#F#D5#FN3G#D5G7#F"
+	dm "&&&O5V10N3b#C#DE#F#D5#FN3G#D5G3#F#D5#FN3b#C#DE#F#D5#FN3G#D5G7#F"
 TEST_STRING_1_END:
 	
 TEST_STRING_2:			; Simple scale
-	dm "O5V8N3Dbgb7DN5&E7&N5&E7&N3e#fgabgbE" ; N#Db#D#F7E" 
+	dm "&&&O5V8N3Dbgb7DN5&E7&N5&E7&N3e#fgabgbE" ; N#Db#D#F7E"
 TEST_STRING_2_END:
 	
 	
