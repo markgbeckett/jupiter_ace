@@ -125,13 +125,30 @@ NEXT_COMM:
 	ret			
 	
 PROCESS_COMM:
-	cp '1'			; Check if 1, ..., 9 (new note duration)
+	;; Check for number
+	cp '0'			; Check if 1, ..., 9 (new note duration)
 	jr c, NOT_NUM
 	cp '9'+1
 	jr nc, NOT_NUM
 
+	;; First character is digit, so back-up one character
+	;; and read whole number
+	call PREV_NOTE
+	call GET_NUM
+
+	;; Check is in range, for note duration
+	ld a,h
+	and a
+	jp nz, ERR_NUM
+
+	ld a,l
+	and a
+	jp z, ERR_NUM
+	cp 0x0a		    ; Only accept 1 to 9
+	jp nc, ERR_NUM
+	
 	;; If number, update default note duration
-	sub '1'			; Normalise number
+	dec a			; Normalise on 1
 	ld e,a			; Transfer to DE for look-up
 	ld d,0
 	ld hl, NOTE_DURATIONS
@@ -928,15 +945,15 @@ CHANNEL_2_INFO:
 
 
 TEST_STRING_0:			; Simple scale
- 	dm "cccO5N3e#fgabg5b3#a#f5#a3af5aN3e#fgabgbENDbgb7D"
+ 	dm "O5N3e#fgabg5b3#a#f5#a3af5aN3e#fgabgbENDbgb7D"
 TEST_STRING_0_END:
 	
 TEST_STRING_1:			; Simple scale
-	dm "&&&O5V10N3b#C#DE#F#D5#FN3G#D5G3#F#D5#FN3b#C#DE#F#D5#FN3G#D5G7#F"
+	dm "O5V10N3b#C#DE#F#D5#FN3G#D5G3#F#D5#FN3b#C#DE#F#D5#FN3G#D5G7#F"
 TEST_STRING_1_END:
 	
 TEST_STRING_2:			; Simple scale
-	dm "&&&O5V8N3Dbgb7DN5&E7&N5&E7&N3e#fgabgbE" ; N#Db#D#F7E"
+	dm "O5V8N3Dbgb7DN5&E7&N5&E7&N3e#fgabgbE" ; N#Db#D#F7E"
 TEST_STRING_2_END:
 	
 	
