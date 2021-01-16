@@ -65,11 +65,17 @@ For example, to play the C major scale, simply enter the command
 
 ``PLAY cdefgabC``
 
-Flats and sharps are indicated by prefixing the particular note by `$` or '#`, respectively. So, to play the C minor scale, enter
+Flats and sharps are indicated by prefixing the particular note by `$` or `#`, respectively. So, to play the C minor scale, enter
 
 ``PLAY cd$efg$a$bC``
 
-When specifying notes, capitalisation is important. Lower-case notes are taken from the current octave, upper-case notes are taken from the octave above. To change the current octave, for a particular channel, use the sequence `O<octave-number>`. Again, capitalisation is important. The default octave if 5, that is `O5`. So, for example, to play a simple two-channel tune, try:
+When specifying notes, capitalisation is important. Lower-case notes are taken from the current octave, upper-case notes are taken from the octave above.
+
+You can also play rest notes, by adding `&` to the the PLAY string. For example:
+
+``PLAY cdefgabC&Cdagfedc``
+
+To change the current octave, for a particular channel, use the sequence `O<octave-number>`. Again, capitalisation is important. The default octave if 5, that is `O5`. So, for example, to play a simple two-channel tune, try:
 
 ``PLAY O4cCcCgGgG O6CaCe$bd$bD``
 
@@ -87,7 +93,7 @@ By default, the note duration is set to a crochet. To change the current default
 
 N.B. Triplet notes (which, on the Spectrum correspond to 10, 11, and 12, are not yet implemented).
 
-There is also a dummy note 'N', which can be used to separate two numeric arguments. For example, if you want to play a minim-length high-C, you could type `O6N7c`. That is, change to Octave 6, set note length to minim, and play a C.
+There is also a dummy note `N`, which can be used to separate two numeric arguments. For example, if you want to play a minim-length high-C, you could type `O6N7c`. That is, change to Octave 6, set note length to minim, and play a C.
 
 To change the volume on a channel, you use the sequence `V<volume>`, where the volume can be anything from 0 (silent) to 15 (maximum volume).
 
