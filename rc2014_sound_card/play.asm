@@ -18,6 +18,7 @@ AY_VOL_3:	EQU 0x08
 
 AY_MAX_VOL:	EQU 0x0F
 AY_MAX_CHANNEL:	EQU 0x03	; Three channels
+DEF_TEMPO:	EQU 7920/120	; 120 beats per minute @ 3.5 MHz
 AY_WAIT_UNIT:	EQU 0x0042	; Basic unit of duration
 	
 	org 0xC000
@@ -50,10 +51,10 @@ INIT:	push af			; Store channel number
 	;; done
 	xor a			; Start with Channel 0
 LOOP:
-	call GET_CHAN_POINTER	; Set IY to point to channel info
+	call GET_CHAN_POINTER	; Set IY to point to channel info (100)
 	
 	;;  Check if channel is active
-	bit 7,(IY + CH_N)	; Bit 7 set indicates inactive
+	bit 7,(IY + CH_N)	; Bit 7 set indicates inactive (20)
 	jr z, CHANNEL_ACTIVE 	; (T=12/ 7)
 
 	;; Add timing delay here for T=129-7-12=110 T states
@@ -72,7 +73,7 @@ CHANNEL_ACTIVE:
 	ld a,d			; Check if zero (T=4)
 	or e			; (T=4)
 
-	jr nz, DEC_COUNT	; Jump forward, if not (T=12)
+	jr nz, DEC_COUNT	; Jump forward, if not (T=12/ 7)
 
 	;; Retrieve next note (and any preceeding commands)
 	call MUTE_CHAN
@@ -90,12 +91,12 @@ ACT_CHAN:
 	inc (hl)		; (T=11)
 	
 NEXT_CHAN:
-	ld a, (CUR_CH)
-	inc a
-	ld (CUR_CH),a
+	ld a, (CUR_CH)		; (13)
+	inc a			; (4)
+	ld (CUR_CH),a		; (13)
 	
-	cp AY_MAX_CHANNEL
-	jr nz, LOOP
+	cp AY_MAX_CHANNEL	; (7)
+	jr nz, LOOP		; (12/7)
 
 	xor a			; Back to Channel 0
 	ld (CUR_CH),a
@@ -156,7 +157,7 @@ PROCESS_COMM:
 	
 	ld b,(HL)		; Loop counter
 	
-	ld de, AY_WAIT_UNIT	; Basic unit of duration
+	ld de, (TEMPO)		; Basic unit of duration
 	ld hl, 0x000		; Reset duration
 
 ADD_TO_DUR:
@@ -171,7 +172,7 @@ ADD_TO_DUR:
 NOT_NUM:
 	;; Get relevant command
 	ld hl, PLAY_COMMANDS
-	ld bc, 0x0004
+	ld bc, 0x0005		; Five possible commands
 	cpir
 	
 	sla c			; Multiply C by two to get offset
@@ -269,6 +270,26 @@ CHANGE_VOL:
 	scf			; Indicates need to read another command
 	ret
 
+CHANGE_TEMPO:
+	call GET_NUM		; Retrieve new tempo (crochets/ min)
+
+	;; Check is Channel 0, otherwise ignore command
+	ld a,(IY + CH_N)
+	and a
+	ret nz			
+
+	;; Work out new tempo
+	ex de, hl		; Put divisor into DE
+	ld a, 0x1e		; Put 7,920d into AC
+	ld c, 0xf0
+	call DIV16		; Divide AC by DE, answer in AC
+	ld b,a			; Move answer into BC
+	ld hl, TEMPO		; Store new tempo
+	ld (hl),c
+	inc hl
+	ld (hl),b
+	ret			; Done
+	
 DUMMY_NOTE:
 	scf
 	ret
@@ -297,10 +318,11 @@ CO_LOOP:
 	ret
 	
 PLAY_COMMANDS:
-	dm "OVN"			; List of recognised Play commands
+	dm "OVNT"			; List of recognised Play commands
 
 PLAY_COMM_JUMPS:
 	dw NEW_NOTE		; Process note
+	DW CHANGE_TEMPO
 	dw DUMMY_NOTE		; 'N' - Separator to avoid ambiguity
 	dw CHANGE_VOL		; 'V' - New volume
 	dw CHANGE_OCTAVE	; 'O' - New octave
@@ -531,6 +553,12 @@ INIT_AY:
 	xor a			; Reset active channel count
 	ld (ACT_CH),a
 
+	ld de,DEF_TEMPO
+	ld hl,(TEMPO)
+	ld (hl),e
+	inc hl
+	ld (hl),d
+	
 	ret
 
 	;; -------------------------------------------------------------
@@ -546,21 +574,21 @@ INIT_AY:
 	;; -------------------------------------------------------------
 GET_CHAN_POINTER:
 	;; Compute address of channel pointer
-	ld a,(CUR_CH)		; Retrieve channel number
-	ld hl, PLAY_INFO	; Start of play info
-	ld c,a			; Move channel number to C
-	sla c			; Multiply C by two to get offset
-	ld b,0
-	add hl, bc		; Pointer stored at PLAY_INFO + 2*CHAN
+	ld a,(CUR_CH)		; Retrieve channel number (13)
+	ld hl, PLAY_INFO	; Start of play info (10)
+	ld c,a			; Move channel number to C (4)
+	sla c			; Multiply C by two to get offset (8)
+	ld b,0			; (7)
+	add hl, bc		; Pointer stored at PLAY_INFO + 2*CHAN (11)
 	
-	ld c, (hl)		; Retrieve channel pointer
-	inc hl
-	ld b, (hl)
+	ld c, (hl)		; Retrieve channel pointer (7)
+	inc hl			; (6)
+	ld b, (hl)		; (7)
 
-	push bc			; Transfer to IY
-	pop iy
+	push bc			; Transfer to IY (11)
+	pop iy 			; (10)
 
-	ret
+	ret			; (10)
 
 	;; -------------------------------------------------------------
 	;; Close channel, disable sound and noise of mixer.
@@ -723,6 +751,22 @@ WRITE_TO_AY:
 
 	ret
 
+	;; Divide 16-bit number in AC by 16-bin number in DE. 
+DIV16:	ld hl, 0x0000
+	ld b, 0x10
+LOOP16:	rl c
+	rla
+	adc hl,hl
+	sbc hl,de
+	jr nc, SKIP16
+	add hl, de
+SKIP16:	ccf
+	djnz LOOP16
+	rl c
+	rla
+	ret
+	
+
 IY_SAVE:	dw 0x0000
 SP_SAVE:	dw 0x0000
 NOTE_DURATIONS:
@@ -876,20 +920,29 @@ NOTES:
         dw $0009        ; Octave 10, Note 127 - G  (12315.63 Hz, Ideal=12544.00 Hz, Error=-1.82%)
         dw $0008        ; Octave 10, Note 128 - G# (13855.08 Hz, Ideal=13289.60 Hz, Error=+4.26%)
 
-	;; Error codes
+	;; Abort routines for different errors
 ERR_NUM:
 	call SND_OFF
 	ld sp,(SP_SAVE)
 	ld iy,(IY_SAVE)
+	IFDEF ZXSPECTRUM
 	rst 0x08
 	db #0a			; Number out of range
-
+	ELSE
+	rst 0x20
+	db #08			; Overflow in floating-point
+	ENDIF
 ERR_NOTE:
 	call SND_OFF
 	ld sp,(SP_SAVE)
 	ld iy,(IY_SAVE)
+	IFDEF ZXSPECTRUM
 	rst 0x08
 	db #26			; Invalid note name
+	ELSE
+	rst 0x20
+	db #0c			; Word not defined
+	ENDIF
 
 PLAY_CHAN:	EQU 0x00
 PLAY_START:	EQU 0x01
@@ -903,6 +956,7 @@ PLAY_VOL:	EQU 0x0C
 MIX_MA:	db 0xFF			; Mixer mask
 CUR_CH:	db 0x00			; Current channel
 ACT_CH:	db 0x00			; Number of active channels
+TEMPO:	dw DEF_TEMPO		; Initial
 	
 CH_N:	EQU 00
 CH_STA:	EQU 01
@@ -944,16 +998,17 @@ CHANNEL_2_INFO:
 	db 0x0F			; Volume
 
 
-TEST_STRING_0:			; Simple scale
- 	dm "O5N3e#fgabg5b3#a#f5#a3af5aN3e#fgabgbENDbgb7D"
+TEST_STRING_0:			
+	;; dm "5cdefgabC&&&&&&&&Cbagfedc" ; Timing test
+	dm "O5N3e#fgabg5b3#a#f5#a3af5aN3e#fgabgbENDbgb7D" ; HotMK
 TEST_STRING_0_END:
 	
-TEST_STRING_1:			; Simple scale
+TEST_STRING_1:			
 	dm "O5V10N3b#C#DE#F#D5#FN3G#D5G3#F#D5#FN3b#C#DE#F#D5#FN3G#D5G7#F"
 TEST_STRING_1_END:
 	
-TEST_STRING_2:			; Simple scale
-	dm "O5V8N3Dbgb7DN5&E7&N5&E7&N3e#fgabgbE" ; N#Db#D#F7E"
+TEST_STRING_2:			
+	dm "O5T160V8N3Dbgb7DN5&E7&N5&E7&N3e#fgabgbE" 
 TEST_STRING_2_END:
 	
 	
