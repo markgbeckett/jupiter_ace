@@ -51,7 +51,12 @@ Assemble the source code, using the RC2014 configuration (set `RC=1` at the begi
 
 ## PLAY Utility
 
-PLAY is a machine-code utility to make it easier to create your own music on your Minstrel. It processes up to three strings (one per sound channel), which should contain instructions in the same format as for the ZX Spectrum `PLAY` command.
+PLAY is a utility, written in FORTH and machine code, to make it easier to create your own music on your Minstrel. It processes up to three strings (one per sound channel), which should contain instructions in the same format as for the ZX Spectrum `PLAY` command.
+
+The FORTH word, PLAY, is a defining word. That is, it creates a new word encapsulating the note sequence you want to play, which is then invoked whenever you enter the defined word. For example,
+
+``PLAY SCALE cdefgabC ( DEFINE WORD TO PLAY SCALE )``
+``SCALE ( PLAY THE SCALE )`` 
 
 The current version of the code only supports a subset of the ZX Specttum PLAY features, as follows:
 
@@ -59,25 +64,42 @@ The current version of the code only supports a subset of the ZX Specttum PLAY f
 - Option to set volume independently on each channel
 - Option to set the tempo for all three channels
 
-The easiest way to start experimenting with the utility is using the simple PLAY word that is also provided. The syntax is very similar to that of the Spectrum version, though PLAY strings do not need to be enclosed in double quotes.
+### Loading
 
-For example, to play the C major scale, simply enter the command
+The program can be loaded from tape/ WAV audio, in two parts (a dictionary file and a block of machine code) using the following commands:
 
-``PLAY cdefgabC``
+``49152 15384 ! ( LOWER RAMTOP TO MAKE ROOM FOR MCODE )``
+`` LOAD PLAY ( LOAD DICTIONARY )``
+`` 49152 0 BLOAD PLAYC ( LOAD MACHINE CODE )``
 
-Flats and sharps are indicated by prefixing the particular note by `$` or `#`, respectively. So, to play the C minor scale, enter
+All going well, you should see some additional words in your dictionary: most importantly, you should see a PLAY command.
 
-``PLAY cd$efg$a$bC``
+The syntax for PLAY is very similar to that of the Spectrum version, though the arguments to PLAY do not need to be enclosed in double quotes. As with many string arguments to a FORTH word, they are placed after the word, not before.
+
+As well as standard nodes, PLAY also supports flats and sharps, which are indicated by prefixing the particular note by `$` or `#`, respectively. So, to play the C minor scale, enter
+
+``PLAY MSCALE cd$efg$a$bC``
+``MSCALE``
+
+When you enter the above, you will see a new word in your dictionary, called MSCALE, which you can run as many times as you like. Sadly, as with all DEFINER words on the Minstrel 4th, you can't list nor edit their definition. If you make a mistake, the best thing to do is redefine the word. E.g.,
+
+``PLAY MSCALE cd$efg$a$``
+``MSCALE ( OOPS, SOME NOTES MISSING )``
+``PLAY MSCALE cd$efg$a$bC``
+``REDEFINE MSCALE``
+``MSCALE ( THAT'S BETTER )``
 
 When specifying notes, capitalisation is important. Lower-case notes are taken from the current octave, upper-case notes are taken from the octave above.
 
 You can also play rest notes, by adding `&` to the the PLAY string. For example:
 
-``PLAY cdefgabC&Cdagfedc``
+``PLAY EX1 cdefgabC&Cdagfedc``
+``EX1``
 
 To change the current octave, for a particular channel, use the sequence `O<octave-number>`. Again, capitalisation is important. The default octave if 5, that is `O5`. So, for example, to play a simple two-channel tune, try:
 
-``PLAY O4cCcCgGgG O6CaCe$bd$bD``
+``PLAY EX2 O4cCcCgGgG O6CaCe$bd$bD``
+``EX2``
 
 By default, the note duration is set to a crochet. To change the current default note duration, for a channel, use a numeric code, as follows:
 
@@ -99,16 +121,17 @@ To change the volume on a channel, you use the sequence `V<volume>`, where the v
 
 Bringing all of this together, you could play the first four bars of "The Hall of The Mountain King" with the following:
 
-``PLAY O5N3e#fgabg5b3#a#f5#a3af5aN3e#fgabgbENDbgb7D O5V10N3b#C#DE#F#D5#FN3G#D5G3#F#D5#FN3b#C#DE#F#D5#FN3G#D5G7#F O5T160V8N3Dbgb7DN5&E7&N5&E7&N3e#fgabgbE``
+``PLAY HOMK O5N3e#fgabg5b3#a#f5#a3af5aN3e#fgabgbENDbgb7D O5V10N3b#C#DE#F#D5#FN3G#D5G3#F#D5#FN3b#C#DE#F#D5#FN3G#D5G7#F O5T160V8N3Dbgb7DN5&E7&N5&E7&N3e#fgabgbE``
+``HOMK``
 
 The default tempo for your music is 120 crochets per minute (see Timing for more information about this). You can change the timing with the sequence `T<crochets-per-minute>`. So for example, to double the speed of your tune, try something like:
 
-``PLAY T240O4cCcCgGgG O6CaCe$bd$bD``
+``PLAY FASTTUNE T240O4cCcCgGgG O6CaCe$bd$bD``
+``FASTTUNE``
 
 Note, as for the ZX Spectrum, you can only specify a new tempo in the first channel's PLAY string. If you instead, typed the following:
 
-``PLAY O4cCcCgGgG T240O6CaCe$bd$bD``
+``PLAY NOTFAST O4cCcCgGgG T240O6CaCe$bd$bD``
+``NOTFAST``
 
 --the tempo change would be ignored, and the tune would continue to play at 120 beats per minute.
-
-
