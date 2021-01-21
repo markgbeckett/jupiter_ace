@@ -172,7 +172,7 @@ ADD_TO_DUR:
 NOT_NUM:
 	;; Get relevant command
 	ld hl, PLAY_COMMANDS
-	ld bc, 0x0005		; Five possible commands
+	ld bc, 0x0006		; Five possible commands
 	cpir
 	
 	sla c			; Multiply C by two to get offset
@@ -289,6 +289,28 @@ CHANGE_TEMPO:
 	inc hl
 	ld (hl),b
 	ret			; Done
+
+CHANGE_MIXER:
+	call GET_NUM		; Retrieve parameter
+	
+	ld a,h			; Check high byte is zero
+	and a
+	jp nz, ERR_NUM
+
+	ld a,l
+	cp 0x40			; Check is <64
+	jp nc, ERR_NUM
+
+	cpl			; Bit reset to activate feature
+
+	ld d,AY_MIXER
+	ld e,a
+	call WRITE_TO_AY
+
+	scf			; Indicates need to read 
+				; another command
+	
+	ret
 	
 DUMMY_NOTE:
 	scf
@@ -318,11 +340,12 @@ CO_LOOP:
 	ret
 	
 PLAY_COMMANDS:
-	dm "OVNT"			; List of recognised Play commands
+	dm "OVNTM"			; List of recognised Play commands
 
 PLAY_COMM_JUMPS:
 	dw NEW_NOTE		; Process note
-	DW CHANGE_TEMPO
+	dw CHANGE_MIXER
+	dw CHANGE_TEMPO
 	dw DUMMY_NOTE		; 'N' - Separator to avoid ambiguity
 	dw CHANGE_VOL		; 'V' - New volume
 	dw CHANGE_OCTAVE	; 'O' - New octave
@@ -1000,7 +1023,7 @@ CHANNEL_2_INFO:
 
 TEST_STRING_0:			
 	;; dm "5cdefgabC&&&&&&&&Cbagfedc" ; Timing test
-	dm "O5N3e#fgabg5b3#a#f5#a3af5aN3e#fgabgbENDbgb7D" ; HotMK
+	dm "O5M39N3e#fgabg5b3#a#f5#a3af5aN3e#fgabgbENDbgb7D" ; HotMK
 TEST_STRING_0_END:
 	
 TEST_STRING_1:			
