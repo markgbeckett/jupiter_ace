@@ -157,6 +157,7 @@ NOTFAST
 
 The sound card is capable of playing both musical notes (tones) and white noise. White noise is useful for sound effects or, used carefully, can add to musical pieces. You can control what combination of tone and white noise is played using the command `M<value>`, where value is calculated using the following table.
 
+```
         .--------+-----------------+-----------------.
 	|        |  Tone channels  | Noise channels  |
         |        |-----+-----+-----+-----+-----+-----|
@@ -164,7 +165,7 @@ The sound card is capable of playing both musical notes (tones) and white noise.
         |--------+-----+-----+-----+-----+-----+-----|
         | Number |  1  |  2  |  4  |  8  | 16  | 32  |
         `--------+-----+-----+-----+-----+-----+-----'
-
+```
 For each channel, and each effect you wish to enable, add the corresponding number to the command argument. For example, to enable tone on channels B and C, and white noise on channel A, specify the command `M14`.
 
 
