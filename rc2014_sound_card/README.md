@@ -45,13 +45,13 @@ CODE HALT 118 C, 253 C, 233 C,
 ;
 ```
 
-You can also use S.V.Bulba's PT2/PT3 player, which is available from Ed Brindley's repository, to provide a more interesting test of the sound card.
+You can also use S.V. Bulba's PT2/PT3 player, which is available from Ed Brindley's repository, to provide a more interesting test of the sound card.
 
-Assemble the source code, using the RC2014 configuration (set `RC=1` at the beginning of the source). However, you also need to disable interrupts, by inserting the `DI` command immediately after the `ORG` directive. This is to work around the fact that the player makes extensive use of the IX register pair, which is also used by Minstrel 4th's built-in monitor program.
+Assemble the source code, using the RC2014 configuration (set `RC=1` at the beginning of the source). However, you also need to disable interrupts, by inserting the `DI` command immediately after the `ORG` directive. This is to work around the fact that the player makes extensive use of the IX register pair, which is also used by the Minstrel 4th's built-in monitor program.
 
 ## PLAY Utility
 
-PLAY is a utility, written in FORTH and machine code, to make it easier to create your own music on your Minstrel. It processes up to three strings (one per sound channel), which should contain instructions in the same format as for the ZX Spectrum `PLAY` command.
+Once you have built and tested your card, you will want to start getting creative. To help you do this, I have created a PLAY utility, written in FORTH and machine code, to make it easier to make your own music on your Minstrel. It processes up to three strings (one per sound channel), which should contain instructions in the same format as for the ZX Spectrum `PLAY` command.
 
 The FORTH word, PLAY, is a defining word. That is, it creates a new word encapsulating the note sequence you want to play, which is then invoked whenever you enter the defined word. For example,
 
@@ -62,13 +62,14 @@ SCALE ( PLAY THE SCALE )
 
 The current version of the code only supports a subset of the ZX Specttum PLAY features, as follows:
 
-- Option to play notes from a ten-octave range of notes (including sharp and flat notes)
-- Option to set volume independently on each channel
-- Option to set the tempo for all three channels
+- Play notes from a ten-octave range of notes (including sharp and flat notes)
+- Set volume independently on each channel
+- Set the tempo for all three channels
+- Select whether each channel plays tones, white noise, or some combination of the two. 
 
 ### Loading
 
-The program can be loaded from tape/ WAV audio, in two parts (a dictionary file and a block of machine code) using the following commands:
+The PLAY utility can be loaded from tape/ WAV audio in two parts (a dictionary file and a block of machine code), using the following commands:
 
 ```
 49152 15384 ! ( LOWER RAMTOP TO MAKE ROOM FOR MCODE )
@@ -87,7 +88,7 @@ PLAY MSCALE cd$efg$a$bC
 MSCALE
 ```
 
-When you enter the above, you will see a new word in your dictionary, called MSCALE, which you can run as many times as you like. Sadly, as with all DEFINER words on the Minstrel 4th, you can't list nor edit their definition. If you make a mistake, the best thing to do is redefine the word. E.g.,
+When you enter the above, you will see a new word in your dictionary, called MSCALE, which you can run as many times as you like. Sadly, as with all DEFINER words on the Minstrel 4th, you cannot list nor edit their definition. If you make a mistake, the best thing to do is redefine the word. E.g.,
 
 ```
 PLAY MSCALE cd$efg$a$
@@ -97,7 +98,7 @@ REDEFINE MSCALE
 MSCALE ( THAT'S BETTER )
 ```
 
-When specifying notes, capitalisation is important. Lower-case notes are taken from the current octave, upper-case notes are taken from the octave above.
+When specifying notes, capitalisation is important. Lower-case notes are taken from the current octave, upper-case notes are taken from the octave above. All commands (see below) must be typed in capitals.
 
 You can also play rest notes, by adding `&` to the the PLAY string. For example:
 
@@ -153,3 +154,22 @@ NOTFAST
 ```
 
 --the tempo change would be ignored, and the tune would continue to play at 120 beats per minute.
+
+The sound card is capable of playing both musical notes (tones) and white noise. White noise is useful for sound effects or, used carefully, can add to musical pieces. You can control what combination of tone and white noise is played using the command `M<value>`, where value is calculated using the following table.
+
+        .--------+-----------------+-----------------.
+	|        |  Tone channels  | Noise channels  |
+        |        |-----+-----+-----+-----+-----+-----|
+	|        |  A  |  B  |  C  |  A  |  B  |  C  |
+        |--------+-----+-----+-----+-----+-----+-----|
+        | Number |  1  |  2  |  4  |  8  | 16  | 32  |
+        `--------+-----+-----+-----+-----+-----+-----'
+
+For each channel, and each effect you wish to enable, add the corresponding number to the command argument. For example, to enable tone on channels B and C, and white noise on channel A, specify the command `M14`.
+
+
+### Timing
+
+Timing is important in two places. First, the clock signal that is passed to the sound card determines the tone of notes. The AY-3-8910 is designed to operate at around 2 MHz. With one of the configurations suggested above, the sound card will receive a clock signal of 1.625 MHz, which is close enough. The tone values associated with notes is taken from  the ZX Spectrum +3. The ZX Spectrum runs its sound card at 1.77 MHz, so those of you with an ear for music may not that the sound is slightly flat. IF you wish to correct this, you would need to update the tone table in the `play.asm` source code with more accurate timings (using the AY-3-8910 instruction guide to help you).
+
+The clock speed of the Minstrel 4th is also important. The PLAY Utility beat timing is calibrated to a Minstrel 4th running at 3.25 MHz. If, instead, you run your Minstrel 4th at 6.5 MHz, then you will find that your tunes play at double-tempo (though the tone of notes will not be affected). The easiest way to corect this discrepancy is using the T command, halving the usual value. So, for example, to achieve a timing of 120 beats per minutes use the command `T60` rather than `T120`.
