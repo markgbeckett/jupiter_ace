@@ -188,7 +188,7 @@ There are two aspects of the volume effect to control. First, the type of effect
 
 ```
 
-Second, the duration/ period of the effect can be set with `X<period>`. Period values between 1 and 65,535 are possible. For repeating patterns (wave pattern 4, ...,7) values of 100--5,000 are typically good. For no-repeating patters (wave pattern 0, ..., 3) values above 2,000 are generally best.
+Second, the duration/ period of the effect can be set with `X<period>`. Period values between 1 and 65,535 are possible. For repeating patterns (wave pattern 4, ...,7), values of 100--5,000 are typically good. For non-repeating patterns (wave pattern 0, ..., 3), values above 2,000 are generally best.
 
 So, for example, a variation on our major C scale would be:
 ```
