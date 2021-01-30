@@ -155,6 +155,47 @@ NOTFAST
 
 --the tempo change would be ignored, and the tune would continue to play at 120 beats per minute.
 
+The sound card is able to create variable-volume effects, as well as constant volume levels. A volume effect can be applied to none or any of the three sound channels, though only one volume effect can be active at a time. So, all channels that have volume effect enabled will have the same effect.
+
+To enable the volume effect for a channel, add `U` to the channel string. The volume effect overrides any previously set volume levels (`V` commands).
+
+There are two aspects of the volume effect to control. First, the type of effect is defined using `W<effect>`, where the wave pattern for each of the eight supported effects is shown below:
+
+```
+	   \
+	0   \_________________     0 - single decay then off.
+	
+	    /|
+	1  / |________________     1 - single attack then off.
+	      ________________
+	   \ |
+	2   \|                     2 - single decay then hold.
+	     _________________
+	    /
+	3  /                       3 - single attack then hold.
+	
+	   \ |\ |\ |\ |\ |\ |\
+	4   \| \| \| \| \| \|      4 - repeated decay.
+	
+	    /| /| /| /| /| /|
+	5  / |/ |/ |/ |/ |/ |/     5 - repeated attack.
+	
+	    /\  /\  /\  /\  /\
+	6  /  \/  \/  \/  \/       6 - repeated attack-decay.
+	
+	   \  /\  /\  /\  /\
+	7   \/  \/  \/  \/  \/     7 - repeated decay-attack.
+
+```
+
+Second, the duration/ period of the effect can be set with `X<period>`. Period values between 1 and 65,535 are possible. For repeating patterns (wave pattern 4, ...,7) values of 100--5,000 are typically good. For no-repeating patters (wave pattern 0, ..., 3) values above 2,000 are generally best.
+
+So, for example, a variation on our major C scale would be:
+```
+PLAY ENVELOPE W0X5000UcdefgabC
+ENVELOPE
+```
+
 The sound card is capable of playing both musical notes (tones) and white noise. White noise is useful for sound effects or, used carefully, can add to musical pieces. You can control what combination of tone and white noise is played using the command `M<value>`, where value is calculated using the following table.
 
 ```

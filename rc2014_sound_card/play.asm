@@ -13,13 +13,15 @@ AY_TONE_3:	EQU 0x04
 AY_NOISE_FREQ:	EQU 0x06
 AY_MIXER:	EQU 0x07
 AY_VOL_1:	EQU 0x08
-AY_VOL_2:	EQU 0x08
-AY_VOL_3:	EQU 0x08
+AY_ENV_P:	EQU 0x0B
+AY_ENV_SH:	EQU 0x0D
 
 AY_MAX_VOL:	EQU 0x0F
 AY_MAX_CHANNEL:	EQU 0x03	; Three channels
 DEF_TEMPO:	EQU 7920/120	; 120 beats per minute @ 3.5 MHz
-AY_WAIT_UNIT:	EQU 0x0042	; Basic unit of duration
+DEF_ENV:	EQU 8000	; Default envelope period
+DEF_ENV_SH:	EQU 0		; Default envelope shape
+AY_WAIT_UNIT:	EQU 0x0042	; Unit of duration (calibrate to clock)
 	
 	org 0xC000
 	
@@ -49,7 +51,6 @@ INIT:	push af			; Store channel number
 
 	;; Iterative over each channel's Play string, until all are
 	;; done
-	xor a			; Start with Channel 0
 LOOP:
 	call GET_CHAN_POINTER	; Set IY to point to channel info (100)
 	
@@ -57,7 +58,9 @@ LOOP:
 	bit 7,(IY + CH_N)	; Bit 7 set indicates inactive (20)
 	jr z, CHANNEL_ACTIVE 	; (T=12/ 7)
 
-	;; Add timing delay here for T=129-7-12=110 T states
+	;; Add timing delay here for T=129-7-12=110 T states, to avoid
+	;; noticable change in timing when a channel is not used/
+	;; terminates before others
 	ld b, 0x06		; (T=7)
 NN_WAIT:
 	nop 			; (T=4)
@@ -76,8 +79,11 @@ CHANNEL_ACTIVE:
 	jr nz, DEC_COUNT	; Jump forward, if not (T=12/ 7)
 
 	;; Retrieve next note (and any preceeding commands)
+	ld a,(CUR_CH)		; Retrieve channel number
 	call MUTE_CHAN
+	
 	call NEXT_COMM		; Get next Play string value
+	
 	jr c, NEXT_CHAN	       	; Channel ended
 	jr ACT_CHAN
 	
@@ -117,7 +123,6 @@ NEXT_COMM:
 	jr nc, PROCESS_COMM	; Carry set, indicates end of channel
 
 	;;  Close down channel and associated play string
-	ld a,(CUR_CH)		; Retrieve channel number
 	call CLOSE_CHANNEL
 	
 	set 7,(IY + CH_N)	; Set bit 7 to indicate channel inactive
@@ -132,20 +137,20 @@ PROCESS_COMM:
 	cp '9'+1
 	jr nc, NOT_NUM
 
-	;; First character is digit, so back-up one character
-	;; and read whole number
+	;; First character is digit, so must be change of note duration.
+	;; So back up one character and read whole number
 	call PREV_NOTE
 	call GET_NUM
 
 	;; Check is in range, for note duration
 	ld a,h
-	and a
+	and a			; High byte should be zero
 	jp nz, ERR_NUM
 
-	ld a,l
+	ld a,l			; Low byte should be in 1...9
 	and a
 	jp z, ERR_NUM
-	cp 0x0a		    ; Only accept 1 to 9
+	cp 0x0a
 	jp nc, ERR_NUM
 	
 	;; If number, update default note duration
@@ -172,7 +177,7 @@ ADD_TO_DUR:
 NOT_NUM:
 	;; Get relevant command
 	ld hl, PLAY_COMMANDS
-	ld bc, 0x0006		; Five possible commands
+	ld bc, 0x0009		; Eight possible commands
 	cpir
 	
 	sla c			; Multiply C by two to get offset
@@ -188,7 +193,7 @@ NOT_NUM:
 	;; Call routine
 	call JUMP_TO_IT
 
-	ret nc			; Return if new note set
+	ret nc			; Return if new note set.
  	jr NEXT_COMM		; Otherwise process next command
 
 DONE:	call SND_OFF
@@ -238,6 +243,15 @@ NO_REST:
 	ld e,b			; Volume / mute
 	call WRITE_TO_AY
 	
+	;; If needed, reset envelope waveform
+	bit 4,(IY + CH_VOL)
+	jr z, RESET_COUNT
+
+	ld a,(ENV_SHAPE)
+	ld e,a
+	ld d, AY_ENV_SH
+	call WRITE_TO_AY
+
 RESET_COUNT:
 	ld e,(IY+7)		; Reset duration counter
 	ld d,(IY+8)
@@ -265,7 +279,7 @@ CHANGE_VOL:
 	call WRITE_TO_AY
 
 	;; Save in channel info
-	ld (iy + CH_VOL),l	; Move volume to A
+	ld (iy + CH_VOL),l
 	
 	scf			; Indicates need to read another command
 	ret
@@ -274,11 +288,15 @@ CHANGE_TEMPO:
 	call GET_NUM		; Retrieve new tempo (crochets/ min)
 
 	;; Check is Channel 0, otherwise ignore command
-	ld a,(IY + CH_N)
+	ld a,(CUR_CH)
 	and a
-	ret nz			
+	jr z, CHANGE_T
+	
+	scf			; Indicate need to process another note
+	ret
 
 	;; Work out new tempo
+CHANGE_T:
 	ex de, hl		; Put divisor into DE
 	ld a, 0x1e		; Put 7,920d into AC
 	ld c, 0xf0
@@ -288,6 +306,8 @@ CHANGE_TEMPO:
 	ld (hl),c
 	inc hl
 	ld (hl),b
+
+	scf			; Need to process another note
 	ret			; Done
 
 CHANGE_MIXER:
@@ -339,11 +359,95 @@ CO_LOOP:
 	scf
 	ret
 	
+ACTIVATE_ENVELOPE:
+	ld a,(IY + CH_VOL)	; Retrieve current volume
+	or 0x1F			; Set bit 4 to activate envelope
+	ld (IY + CH_VOL),a	; Store
+
+	ld e,a
+	ld a,(CUR_CH)
+	add a,AY_VOL_1
+	ld d,a
+	call WRITE_TO_AY
+
+	ld hl, ENVELOPE
+	ld c,(hl)
+	inc hl
+	ld b,(hl)
+	ld d, AY_ENV_P
+	ld e,c
+	push bc
+	call WRITE_TO_AY
+	pop bc
+	inc d
+	ld e,b
+	call WRITE_TO_AY
+
+	ld a,(ENV_SHAPE)
+	ld e,a
+	ld d, AY_ENV_SH
+	call WRITE_TO_AY
+
+	scf			; Indicate need for another command
+	ret
+
+CHANGE_WAVEFORM:
+	call GET_NUM
+	;; Check is valid waveform (0...7)
+	ld a,h
+	and a
+	jp nz, ERR_NUM
+	ld a,l
+	cp 0x08
+	jp nc, ERR_NUM
+
+	ld b,0
+	ld c,a
+	ld hl, WAVEFORM_TABLE
+	add hl,bc
+	ld a,(hl)
+
+	ld (ENV_SHAPE),a  	; Update waveform
+	ld e,a			; Retrieve current channel number
+	ld d,AY_ENV_SH		; Work out corresponding sound card register
+	call WRITE_TO_AY
+
+	scf
+	ret
+
+WAVEFORM_TABLE:
+	db 0x00, 0x04, 0x0b, 0x0d, 0x08, 0x0c, 0x0e, 0x0a
+
+SET_ENV_P:
+	call GET_NUM		; Retrieve the new period length
+
+	ex de,hl
+	ld hl, ENVELOPE
+	ld (hl),e
+	inc hl
+	ld (hl),d
+
+	ex de,hl
+
+	ld d,AY_ENV_P
+	ld e,l
+	call WRITE_TO_AY
+	
+	inc d
+	ld e,h
+	call WRITE_TO_AY
+
+	scf
+	ret
+	
 PLAY_COMMANDS:
-	dm "OVNTM"			; List of recognised Play commands
+	dm "OVNTMUWX"		; List of recognised Play commands
 
 PLAY_COMM_JUMPS:
 	dw NEW_NOTE		; Process note
+	dw SET_ENV_P
+	dw CHANGE_WAVEFORM
+	dw ACTIVATE_ENVELOPE	
 	dw CHANGE_MIXER
 	dw CHANGE_TEMPO
 	dw DUMMY_NOTE		; 'N' - Separator to avoid ambiguity
@@ -567,6 +671,8 @@ MU_LOOP:
 	ret			; Done
 	
 
+	;; Initialise sound card and driver variables.
+	;; Turn off any active sounds, 
 INIT_AY:
 	call SND_OFF
 
@@ -576,11 +682,34 @@ INIT_AY:
 	xor a			; Reset active channel count
 	ld (ACT_CH),a
 
+	;; Reset tempo to default
 	ld de,DEF_TEMPO
-	ld hl,(TEMPO)
+	ld hl,TEMPO
 	ld (hl),e
 	inc hl
 	ld (hl),d
+
+	;; Reset envelope period to default
+	ld bc, DEF_ENV		; Reset envelope pattern
+	ld hl, ENVELOPE
+	ld (hl),c
+	inc hl
+	ld (hl),b
+
+	ld d, AY_ENV_P
+	ld e,c
+	push bc
+	call WRITE_TO_AY
+	pop bc
+	inc d
+	ld e,b
+	call WRITE_TO_AY
+
+	ld a, DEF_ENV_SH
+	ld (ENV_SHAPE),a
+	ld e,a
+	ld d, AY_ENV_SH
+	call WRITE_TO_AY
 	
 	ret
 
@@ -753,9 +882,14 @@ SND_OFF:
 
 	ret			
 
+	;; Set volume of channel to 0.
+	;; On entry:
+	;;   A - channel to mute
+	;;
+	;; On exit:
+	;;   BC, DE - corrupted
 MUTE_CHAN:
-	ld a, AY_VOL_1
-	add (IY + CH_N)
+	add AY_VOL_1
 
 	ld d,a
 	ld e,0
@@ -763,6 +897,12 @@ MUTE_CHAN:
 	ret
 
 	;; Write data in E to sound-card register D
+	;; On entry:
+	;;   D - sound-card register to write to
+	;;   E - value to write
+	;;
+	;; On exit:
+	;;   AF, BC - corrupted
 WRITE_TO_AY:
 	ld a, d			; Retrieve register
 	ld bc, AY_REG_PORT	; and address of register port
@@ -774,6 +914,23 @@ WRITE_TO_AY:
 
 	ret
 
+	;; Read data from sound-card register D
+	;; On entry:
+	;;   D - sound-card register to read from
+	;;
+	;; On exit:
+	;;   E - value read
+	;;   AF, BC - corrupted
+READ_FROM_AY:
+	ld a, d			; Retreive register
+	ld bc, AY_REG_PORT	; and address of register port
+	out (c),a		; Write it
+
+	in e,(c)		; Retrieve value
+
+	ret
+	
+	
 	;; Divide 16-bit number in AC by 16-bin number in DE. 
 DIV16:	ld hl, 0x0000
 	ld b, 0x10
@@ -868,6 +1025,8 @@ MIX_MA:	db 0xFF			; Mixer mask
 CUR_CH:	db 0x00			; Current channel
 ACT_CH:	db 0x00			; Number of active channels
 TEMPO:	dw DEF_TEMPO		; Initial
+ENVELOPE:	dw 8000		; Envelope period
+ENV_SHAPE:	db 0x00		; Envelope shape
 	
 CH_N:	EQU 00
 CH_STA:	EQU 01
@@ -877,22 +1036,22 @@ CH_DUR:	EQU 07
 CH_CNT:	EQU 09
 CH_OCT:	EQU 11
 CH_VOL:	EQU 12
-	
+
 CHANNEL_0_INFO:
 	db 0x00			; Channel number
-	dw TEST_STRING_0	; Start of Play string
+	dw MK1			; Start of Play string
 	dw 0x0000		; Current location in Play string
-	dw TEST_STRING_0_END	; End of Play string
+	dw MK1E			; End of Play string
 	dw 0xFFFF		; Default note duration
 	dw 0x0000		; Current note counter
-	db 0x18			; Octave 6 by default
+	db 0x30			; Octave 5 by default
 	db 0x0F			; Volume
 
 CHANNEL_1_INFO:
 	db 0x01			; Channel number
-	dw TEST_STRING_1	; Start of Play string
+	dw MK2			; Start of Play string
 	dw 0x0000		; Current location in Play string
-	dw TEST_STRING_1_END	; End of Play string
+	dw MK2E			; End of Play string
 	dw 0xFFFF		; Default note duration
 	dw 0x0000		; Current note counter
 	db 0x30			; Octave 5 by default
@@ -900,26 +1059,18 @@ CHANNEL_1_INFO:
 
 CHANNEL_2_INFO:
 	db 0x01			; Channel number
-	dw TEST_STRING_2	; Start of Play string
+	dw MK3			; Start of Play string
 	dw 0x0000		; Current location in Play string
-	dw TEST_STRING_2_END	; End of Play string
+	dw MK3E			; End of Play string
 	dw 0xFFFF		; Default note duration
 	dw 0x0000		; Current note counter
-	db 0x30			; Octave 6 by default
+	db 0x30			; Octave 5 by default
 	db 0x0F			; Volume
 
-
-TEST_STRING_0:			
-	;; dm "5cdefgabC&&&&&&&&Cbagfedc" ; Timing test
-	dm "O5T60M7N3e#fgabg5b3#a#f5#a3af5aN3e#fgabgbENDbgb7D" ; HotMK
-TEST_STRING_0_END:
-	
-TEST_STRING_1:			
-	dm "O5V10N3b#C#DE#F#D5#FN3G#D5G3#F#D5#FN3b#C#DE#F#D5#FN3G#D5G7#F"
-TEST_STRING_1_END:
-	
-TEST_STRING_2:			
-	dm "O5V8N3Dbgb7DN5&E7&N5&E7&N3e#fgabgbE" 
-TEST_STRING_2_END:
-	
-	
+	;; Demo tune "Hall Of the Mountain King", E. Grieg
+MK1:	dm "O5T120N3e#fgabg5b3#a#f5#a3af5aN3e#fgabgbENDbgb7D"
+MK1E:
+MK2:	dm "O5V6N3b#C#DE#F#D5#FN3G#D5G3#F#D5#FN3b#C#DE#F#D5#FN3G#D5G7#F"
+MK2E:
+MK3:	dm "O5V6N3Dbgb7DN5&E7&N5&E7&N3e#fgabgbE"
+MK3E:	
