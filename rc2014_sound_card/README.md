@@ -212,6 +212,17 @@ For each channel, and each effect you wish to enable, add the corresponding numb
 
 ### Timing
 
-Timing is important in two places. First, the clock signal that is passed to the sound card determines the tone of notes. The AY-3-8910 is designed to operate at around 2 MHz. With one of the configurations suggested above, the sound card will receive a clock signal of 1.625 MHz, which is close enough. The tone values associated with notes is taken from  the ZX Spectrum +3. The ZX Spectrum runs its sound card at 1.77 MHz, so those of you with an ear for music may not that the sound is slightly flat. IF you wish to correct this, you would need to update the tone table in the `play.asm` source code with more accurate timings (using the AY-3-8910 instruction guide to help you).
+Timing is important in two places. First, the clock signal that is passed to the sound card determines the tone of notes. The AY-3-8910 is designed to operate at around 2 MHz. With one of the Minstrel 4th configurations suggested above, the sound card will receive a clock signal of 1.625 MHz, which is close enough. I have worked out the tone values, associated with notes based on that clock speed. If you have a different clock speed, or if you want to port the Play utility to a different computer, you will want to recompute the tone values. To help do this, I have created a spreadsheet `tone_value_calculator.xlsx` into which you merely need to enter the clock signal you will pass to the sound card and then copy the source code from column K into an assembler source file. You then need to assemble the source again, to get a new version of the machine-code driver (see Building From Source).
 
 The clock speed of the Minstrel 4th is also important. The PLAY Utility beat timing is calibrated to a Minstrel 4th running at 3.25 MHz. If, instead, you run your Minstrel 4th at 6.5 MHz, then you will find that your tunes play at double-tempo (though the tone of notes will not be affected). The easiest way to corect this discrepancy is using the T command, halving the usual value. So, for example, to achieve a timing of 120 beats per minutes use the command `T60` rather than `T120`.
+
+### Building from Source
+
+I have provided assembler source code and a Makefile to make it easy for you to modify and re-build the driver. If you are comfortable with Z80 machine code, and writing assembly language, this should be straightforward.
+
+Some notes to get you started:
+
+- I have used the SJASMPLUS assembler, though the source should work with most assemblers.
+- By default, the code is assembled to 0xC000 in memory and run from address 0XC006. Before executing the code, you need to populate the three channel information areas, the address of which are stored at 0xC000, 0xC002, and 0xC004, respectively. See the source-code comments for information on these structures.
+- I have provided a version of the code for the ZX Spectrum 128k machine. You can build this version, by defining the token ZXSPECTRUM when assembling -- e.g., change the second line of the Makefile to `AFLAGS = --sym=play.sym --raw=play.bin -DZXSPECTRUM`.
+- The tone values used for the supportive octave range, are read from a separate source file, which is included towards the end of `play.asm`. I have provided tone files for a 1.625 MHz clock (e.g., default configuration of the Minstrel 4th) and a 1.77 MHz clock (e.g., as for the ZX Spectrum 128k). If you create additional tone-value tables, update the include file accordingly.
