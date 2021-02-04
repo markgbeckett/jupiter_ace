@@ -6,7 +6,7 @@ The ["YM2149 Sound Card for RC2014 Retro Computer"](https://www.tindie.com/produ
 
 ![Minstrel 4th with YM2149 sound card](minstrel_4th_with_sound_card.jpg)
 
-The card supports the General Instruments AY-3-8910, the Yamaha 2149, and (with an adaptor) the General Instruments AY-3-8912. However, from the point of sound generation, the three cards are indistinguishable. Below I refer to the AY-3-8910 chip, only because that is the sound chip I have. Either of the others will work equally well.
+The card supports the General Instruments AY-3-8910, the Yamaha 2149, and (with an adaptor) the General Instruments AY-3-8912. However, from the point of sound generation, the three chips are indistinguishable. Below I refer to the AY-3-8910 chip, only because that is the sound chip I have. Either of the others will work equally well.
 
 ## Building the Card
 
@@ -47,9 +47,7 @@ CODE HALT 118 C, 253 C, 233 C,
 ;
 ```
 
-You can also use S.V. Bulba's PT2/PT3 player, which is available from Ed Brindley's repository, to provide a more interesting test of the sound card.
-
-Assemble the source code, using the RC2014 configuration (set `RC=1` at the beginning of the source). However, you also need to disable interrupts by, for example, inserting the `DI` command immediately after the `ORG` directive. This is to work around the fact that the player makes extensive use of the IX register pair, which is also used by the Minstrel 4th's built-in monitor program.
+You can also use S.V. Bulba's PT2/PT3 player, which is available from Ed Brindley's repository, to provide a more interesting test of the sound card. Assemble the source code, using the RC2014 configuration (set `RC=1` at the beginning of the source). However, you also need to disable interrupts by, for example, inserting the `DI` command immediately after the `ORG` directive. This is to work around the fact that the player makes extensive use of the IX register pair, which is also used by the Minstrel 4th's built-in monitor program.
 
 ## PLAY Utility
 
@@ -84,7 +82,7 @@ All going well, you should see some additional words in your dictionary: most im
 
 The syntax for PLAY is very similar to that of the ZX Spectrum version (for example, see the [ZX Spectrum +3 User Guide, Chapter 8, Part 19](https://worldofspectrum.org/ZXSpectrum128+3Manual/chapter8pt19.html)), though the arguments to PLAY do not need to be enclosed in double quotes. As with many FORTH word that accept string arguments, the strings are placed after the word, not before.
 
-As well as standard nodes, PLAY also supports flats and sharps, which are indicated by prefixing the particular note by `$` or `#`, respectively. So, to play the C minor scale, enter
+As well as standard notes, PLAY also supports flats and sharps, which are indicated by prefixing the particular note by `$` or `#`, respectively. So, to play the C minor scale, enter
 
 ```
 PLAY MSCALE cd$efg$a$bC
@@ -191,7 +189,7 @@ There are two aspects of the volume effect to control. First, the type of effect
 
 ```
 
-Second, the duration/ period of the effect can be set with `X<period>`. Period values between 1 and 65,535 are possible (actually `X0` corresponds to a period length of 65,536. For repeating patterns (wave pattern 4, ...,7), values of 100--5,000 are typically good. For non-repeating patterns (wave pattern 0, ..., 3), values above 2,000 are generally best.
+Second, the duration/ period of the effect can be set with `X<period>`. Period values between 1 and 65,535 are possible (actually `X0` corresponds to a period length of 65,536). For repeating patterns (wave pattern 4, ...,7), values of 100--5,000 are typically good. For non-repeating patterns (wave pattern 0, ..., 3), values above 2,000 are generally best.
 
 So, for example, a variation on our major C scale would be:
 ```
@@ -215,11 +213,11 @@ For each channel, and each effect you wish to enable, add the corresponding numb
 
 ### Timing
 
-Timing is important in two places. First, the clock signal that is passed to the sound card determines the tone of notes. The AY-3-8910 is designed to operate at around 2 MHz. With one of the Minstrel 4th configurations suggested above, the sound card will receive a clock signal of 1.625 MHz, which is close enough. I have worked out the tone values, associated with notes based on that clock speed. If you have a different clock speed, or if you want to port the Play utility to a different computer, you will want to recompute the tone values. To help do this, I have created a spreadsheet `tone_value_calculator.xlsx` into which you merely need to enter the clock signal you will pass to the sound card and then copy the source code from column K into an assembler source file. You then need to assemble the source again, to get a new version of the machine-code driver (see Building From Source).
+Timing is important in two places. First, the clock signal that is passed to the sound card determines the pitch of notes. The AY-3-8910 is designed to operate at around 2 MHz. With one of the Minstrel 4th configurations suggested above, the sound card will receive a clock signal of 1.625 MHz, which is close enough. I have worked out the pitch values, associated with notes based on that clock speed. If you have a different clock speed, or if you want to port the Play utility to a different computer, you will want to recompute the pitch values. To help do this, I have created a spreadsheet `tone_value_calculator.xlsx` into which you merely need to enter the clock signal you will pass to the sound card and then copy the source code from column K into an assembler source file. You then need to assemble the source again, to get a new version of the machine-code driver (see Building From Source).
 
-The clock speed of the Minstrel 4th is also important. The PLAY Utility beat timing is calibrated to a Minstrel 4th running at 3.25 MHz. If, instead, you run your Minstrel 4th at 6.5 MHz, then you will find that your tunes play at double-tempo (though the tone of notes will not be affected). The easiest way to corect this discrepancy is using the T command, halving the usual value. So, for example, to achieve a timing of 120 beats per minutes use the command `T60` rather than `T120`.
+The clock speed of the Minstrel 4th is also important. The PLAY Utility beat timing is calibrated to a Minstrel 4th running at 3.25 MHz. If, instead, you run your Minstrel 4th at 6.5 MHz, then you will find that your tunes play at double-tempo (though the pitch of notes will not be affected). The easiest way to correct this discrepancy is using the T command, halving the usual value. So, for example, to achieve a timing of 120 beats per minutes use the command `T60` rather than `T120`.
 
-If you use S.V. Bulba's PT2/PT3 player, you do not have a change to adjust either of these timing parameters (or, at least, I have not worked out how to adjust them), so you may find tunes do not play quite as they are intended. The sound card timing seems reasonable, so the tone of notes should be okay. However, if you run at 3.25 MHz, the tempo will be slow: running the Minstrel 4th at 6.5M MHz give a better result.
+If you use S.V. Bulba's PT2/PT3 player, you do not have a chance to adjust either of these timing parameters (or, at least, I have not worked out how to adjust them), so you may find tunes do not play quite as they are intended. The sound card timing seems reasonable, so the pitch of notes should be okay. However, if you run at 3.25 MHz, the tempo will be slow: running the Minstrel 4th at 6.5 MHz give a better result.
 
 ### Building from Source
 
@@ -228,7 +226,7 @@ I have provided assembler source code and a Makefile to make it easy for you to 
 Some notes to get you started:
 
 - I have used the [SJASMPLUS](https://github.com/z00m128/sjasmplus) assembler, though the source should work with most assemblers. The one point of portability problems may be the IFDEF / ENDIF directives, which could be removed, if you only want to support a single platform.
-- By default, the code is assembled to 0xC000 in memory and run from address 0XC006. Before executing the code, you need to populate the three channel information areas, the address of which are stored at 0xC000, 0xC002, and 0xC004, respectively. See the source-code comments for information on these structures.
-- The driver should be reasonably portable to other Z80-based computers. The key areas of difference are likely to be: the address used to reference the sound-card ports; the exit and error-handling routines. As the source code supports either a Minstrel 4th or a ZX Spectrum you can easily find the sections of code that you will need to change by searching for IFDEF directives.
-- The tone values used for the supported octave range are read from a separate source file, which is included towards the end of `play.asm`. I have provided tone files for a 1.625 MHz clock (e.g., default configuration of the Minstrel 4th) and a 1.77 MHz clock (e.g., as for the ZX Spectrum 128k). If you create additional tone-value tables, update the `include` command accordingly.
+- By default, the code is assembled to address 0xC000 in memory and run from address 0xC006. Before executing the code, you need to populate the three channel information areas, the address of which are stored at 0xC000, 0xC002, and 0xC004, respectively. See the source-code comments for information on these structures.
+- The driver should be reasonably portable to other Z80-based computers. The key areas of difference are likely to be: the address used to reference the sound-card ports, plus the exit and error-handling routines. As the source code supports either a Minstrel 4th or a ZX Spectrum you can easily find the sections of code that you will need to change by searching for IFDEF directives.
+- The pitch values used for the supported octave range are read from a separate source file, which is included towards the end of `play.asm`. I have provided pitch files for a 1.625 MHz clock (e.g., default configuration of the Minstrel 4th) and a 1.77 MHz clock (e.g., as for the ZX Spectrum 128k). If you create additional pitch-value tables, update the `include` command accordingly.
 - When developing the driver, I did lots of early testing using a ZX Spectrum+  128k machine. The reason was that I could test the code in an emulator (there is no emulator of a Jupiter Ace/ Minstrel 4th, with an RC2014 sound card). The ZX Spectrum has full PLAY support built in to the BASIC. However, if you want to use the driver, here, on a ZX Spectrum, just define the variable ZXSPECTRUM -- e.g., change the second line of the Makefile to `AFLAGS = --sym=play.sym --raw=play.bin -DZXSPECTRUM`.
