@@ -48,42 +48,72 @@ The above example is not exactly earth shattering, but it does explain how Forth
 ## Writing Programs
 
 A key advantage of FORTH is the ability to define your own words, to supplement the standard dictionary. FORTH programs are effectively words written by an end-user to encapsulate some function--anything from a platform arcade game through to a spreadsheet.
+
 The easiest way to define a new word is by combining existing words. In this way, a program can be represented by a top-level word built up from other user-defined and internal words. This form of programming encourages a top-down approach and a large program could be made up of a number of layers of lower-level words.
-To define a new word from other, existing words, you need to be aware of two FORTH words, : and ; which switch FORTH between compile mode and interpret mode. Consider the following FORTH code 
+
+To define a new word from other, existing words, you need to be aware of two FORTH words, `:` and `;` which switch FORTH between compile mode and interpret mode. Consider the following FORTH code
+```
 : DOUBLE 2 * ;
-We have seen * earlier, but the other words are new to us. This is a very simple word definition, which creates a new word, named DOUBLE. The : command tells the Minstrel you want to define a new word and the word immediately after is the name of that new word. Following on from that is the body of the new word, which is interpreted whenever you enter DOUBLE, terminated by the ; command, which returns FORTH to interpret mode. Note that because : and ; are words, they need to be surrounded by spaces.
+```
+We have seen `*` earlier, but the other words are new to us. This is a very simple word definition, which creates a new word, named DOUBLE. The `:` command tells the Minstrel you want to define a new word and the word immediately after is the name of that new word. Following on from that is the body of the new word, which is interpreted whenever you enter DOUBLE, terminated by the `;` command, which returns FORTH to interpret mode. Note that because `:` and `;` are words, they need to be surrounded by spaces.
+
 As you have probably guessed, DOUBLE multiplies something by two. However, as only one value (`2`) is added to the stack, within the word, this means that the other value needs to be on the stack already.
+
 When you type the command above, the Minstrel will compile the new word into a fast, internal representation, ready to be used in the same way as other FORTH words.
-You can see that your new word is part of the dictionary, using VLIST. You should find that DOUBLE is the first word printed: it is at the top of the dictionary.
+
+You can see that your new word is part of the dictionary, using ``VLIST``. You should find that DOUBLE is the first word printed: it is at the top of the dictionary.
+
 To test DOUBLE, you could enter something like:
+```
 10 DOUBLE . 
-For words that you define, you can display the definition using the word LIST. Notice that the Minstrel will make an attempt to format the listing in an easy-to-read way. Notice, also, that LIST does not work for internal words: they are defined in a different way.
-For this simple word, it is reasonably easy to work out what is going on, even if you come back to the word some weeks later. However, for more complicated words, it is useful to be able to add comments. To do this in FORTH, you use two words ( and ), which indicate the beginning and end of a comment.
-To update our word definition, for DOUBLE, we type EDIT DOUBLE. This will open the existing definition of DOUBLE in the input buffer and allow us to edit it, to something like:
+```
+For words that you define, you can display the definition using the word `LIST`. Notice that the Minstrel will make an attempt to format the listing in an easy-to-read way. Notice, also, that `LIST` does not work for internal words: they are defined in a different way.
+
+For this simple word, it is reasonably easy to work out what is going on, even if you come back to the word some weeks later. However, for more complicated words, it is useful to be able to add comments. To do this in FORTH, you use two words `(` and `)`, which indicate the beginning and end of a comment.
+
+To update our word definition, for DOUBLE, we type `EDIT DOUBLE`. This will open the existing definition of DOUBLE in the input buffer and allow us to edit it, to something like:
+'''
 : DOUBLE ( N -- 2*n ) 
   ( MULTIPLY VALUE ON STACK BY TWO )
   2 *
 ;
-For longer word definitions, EDIT will divide the definition into sections of around 12 lines. Once you have finished editing the current section, press Enter to move on to the next one. Pressing Enter in the last section will end the editing session. Sadly, you cannot go back to the previous section in an editing session, so, if you need to backtrack, you will have to skip through the remaining sessions and EDIT the word again.
+'''
+For longer word definitions, `EDIT` will divide the definition into sections of around 12 lines. Once you have finished editing the current section, press Enter to move on to the next one. Pressing Enter in the last section will end the editing session. Sadly, you cannot go back to the previous section in an editing session, so, if you need to backtrack, you will have to skip through the remaining sessions and EDIT the word again.
+
 You might naturally assume that the definition of DOUBLE has been updated, in the dictionary. However, this is not quite what happens. When the Minstrel exits the editing session, it creates a new copy of the word at the top of the dictionary, though also keeps the previous version. You can see this by typing VLIST, which will confirm you have two copies of the word DOUBLE.
-Having edited a word, it is important to remember immediately to replace the old version, using a word named REDEFINE--in this case, you would type REDEFINE DOUBLE. This will replace the old definition of DOUBLE by the word on the top of the stack (and also recompile any words that might depend on DOUBLE).
-The process for EDIT-ing and REDEFINE-ing words is a potential source of problems for someone new to the Minstrel 4th. If you forget to REDEFINE your word, you will end up having two copies and, worse still, if you go on to define more words, you will not be able to REDEFINE the earlier word, since REDEFINE expects the new definition to be at the top of the dictionary. In this case, the only solution is to use a word FORGET to remove all of the subsequent words and then use REDEFINE as you should have done originally.  Say, you had forgotten to REDEFINE DOUBLE, above, and, fuelled with enthusiasm, had gone on to write further words TRIPLE and QUADRUPLE. Then the top of your dictionary would look like:
- 
+
+Having edited a word, it is important to remember immediately to replace the old version, using a word named REDEFINE--in this case, you would type `REDEFINE DOUBLE`. This will replace the old definition of DOUBLE by the word on the top of the stack (and also recompile any words that might depend on DOUBLE).
+
+The process for EDIT-ing and REDEFINE-ing words is a potential source of problems for someone new to the Minstrel 4th. If you forget to REDEFINE your word, you will end up having two copies and, worse still, if you go on to define more words, you will not be able to REDEFINE the earlier word, since REDEFINE expects the new definition to be at the top of the dictionary. In this case, the only solution is to use a word `FORGET` to remove all of the subsequent words and then use REDEFINE as you should have done originally.  Say, you had forgotten to REDEFINE DOUBLE, above, and, fuelled with enthusiasm, had gone on to write further words TRIPLE and QUADRUPLE. Then the top of your dictionary would look like: [](intro_5.png)
+
 To correct the issue, you would need to type the following:
+
+```
 FORGET TRIPLE ( FORGETS ALL WORDS AFTER AND INCLUDING TRIPLE )
 REDEFINE DOUBLE ( CORRECT YOUR ORIGINAL OMMISSION )
 : TRIPLE 3 * ; ( I AM SURE I TYPED THIS BEFORE )
 : QUADRUPLE 4 * ; ( YEP, DEFINITELY DEJA VU )
+```
+
 In this case, the error is not too costly. However, in longer programs, it could become a very expensive mistake to fix. Because of this, it is wise to save your work frequently, as we will explain below.
-Saving Your Work
+
+## Saving Your Work
+
 When you turn the Minstrel 4th off, any new words you have defined will be wiped from memory. However, having spent time creating some new words, it is useful to be able to keep them for future use. To do this, in typical 1980s style, you need a cassette recorder (or a modern-day substitute, such as a PC with a mic jack). 
+
 You need to connect your cassette recorder to the ear and mic sockets on the Minstrel 4th, using a 3.5mm headphone lead (contrary to the usual convention, the mic socket is used to capture audio output from the Minstrel, to save on tape, and the Ear socket is used to play-back a saved program into the Minstrel's memory).
-To save  your words, you use the word SAVE followed by the name you want to give your new extended dictionary--for example, SAVE MYWORDS. Before pressing Enter, you should press 'Record' on the cassette recorder, as the Minstrel 4th will immediately begin transmitting the data. It takes around 5 seconds per kilobyte to save your work.
-Before powering off, it is worthwhile to check that you have saved your work successfully and, to do this, you use VERIFY. Rewind your tape to just before the saved session and enter VERIFY MYWORDS. You can then play back the saved audio, so that the Minstrel 4th can check it agrees with what is in memory.
-Having successfully saved your work, you can load it back into memory, in a future session, using LOAD MYWORDS. 
+
+To save your words, you use the word SAVE followed by the name you want to give your new extended dictionary--for example, `SAVE MYWORDS`. Before pressing Enter, you should press 'Record' on the cassette recorder, as the Minstrel 4th will immediately begin transmitting the data. It takes around 5 seconds per kilobyte to save your work.
+
+Before powering off, it is worthwhile to check that you have saved your work successfully and, to do this, you use VERIFY. Rewind your tape to just before the saved session and enter `VERIFY MYWORDS`. You can then play back the saved audio, so that the Minstrel 4th can check it agrees with what is in memory.
+Having successfully saved your work, you can load it back into memory, in a future session, using `LOAD MYWORDS`.
+
 It is worth noting that the Minstrel 4th is hard of hearing. You will need to play back your save audio at a high volume (though, thankfully, you will not hear it, as it goes straight into the computer's Ear socket). In my experience, you should set a tape recorder to play-back at around three quarters of maximum volume (or, on a PC, full volume is likely to be needed). Trial and error is required to get a reliable process for saving and loading to cassette, so it is worthwhile to get to grips with this early on.
-Next steps
+
+## Next steps
+
 This is the end of your quick tour of the Minstrel 4th. However, there are lots of other resources available to help you take your next steps. 
+
 The Minstrel 4th uses a variant of FORTH, called AceForth, developed for an early 1980s micro called the Jupiter Ace. The Minstrel 4th is a clone of the Ace and runs the same monitor and FORTH system as the Ace did. Software written for the Ace (and books about the Ace) should work on (and be relevant to) the Minstrel 4th. In particular, the original Ace user guide, called "Jupiter Ace FORTH Programming" by Steven Vickers, is an excellent book for learning to program the Minstrel 4th. It was recently re-printed to celebrate the Ace's 35th birthday, so is relatively easy to find on retro-computing auction sites. Further, along with lots of software and other materials, you can find a PDF copy of the user guide on the Jupiter Ace archive website [www.jupiter-ace.co.uk].
 
 Hopefully, you will go on to have a great deal of fun programming your Minstrel 4th, and to become a convert to the FORTH way. However, even if you do not, you will still be able to enjoy the wide range of software that others have written for the (Jupiter Ace and) Minstrel 4th. 
