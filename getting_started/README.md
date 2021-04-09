@@ -38,7 +38,7 @@ The next item it finds is '*'. The Minstrel will search its dictionary and find 
 
 Continuing on, it will add 10 to the stack and then execute the next word '+' which will add the top two number on the stack and replace them with the answer.
 
-! [](intro_2.png)
+![](intro_2.png)
 
 There are no more items in the Input Buffer, so the Minstrel prints 'OK' to indicate it has successfully processed all of the instructions it has been given.
 
