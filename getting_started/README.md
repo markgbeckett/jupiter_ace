@@ -38,7 +38,8 @@ The next item it finds is '*'. The Minstrel will search its dictionary and find 
 
 Continuing on, it will add 10 to the stack and then execute the next word '+' which will add the top two number on the stack and replace them with the answer.
 
-[](intro_1.png)
+! [](intro_2.png)
+
 There are no more items in the Input Buffer, so the Minstrel prints 'OK' to indicate it has successfully processed all of the instructions it has been given.
 
 But where is the answer, you say? The answer is on the stack. If you want to see the answer, you need to ask the Minstrel to print the value on the top of the stack and to do this you type the word `.` (that is, a full stop). This is another standard Forth word: it removes the top number from the stack and prints it on the screen. 
@@ -47,6 +48,8 @@ The above example is not exactly earth shattering, but it does explain how Forth
 ```200 200 * .```
 
 ---which does not produce the answer you probably expected. If you are familiar with machine code, you may spot immediately what has happened. If not, I will explain. Numbers on the Minstrel 4th are, by default held as 16-bit, signed integers, which can hold values between -32,768 and +32,767. If you happen to overflow this range (200 × 200 = 40,000, which is too big to fit in a 16-bit, signed integer), the answer will simply overflow and lose its most significant bit, leading to the wrong answer. However, the Minstrel will not tell you this has happened: It will happily compute and report the wrong answer. This is a potential downside of a language like FORTH. If you tried the same calculation in BASIC, it would have succeeded, though would have spent some time turning your inputs into its generic internal representation, consuming around five times as much memory and taking quite a bit longer to produce the answer. The trade-off for fast FORTH arithmetic is that it relies on the programmer being aware of and checking for its limitations. By the way, FORTH on the Minstrel can deal with bigger numbers (and floating-point numbers, too) though this requires the use of different words, which are best kept until you know some more FORTH.
+
+![Limitations of FORTH arithmetic](intro_3.png)
 
 ## Writing Programs
 
@@ -65,6 +68,8 @@ As you have probably guessed, DOUBLE multiplies something by two. However, as on
 When you type the command above, the Minstrel will compile the new word into a fast, internal representation, ready to be used in the same way as other FORTH words.
 
 You can see that your new word is part of the dictionary, using ``VLIST``. You should find that DOUBLE is the first word printed: it is at the top of the dictionary.
+
+![Defining new words](intro_4.png)
 
 To test DOUBLE, you could enter something like:
 ```
@@ -87,7 +92,9 @@ You might naturally assume that the definition of DOUBLE has been updated, in th
 
 Having edited a word, it is important to remember immediately to replace the old version, using a word named REDEFINE--in this case, you would type `REDEFINE DOUBLE`. This will replace the old definition of DOUBLE by the word on the top of the stack (and also recompile any words that might depend on DOUBLE).
 
-The process for EDIT-ing and REDEFINE-ing words is a potential source of problems for someone new to the Minstrel 4th. If you forget to REDEFINE your word, you will end up having two copies and, worse still, if you go on to define more words, you will not be able to REDEFINE the earlier word, since REDEFINE expects the new definition to be at the top of the dictionary. In this case, the only solution is to use a word `FORGET` to remove all of the subsequent words and then use REDEFINE as you should have done originally.  Say, you had forgotten to REDEFINE DOUBLE, above, and, fuelled with enthusiasm, had gone on to write further words TRIPLE and QUADRUPLE. Then the top of your dictionary would look like: [](intro_5.png)
+The process for EDIT-ing and REDEFINE-ing words is a potential source of problems for someone new to the Minstrel 4th. If you forget to REDEFINE your word, you will end up having two copies and, worse still, if you go on to define more words, you will not be able to REDEFINE the earlier word, since REDEFINE expects the new definition to be at the top of the dictionary. In this case, the only solution is to use a word `FORGET` to remove all of the subsequent words and then use REDEFINE as you should have done originally.  Say, you had forgotten to REDEFINE DOUBLE, above, and, fuelled with enthusiasm, had gone on to write further words TRIPLE and QUADRUPLE. Then the top of your dictionary would look like:
+
+![](intro_5.png)
 
 To correct the issue, you would need to type the following:
 
@@ -110,6 +117,8 @@ To save your words, you use the word SAVE followed by the name you want to give 
 
 Before powering off, it is worthwhile to check that you have saved your work successfully and, to do this, you use VERIFY. Rewind your tape to just before the saved session and enter `VERIFY MYWORDS`. You can then play back the saved audio, so that the Minstrel 4th can check it agrees with what is in memory.
 Having successfully saved your work, you can load it back into memory, in a future session, using `LOAD MYWORDS`.
+
+![Saving your work](intro_6.png)
 
 It is worth noting that the Minstrel 4th is hard of hearing. You will need to play back your save audio at a high volume (though, thankfully, you will not hear it, as it goes straight into the computer's Ear socket). In my experience, you should set a tape recorder to play-back at around three quarters of maximum volume (or, on a PC, full volume is likely to be needed). Trial and error is required to get a reliable process for saving and loading to cassette, so it is worthwhile to get to grips with this early on.
 
