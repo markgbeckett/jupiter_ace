@@ -14,7 +14,7 @@ If you can get past these idiosyncrasies, you will find that your Minstrel 4th g
 
 ## The FORTH Language
 
-[Output of VLIST](intro_0.png)
+![Output of VLIST](intro_0.png)
 
 At the heart of Forth is a dictionary of procedures, referred to as words, which encapsulates the functionality of the computer. You can see a list of built-in words, in the Minstrel 4th, by typing the command `VLIST`. Looking at the list produced, there will probably be some words, such as `PLOT` and `BEEP`, for which their purpose seems obvious, but also many words for which it is not. In fact, words such as `.` and `:` may look more like punctuation than words. However, rest assured that they are words and it is important to remember that when writing FORTH. 
 
@@ -27,6 +27,8 @@ If you have the Minstrel powered up, you can type the following simple expressio
 ```
 
 When you press Enter, the expression is copied to the upper part of the screen alongside the response 'OK', indicating success, but you will notice that no obvious answer is produced. 
+
+![Sample FORTH Command](intro_1.png)
 
 The field near the bottom of the screen, where you enter commands, is called the Input Buffer. When you press Enter, the Minstrel looks to see what instructions are in the Input Buffer and processes them item by item. The first item it will come across in this case is the '3'. It will check to see if '3' is a word in its dictionary. It is not, so it will then try to interpret '3' as a number. This will succeed, so it will add 3 to the top of the stack (it will also move the item to the upper part of the screen, to indicate it has been processed).
 
