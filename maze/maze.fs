@@ -2,27 +2,31 @@
 
 ( VARIABLES ARE USED, AS FOLLOWS:                        )
 (   Z - MAZE SIZE--1, 2, OR 3                            )
-(   P - LOCATION OF MAZE IN MEMORY                       )
-(   U,V -- COORDINATE FOR SOMETHING <MAYBE MOUSE>        )
+(   P1 - LOCATION OF SCREEN COPY IN MEMORY               )
+(   P - LOCATION OF CURRENT SCREEN SECTION IN MEMORY     )
+(   W - LOCATION OF CURRENT MAZE SECTION IN MEMORY       )
+(   U,V -- COORDINATE FOR ACTIVE MAZE SEGMENT            )
 (                                                        )
 (                                                        )
 ( MEMORY LAYOUT IS, AS FOLLOWS:                          )
-( <---       32x         --->                            )
 ( [HERE + 30]                                            )
-( [VARIABLE W POINTS TO ACTIVE BOARD SEGMENT]            )
+( VARIABLE W POINTS TO ACTIVE MAZE SEGMENT               )
 ( BITS SET HAVE FOLLOWING MEANING:                       )
 (  0 - CAN MOVE RIGHT FROM THIS CELL                     )
 (  1 - CAN MOVE LEFT FROM THIS CELL                      )
 (  2 - CAN MOVE UP FROM THIS CELL                        )
 (  3 - CAN MOVE DOWN FROM THIS CELL                      )
-(  4 -                                                   )
+(  4 - HAS BEEN VISITED DURING AUTO-SOLVER MODE          )
 (  5 - WITH BIT 6, HOLDS BREADCRUMB TRAIL                )
 (      00 - ARRIVED FROM LEFT                            )
 (      01 - ARRIVED FROM RIGHT                           )
 (      10 - ARRIVED FROM ABOVE                           )
 (      11 - ARRIVED FROM BELOW                           )
 (  7 - CELL HAS BEEN VISITED, DURING MAZE GENERATION     )
+(                                                        )
+(                                                        )
 ( INITIALISED AS FOLLOWS                                 )
+( <---       32x         --->                            )
 ( 00 00 ...                00                            )
 ( 00 00 ...                00                            )
 ( ...                     ...   21x                      )
@@ -34,7 +38,7 @@
 ( 01 01 ...             01 03                            )
 ( 02 02 ...             02 04                            )
 
-( D - ARRAY OF 96 BYTES BETWEEN 1 AND 4 )
+( D - ARRAY OF 24 QUADRUPLES OF DIRECTIONS FOR MAZE GENERATION )
 
 CREATE D ALLOT 48 ( 48 WORDS = 96 BYTES )
 
@@ -381,44 +385,63 @@ CREATE D ALLOT 48 ( 48 WORDS = 96 BYTES )
  DROP
 ;
 
-: MOVE
- DUP 150 Z @ DUP
- * * <
- IF
-  1 T !
- ELSE
-  0 T !
- THEN
- BEGIN
-  24 RND DUP + DUP
-  + 1- D + 4
-  BEGIN
-   OVER OVER + C@ DUP
-   1 =
-   IF
-    X+
-   ELSE
-    DUP 2 =
-    IF
-     X-
+( USED WHEN CREATING MAZE TO ADVANCE TO NEXT AVAILABLE SQUARE )
+: MOVE ( OFFSET -- NEW_OFFSET )
+    ( CHECK IF OFFSET < 150*SIZE^2 AND SET T ACCORDINGLY )
+    DUP
+    150 Z @ DUP
+    * *
+
+    < IF
+	1 T !
     ELSE
-     DUP 3 =
-     IF
-      Y+
-     ELSE
-      Y-
-     THEN
+	0 T !
     THEN
-   THEN
-   IF
-    DROP DROP DROP EXIT
-   THEN
-   DROP 1- ?DUP
-  WHILE
-  REPEAT
-  DROP SCAN 0
- UNTIL
+
+    ( .S : OFFSET )
+    BEGIN
+	24 RND ( PICK RANDOM NUMBER BETWEEN 0 AND 23 )
+	DUP + DUP + ( THEM MULTIPLY BY 4 )
+	1- D + 4 ( INDEX INTO D, WHICH STORES SEQUENCES OF SEARCH DIRECTIONS )
+
+	( .S : OFFSET DIRN COUNT )
+	BEGIN
+	    OVER OVER + C@ ( RETRIEVE NEXT DIRECTION FROM D ARRAY )
+
+	    DUP 1 = IF ( TRY TO MOVE RIGHT )
+		X+
+	    ELSE
+		DUP 2 =	IF ( TRY TO MOVE LEFT )
+		    X-
+		ELSE
+		    DUP 3 = IF ( TRY TO MOVE DOWN )
+			Y+
+		    ELSE ( TRY TO MOVE UP )
+			Y- 
+		    THEN
+		THEN
+	    THEN
+
+	    IF ( MOVED, THEN CLEAR STACK AND EXIT )
+		DROP DROP DROP ( .S : OFFSET )
+		EXIT
+	    THEN
+
+	    DROP ( .S : OFFSET DIR COUNT )
+
+	    1- ?DUP ( CHECK IF FURTHER DIRECTIONS TO TRY ... )
+	WHILE
+	REPEAT ( ... REPEAT, IF SO )
+
+	( IF GET THIS FAR, THEN AT A DEAD END )
+	DROP ( .S : OFFSET )
+	
+	SCAN ( BACKTRACK ONE STEP )
+
+	0 ( AND TRY AGAIN )
+    UNTIL
 ;
+
 
 ( CREATE DOOR -- THAT IS, ENTRY OR EXIT -- ON BORDER OF MAZE )
 : DOOR ( N -- OFFSET CHAR )
