@@ -40,15 +40,22 @@ The maze information is held in two data structures. One structure holds the scr
 
 I noted that Bits 5 and 6 are apparently not used, as they would be ideal candidates to work around one of the corruptions I discovered in the game.
 
-The screen sections contain 32x21 arrays of character bytes, which correspond to characters 1 through 12, which are organised into three sets of four. Characters 1, 2, 3, and 4 contain graphics for walls on top and left, wall on top, wall on left, and top-left corner only. To box in a particular cell, then the actual cell needs to have top and left walls, the cell immediately to the right needs to have, at least, the left wall set, and the cell immediately below needs to have, at least, the top wall set, and the cell down and to the right needs to have at least the top-left corner set. This is why it takes 32x21 characters to store a 31x20 maze: the final column contains mostly 3s, the final row contains mostly 2s, and the bottom right corner contains 4.
+The screen sections contain 32x21 arrays of character bytes, containing character values between 1 and 12. These are user-defined graphics set up with the word GR, when the instructions are printed. The 12 characters represent  three sets of four maze-wall configurations. Characters 1, 2, 3, and 4 contain graphics for walls on top and left, a wall on top, a wall on the left, and a top-left corner only, respectively. To box in a particular cell: the actual cell needs to have top and left walls; the cell immediately to the right needs to have, at least, the left wall set; the cell immediately below needs to have, at least, the top wall set; and the cell down and to the right needs to have at least the top-left corner set. This is why it takes 32x21 characters to store a 31x20 maze: the final column contains mostly 3s, the final row contains mostly 2s, and the bottom-right corner contains 4.
 
-If that seems confusing take a look at an example screenshots of a maze section. This section shows the top-left 4x3 section of a maze, with the corresponding character codes in yellow. The top left cell has both the top and left wall filled in, so is represented by character 1. The cell to the right of that has just the top wall filled in so is represented by a 2 (remember the bottom wall comes from the cell below). The first cell on the second row has a left wall and right, so will be represented by character 3 with character 1 to the right of it (to fill in the right wall). Hopefully that makes sense.
+If that seems confusing take a look at an example screenshots of a maze section. This section shows the top-left 4x3 section of a maze, with the corresponding character codes in yellow. The top left cell has both the top and left wall filled in, so is represented by character 1. The cell to the right of that has just the top wall filled in so is represented by a 2 (remember the bottom wall comes from the cell below). The first cell on the second row has a left wall and right, so will be represented by character 3 with character 1 to the right of it (to fill in the right wall) and so on. Hopefully that makes sense though, if not, draw your own version of this maze segment by filling in the walls that correspond to each character.
 
 ![](maze_section.png "Displaying the maze")
 
-Characters 5,...8 and characters 9,...,12 contain the same wall sections, but also have either a large square or a small square in the middle of the cell. These are used to indicate, the current location, a cell on the solution, or a cell that has been visited but discounted from the solution. Look at the completed maze puzzle and see how the correct path is highlighted with large squares whereas wrong turns that needed to be backtracked are shown with small squares. The entrance to the maze is near the top-right corner and the exit is near the bottom-left corner.
+Characters 5,...8 and characters 9,...,12 contain the same wall sections, but also have either a large square or a small square in the middle of the cell. These are used to indicate: the current location; a cell on the solution; or a cell that has been visited but discounted from the solution.
+
+Look at the completed maze puzzle (it is actually the zoom-out of the maze we looked at before) and see how the correct path is highlighted with large squares whereas wrong turns that needed to be backtracked are shown with small squares. The entrance to the maze is near the top-right corner and the exit is near the bottom-left corner. On this occasion the mouse explored almost the whole maze before finding the solution: there is a small part of the maze immediately to the right of the exit which was not explored.
 
 ![](maze_solution.png "The solution and wrong turns")
+
+By organising the user-defined graphics in this way, you can mark a step on the path of the mouse by adding four to the current value at a location, and then mark a path that is backtracked by adding a further four to the value. This will become clearer when we describe how the automatic solver works later.
+
+... more to follow ...
+
 
 ## Status
 
