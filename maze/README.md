@@ -16,4 +16,40 @@ The source code had no information on the origins of the game: who wrote it, who
 
 ## Recovery Process
 
+The game is encapsulated in a top-level word called RUN, which runs through the following steps, each time the game is played:
 
+1. Print instructions
+2. Ask user to choose maze size
+3. Generate maze
+4. Solve maze automatically or let user solve maze
+
+I decided to work through each stage, in turn, attempting to repair any corrupted code and restore the intended functionality.
+
+Steps 1 and 2 are very straightforward, with little corruption, so I quickly moved to tackle the maze-generation code. The fist part of the setup is a word called CLEAR, which sets up an empty maze in memory, ready to be generated. The game supports three maze sizes, made up of 1x1 (small), 2x2 (medium), or 3x3 (large) maze _sections_, with each maze section being 31x20 cells in size. Although each section is 31x20 in size, it is held in a 32x21-byte section of memory, to accommodate the righthand and bottom boundaries, which are outside of the maze (as will be explained later).
+
+The maze information is held in two data structures. One structure holds the screen content for that section of the maze, so it can be rapidly printed (by copying it into the display memory). The other structure stores the connectivity of the maze, along with some state information used during maze generation and when automatically solving the maze. The maze state is based on bit logic, with the following roles assigned to individual bits:
+
+* Bit 0 -- set, if can move right from cell, reset otherwise
+* Bit 1 -- set, if can move left from cell, reset otherwise
+* Bit 2 -- set, if can move up from cell, reset otherwise
+* Bit 3 -- set, if can move down from cell, reset otherwise
+* Bit 4 -- set, if already visited when auto-solving maze
+* Bit 5 -- apparently, not used
+* Bit 6 -- apparently, not used
+* Bit 7 -- set, if already visited during maze generation.
+
+I note that Bits 5 and 6 are apparently not used, as they would be ideal candidates to work around one of the corruptions I discovered in the game.
+
+... More to follow ...
+
+
+## Status
+
+The program has now been recovered and, to the best of my knowledge, works are the author intended. I have anotated the [source code](maze.fs) for anyone who is interested to delve into the working of the game.
+
+Studying the code has highlighted a few potential improvements, for future work:
+
+* The game tends to produce the same mazes each time, as the random-number seed is initialised to a constant value. This could be easily addressed by, for example, initialising the seed using the low work of the internal clock.
+* When the auto-solver completes, the game immediately returns to the main menu, which means you do not get a chance to study the solution. There is a loop in the code, which looks like a wait loop, though the duration of the wait is very short and could be extended.
+* The game does not check availability of memory, but just assumes there is enough space between the end of the dictionary and the start of the return stack. With a 16 kilobyte RAM pack (that is, 19kb of RAM), there is not enough spare memory for the largest maze size. Attempting to generate the largest maze will cause the computer to crash.
+* The game holds two copies of the maze in memory (along with the active maze segment in the display area). For the largest maze, this requires 2*3*3*32*21 = 12,096 bytes. It should be possible to reduce this by half, investing more time into displaying the active maze segment. However, this would slow-down redrawing the on-screen maze segment, though this might be okay, and could enable even bigger mazes to be supported.
