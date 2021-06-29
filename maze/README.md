@@ -1,6 +1,6 @@
-= A-Mouz-in-Mase =
+# A-Mouz-in-Mase
 
-== Background ==
+## Background
 
 In May 2021, the curator of the [Jupiter Ace Archive](https://www.jupiter-ace.co.uk/) posted a [message on Twitter](https://twitter.com/JA_Archive/status/1399479238328295424), asking for help to recover one of a small number of games that he had recently recovered from cassette. The game in question was known simply as MAZE and, as the name suggests, was supposed to be some kind of maze game. Two versions were available: the raw, recovered program, which had various corruption; and a partially recovered version, in which all but a word named SCAN seemed to be okay.
 
@@ -14,6 +14,6 @@ The good news was that the original _rip_ of the cassette loaded and could be ru
 
 The source code had no information on the origins of the game: who wrote it, who published it, and when it was written. I still have not found any of this information, so would be happy to hear from anyone who knows more.
 
-== Recovery Process ==
+## Recovery Process
 
 
