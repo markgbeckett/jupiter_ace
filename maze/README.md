@@ -25,9 +25,9 @@ The game is encapsulated in a top-level word called RUN, which runs through the 
 
 I decided to work through each stage, in turn, attempting to repair any corrupted code and restore the intended functionality.
 
-Steps 1 and 2 are very straightforward, with little corruption, so I quickly moved to tackle the maze-generation code. The fist part of the setup is a word called CLEAR, which sets up an empty maze in memory, ready to be generated. The game supports three maze sizes, made up of 1x1 (small), 2x2 (medium), or 3x3 (large) maze _sections_, with each maze section being 31x20 cells in size. Although each section is 31x20 in size, it is held in a 32x21-byte section of memory, to accommodate the righthand and bottom boundaries, which are outside of the maze (as will be explained later).
+Steps 1 and 2 are very straightforward, with little corruption, so I quickly moved to tackle the maze-generation code. The first part of the setup is a word called CLEAR, which sets up an empty maze in memory, ready to be generated. The game supports three maze sizes, made up of 1x1 (small), 2x2 (medium), or 3x3 (large) maze _sections_, with each maze section being 31x20 cells in size. Although each section is 31x20 in size, it is held in a 32x21-byte section of memory, to accommodate the righthand and bottom boundaries, which are outside of the maze (as will be explained later).
 
-The maze information is held in two data structures. One structure holds the screen content for that section of the maze, so it can be rapidly printed (by copying it into the display memory). The other structure stores the connectivity of the maze, along with some state information used during maze generation and when automatically solving the maze. The maze state is based on bit logic, with the following roles assigned to individual bits:
+The maze information is held in two data structures. One structure holds the screen content for each section of the maze, so it can be rapidly printed (by copying it into the display memory). The other structure stores the connectivity of the maze, again in sections, along with some state information used during maze generation and when automatically solving the maze. The maze state is based on bit logic, with the following roles assigned to individual bits:
 
 * Bit 0 -- set, if can move right from cell, reset otherwise
 * Bit 1 -- set, if can move left from cell, reset otherwise
@@ -38,10 +38,17 @@ The maze information is held in two data structures. One structure holds the scr
 * Bit 6 -- apparently, not used
 * Bit 7 -- set, if already visited during maze generation.
 
-I note that Bits 5 and 6 are apparently not used, as they would be ideal candidates to work around one of the corruptions I discovered in the game.
+I noted that Bits 5 and 6 are apparently not used, as they would be ideal candidates to work around one of the corruptions I discovered in the game.
 
-... More to follow ...
+The screen sections contain 32x21 arrays of character bytes, which correspond to characters 1 through 12, which are organised into three sets of four. Characters 1, 2, 3, and 4 contain graphics for walls on top and left, wall on top, wall on left, and top-left corner only. To box in a particular cell, then the actual cell needs to have top and left walls, the cell immediately to the right needs to have, at least, the left wall set, and the cell immediately below needs to have, at least, the top wall set, and the cell down and to the right needs to have at least the top-left corner set. This is why it takes 32x21 characters to store a 31x20 maze: the final column contains mostly 3s, the final row contains mostly 2s, and the bottom right corner contains 4.
 
+If that seems confusing take a look at an example screenshots of a maze section. This section shows the top-left 4x3 section of a maze, with the corresponding character codes in yellow. The top left cell has both the top and left wall filled in, so is represented by character 1. The cell to the right of that has just the top wall filled in so is represented by a 2 (remember the bottom wall comes from the cell below). The first cell on the second row has a left wall and right, so will be represented by character 3 with character 1 to the right of it (to fill in the right wall). Hopefully that makes sense.
+
+![](maze_section.png "Displaying the maze")
+
+Characters 5,...8 and characters 9,...,12 contain the same wall sections, but also have either a large square or a small square in the middle of the cell. These are used to indicate, the current location, a cell on the solution, or a cell that has been visited but discounted from the solution. Look at the completed maze puzzle and see how the correct path is highlighted with large squares whereas wrong turns that needed to be backtracked are shown with small squares. The entrance to the maze is near the top-right corner and the exit is near the bottom-left corner.
+
+![](maze_solution.png "The solution and wrong turns")
 
 ## Status
 
