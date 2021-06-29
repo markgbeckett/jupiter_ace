@@ -51,9 +51,13 @@ CREATE D ALLOT 48 ( 48 WORDS = 96 BYTES )
     ( ADD 8 TO ASCII VALUE TO INCLUDE SMALL MOUSE )
 
     G ( LOCATION OF USER-DEFINED-GRAPHICS DATA )
+
     96 0 DO 
-	DUP @ 11272 I +
-	! 2+ 2
+	DUP @
+	11272 I + ( 11272 IS LOCATION OF ASCII 1 IN MEMORY )
+	! ( WRITE TWO BYTES AT A TIME )
+	2+
+	2
     +LOOP
 
     DROP
@@ -522,44 +526,64 @@ CREATE D ALLOT 48 ( 48 WORDS = 96 BYTES )
  ! SCR DROP
 ;
 
-: SRAM
- OVER W @ + DUP
- C@ ROT AND SWAP C!
+: SRAM ( X N -- X )
+    OVER 
+    W @ + 
+    DUP C@ ( .S : X N LOC VAL )
+    ROT AND ( .S : X LOC NEW_VAL )
+    SWAP
+    C! ( STORE UPDATED VALUE )
 ;
 
-: MOUSE
- IF
-  4 Z @ - 300
-  * 0
-  DO
-  LOOP
- THEN
- 4 SCR
+: MOUSE ( X FLAG -- X )
+    IF
+	( LOOP FOR 300*[4-Z] )
+	4
+	Z @ - 300
+	* 0
+	DO
+	LOOP
+    THEN
+    
+    4 SCR
 ;
 
-: UP
- DUP DUP 32 < DUP
- T !
- IF
-  640 + Z @ 672
-  * -
- THEN
- 32 - W @ +
- C@ 16 AND
- IF
-  DUP W @ + C@
-  11 AND ?DUP
-  IF
-   EXIT
-  ELSE
-   0 MOUSE 139 SRAM T
-   @
-   IF
-    -1 YP
-   ELSE
-    32 -
-   THEN
-   151 SRAM
+( TRY TO MOVE MOUSE UP.                                         )
+( FIRST, CHECK IF SQUARE ABOVE HAS BEEN VISITED.                )
+(    IF SO, THEN CHECK IF THERE ARE OTHER OPTIONS TO LEAVE CELL )
+(       IF THERE ARE, THEN EXIT, SO CAN TRY THOSE OPTIONS       )
+(    OTHERWISE, KNOW AT DEAD END, SO                            )
+(       BACKTRACK UP BUT BLOCK OFF CELL BELOW                   )
+( OTHERWISE, NOT VISITED SO                                     ) 
+(    MOVE UP NORMALLY                                          )
+: UP ( OFFSET -- NEW_OFFSET FLAG )
+    DUP
+    DUP 32 < ( CHECK IF FIRST ROW )
+    DUP T ! ( STORE ANSWER IN T )
+
+    ( .S : OFFSET OFFSET FLAG )
+    IF ( FIRST ROW OF SEGMENT )
+	640 + Z @ 672 * - ( CALCULATE CORRESPONDING LOCATION IN ABOVE SEGMENT )
+    THEN
+    
+    32 - W @ + C@ ( MOVE UP AND RETRIEVE STATUS OF CELL )
+
+    16 AND ( CHECK IF VISITED )
+    IF
+	DUP W @ + C@ ( RETRIEVE STATUS AT CURRENT LOCATION )
+	11 AND ?DUP ( CHECK IF OTHER DIRECTIONS TO TRY, 11 = %00001011 )
+	IF
+	    EXIT ( .S : OFFSET FLAG ) ( FLAG IS NON-ZERO )
+	ELSE
+	    0 MOUSE ( PRINT SMALL MOUSE POINTER )
+	    139 SRAM ( UPDATE STATUS TO PREVENT MOVING DOWN; 139 = %10001011 )
+
+	    T @ IF
+		-1 YP
+	    ELSE
+		32 -
+	    THEN
+	    151 SRAM
   THEN
  ELSE
   T @
@@ -573,154 +597,240 @@ CREATE D ALLOT 48 ( 48 WORDS = 96 BYTES )
  0
 ;
 
-: DN
- DUP DUP 607 > DUP
- T !
- IF
-  640 - Z @ 672
-  * +
- THEN
- 32 + W @ +
- C@ 16 AND
- IF
-  DUP W @ + C@
-  7 AND ?DUP
-  IF
-   EXIT
-  ELSE
-   0 MOUSE 135 SRAM T
-   @
-   IF
-    1 YP
-   ELSE
-    32 +
-   THEN
-   155 SRAM
-  THEN
- ELSE
-  T @
-  IF
-   1 YP
-  ELSE
-   32 +
-  THEN
-  1 MOUSE 16 RAM
- THEN
- 0
+( TRY TO MOVE DOWN.                                             )
+( FIRST, CHECK IF SQUARE BELOW HAS BEEN VISITED.                )
+(    IF SO, THEN CHECK IF THERE ARE OTHER OPTIONS TO LEAVE CELL )
+(       IF THERE ARE, THEN EXIT, SO CAN TRY THOSE OPTIONS       )
+(    OTHERWISE, KNOW AT DEAD END, SO                            )
+(       BACKTRACK DOWN BUT BLOCK OFF CELL ABOVE                 )
+( OTHERWISE, NOT VISITED SO                                     ) 
+(    MOVE DOWN NORMALLY                                         )
+: DN ( OFFSET -- NEW_OFFSET FLAG )
+    DUP
+    DUP 607 > ( CHECK IF FINAL ROW OF CURRENT SEGMENT )
+    DUP T ! ( STORE ANSWER IN T )
+
+    IF ( FINAL ROW )
+	640 - Z @ 672 * + ( WORK OUT OFFSET TO CORRESPONDING POSN IN SEGMENT BELOW )
+    THEN
+    
+    32 + W @ + ( MOVE DOWN ONE ROW )
+    C@ ( AND RETRIEVE STATUS FOR THAT CELL )
+
+    16 AND IF ( HAS BEEN VISITED )
+	DUP W @ + C@ ( RETRIEVE STATUS OF CURRENT LOCATION )
+	7 AND ?DUP ( CHECK IF ANY OTHER DIRECTIONS TO TRY )
+	IF ( OTHER DIRECTION TO TRY, THEN EXIT )
+	    EXIT  ( WITH TOS NON-ZERO )
+	ELSE
+	    0 MOUSE ( REPRINT SMALL MOUSE, TO INDICATE BACKTRACK )
+	    135 SRAM ( PREVENT MOVE UP , 135 = %10000111 )
+
+	    T @ ( MOVE DOWN )
+	    IF
+		1 YP
+	    ELSE
+		32 +
+	    THEN
+	    
+	    155 SRAM ( PREVENT MOVE UP , 155 = %10011011 )
+	THEN
+    ELSE ( MOVE DOWN )
+	T @ IF ( NEED TO CHANGE SCREEN SEGMENT )
+	    1 YP
+	ELSE ( NORMAL MOVE )
+	    32 +
+	THEN
+	
+	1 MOUSE ( PRINT MOUSE )
+
+	16 RAM ( SET CELL TO BE VISITED )
+    THEN
+    0 ( INDICATING HAS MOVED )
 ;
 
-: LT
- DUP DUP 31 AND 0=
- DUP T !
- IF
-  641 -
- THEN
- 1- W @ + C@
- 16 AND
- IF
-  DUP W @ + C@
-  13 AND ?DUP
-  IF
-   EXIT
-  ELSE
-   0 MOUSE 141 SRAM T
-   @
-   IF
-    -1 XP
-   ELSE
-    1-
-   THEN
-   158 SRAM
-  THEN
- ELSE
-  T @
-  IF
-   -1 XP
-  ELSE
-   1-
-  THEN
-  1 MOUSE 16 RAM
- THEN
- 0
+( TRY TO MOVE LEFT                                              )
+( FIRST, CHECK IF SQUARE TO LEFT HAS BEEN VISITED.              )
+(    IF SO, THEN CHECK IF THERE ARE OTHER OPTIONS TO LEAVE CELL )
+(       IF THERE ARE, THEN EXIT, SO CAN TRY THOSE OPTIONS       )
+(    OTHERWISE, KNOW AT DEAD END, SO                            )
+(       BACKTRACK LEFT BUT BLOCK OFF RIGHT CELL                 )
+( OTHERWISE, NOT VISITED SO                                     ) 
+(    MOVE RIGHT NORMALLY                                        )
+: LT ( OFFSET -- NEW_OFFSET FLAG )
+    DUP
+    DUP 31 AND ( ISOLATE COLUMN VALUE OF CURRENT LOCATION )
+    0= ( CHECK IF COLUMN ZERO )
+    DUP T ! ( STORE OUTCOME OF TEST )
+
+    IF ( COLUMN ZERO )
+	641 - ( SUBTRACT 20 ROWS PLUS ONE )
+    THEN
+    
+    1- W @ + C@ ( MOVE LEFT AND RETRIEVE VALUE )
+    
+    16 AND IF ( CHECK IF VISITED )
+	DUP
+	W @ + C@
+	13 AND ( CHECK IF OTHER DIRECTIONS TO TRY )
+
+	?DUP IF ( OTHER DIRECTIONS TO TRY, THEN TRY THEM )
+	    EXIT ( WITH TOS NON-ZERO )
+	ELSE 
+	    0 MOUSE ( REPRINT SMALL MOUSE, TO INDICATE BACKTRACK )
+	    141 SRAM ( PREVENT MOVE RIGHT : 141 = %10001101 )
+	    
+	    ( MOVE LEFT )
+	    T @ 
+	    IF
+		-1 XP
+	    ELSE
+		1-
+	    THEN
+	    
+	    158 SRAM ( PREVENT MOVE LEFT : 158 = %10011110 )
+	THEN
+    ELSE ( MOVE DOWN NORMALLY )
+	T @
+	IF
+	    -1 XP
+	ELSE
+	    1-
+	THEN
+	1 MOUSE 16 RAM
+    THEN
+    
+    0 ( INDICATES MOVED )
 ;
 
-: RT
- DUP DUP 31 AND 30
- = DUP T !
- IF
-  641 +
- THEN
- 1+ W @ + C@
- 16 AND
- IF
-  DUP W @ + C@
-  14 AND ?DUP
-  IF
-   EXIT
-  ELSE
-   0 MOUSE 142 SRAM T
-   @
-   IF
-    1 XP
-   ELSE
-    1+
-   THEN
-   157 SRAM
-  THEN
- ELSE
-  T @
-  IF
-   1 XP
-  ELSE
-   1+
-  THEN
-  1 MOUSE 16 RAM
- THEN
- 0
+( TRY TO MOVE RIGHT.                                            )
+( FIRST, CHECK IF SQUARE TO RIGHT HAS BEEN VISITED.             )
+(    IF SO, THEN CHECK IF THERE ARE OTHER OPTIONS TO LEAVE CELL )
+(       IF THERE ARE, THEN EXIT, SO CAN TRY THOSE OPTIONS       )
+(    OTHERWISE, KNOW AT DEAD END, SO                            )
+(       BACKTRACK RIGHT BUT BLOCK OFF LEFT CELL                 )
+( OTHERWISE, NOT VISITED SO                                     ) 
+(    MOVE RIGHT NORMALLY                                        )
+: RT ( OFFSET -- NEW_OFFSET FLAG )
+    DUP DUP
+    31 AND ( EXTRACT COLUMN INDEX )
+
+    30 = ( CHECK IF COLUMN 30 )
+    DUP T ! ( STORE ANSWER )
+
+    ( .S : X X FLAG )
+    IF ( IF COLUMN 30 ADD 
+	641 + ( ADD 20 ROWS AND ONE EXTRA )
+    THEN
+    
+    1+ ( MOVE RIGHT )
+
+    ( .S : X NX )
+    W @ + C@ ( RETRIEVE VALUE )
+
+    16 AND ( CHECK IF VISITED ALREADY )
+
+    IF ( VISITED )
+	( .S : X )
+	DUP
+	W @ + C@ ( RETRIEVE STATUS FOR CURRENT LOCATION )
+	14 AND ( CHECK IF CAN MOVE IN ANOTHER DIRECTION : 14 = 00001110 )
+
+	?DUP ( IF SO, DUPLICATE )
+	
+	IF 
+	    EXIT ( .S : X FLAG ) ( FLAG IS NON-ZERO )
+	ELSE ( NO WHERE ELSE TO MOVE )
+	    ( .S : X )
+	    0 MOUSE ( UPDATE TO SMALL MOUSE POINTER )
+	    
+	    142 SRAM ( PREVENT MOVE LEFT ; 142 = % 10001110 )
+
+	    ( MOVE RIGHT, CHECKING IF NEED TO MOVE SEGMENT )
+	    T @ IF
+		1 XP
+	    ELSE
+		1+
+	    THEN
+	    
+	    157 SRAM ( PREVENT MOVE RIGHT : 157 = %10011101 )
+	THEN
+    ELSE ( IF NOT VISITED )
+	T @ ( CHECK IF SCREEN SWAP )
+	IF 
+	    1 XP ( MOVE RIGHT TO NEXT SCREEN SEGMENT )
+	ELSE
+	    1+ ( MOVE RIGHT )
+	THEN
+
+	1 MOUSE ( PRINT MOUSE AT NEW LOCATION, PAUSING FIRST )
+	16 RAM ( MARK LOCATION AS VISITED )
+    THEN
+    
+    0 ( INDICATES MOVED )
 ;
 
-: CHOICE
- DUP W @ + C@
- Y ! Y @ 1
- AND
- IF
-  RT 0=
-  IF
-   EXIT
-  THEN
- THEN
- Y @ 2 AND
- IF
-  LT 0=
-  IF
-   EXIT
-  THEN
- THEN
- Y @ 4 AND
- IF
-  UP 0=
-  IF
-   EXIT
-  THEN
- THEN
- Y @ 8 AND
- IF
-  DN 0=
-  IF
-   EXIT
-  THEN
- THEN
+( MAKE A MOVE IN AUTO MODE )
+: CHOICE ( X -- X FLAG )
+    DUP W @ + C@ ( RETRIEVE INFO ABOUT CURRENT LOCATION )
+    Y ! ( SAVE TO Y )
+    Y @
+
+    1 AND IF ( CHECK IF CAN MOVE RIGHT )
+	RT ( IF SO, TRY )
+
+	0= IF ( IF SUCCESSFUL, DONE )
+	    EXIT
+	THEN
+    THEN
+
+    Y @
+    2 AND IF ( CHECK IF CAN MOVE LEFT )
+	LT
+
+	0= IF ( IF SUCCESSFUL, DONE )
+	    EXIT 
+	THEN
+    THEN
+
+    Y @
+
+    4 AND IF ( CHECK IF CAN MOVE UP )
+	UP
+
+	0= IF ( IF SUCCESSFUL, DONE )
+	    EXIT
+	THEN
+    THEN
+
+    Y @
+    
+    8 AND IF ( CHECK IF CAN MOVE DOWN )
+	DN
+
+	0= IF ( IF SUCCESSFUL, DONE )
+	    EXIT
+	THEN
+    THEN
+
 ;
 
-: AUTO
- IX @ 16 RAM
- BEGIN
-  W @ OVER + C@
-  64 AND 0=
- WHILE
-  CHOICE
- REPEAT
- DROP
+( AUTOMATICALLY SOLVE MAZE )
+: AUTO ( -- )
+    IX @ ( RETRIEVE STARTING POSITION )
+    16 RAM ( MARK AS VISITED )
+
+    ( .S : X )
+    BEGIN
+	W @ OVER + ( RETRIEVE PROPERTIES FOR CURRENT LOCATION )
+	C@
+	64 AND 0= ( CHECK IF BIT 6 IS SET, INDICATING EXIT ) 
+    WHILE
+	    ( IF NOT, MAKE NEXT MOVE )
+	    CHOICE
+    REPEAT
+    
+    DROP ( EMPTY STACK BEFORE RETURNING )
 ;
 
 ( WAIT FOR KEYPRES )
