@@ -54,7 +54,24 @@ Look at the completed maze puzzle (it is actually the zoom-out of the maze we lo
 
 By organising the user-defined graphics in this way, you can mark a step on the path of the mouse by adding four to the current value at a location, and then mark a path that is backtracked by adding a further four to the value. This will become clearer when we describe how the automatic solver works later.
 
-... more to follow ...
+The two data structures are stored in free memory, starting a little above the end of the dictionary, to allow space for the stack to grow. The memory is unmanaged: no checks are made that there is enough space. If there is insufficient memory, the computer will crash during setup (because the data will overwrite the return stack). For example, if you have a 16-kilobyte RAM expansion and try to create a 'large' maze, the machine will crash.
+
+The location of the start of the maze-state information is fixed, at 30 bytes past the end of the dictionary. In the source code, you will often see the calculation ``HERE 30 +`` used to find this location. For the 'medium' and 'large' maze, the state is stored in series of 32x21 sections. The variables U and V record which maze section is current, indexed from 1 (confusingly, column and row, respectively). The meaning of current is dependent on which part of the game is active, though generally it is the section where the action is taking place (e.g., in which the mouse is located, when solving the maze). Also, the variable W stores the address of the start of that section in the maze-state information.
+
+The vslue of W could be worked out using the following Forth snippet (noting that the variable Z holds the size specified by the user in Step 2):
+
+```
+ ...
+  HERE 30 + ( WORK OUT START OF MAZE-STATE DATA STRUCTURE )
+  V @ 1- ( RETRIEVE ROW NUMBER AND NORMALISE TO ZERO )
+  Z @ ( RETRIEVE MAZE SIZE: 1 - SMALL; 2 - MEDIUM; 3 - LARGE )
+  672 * * + ( ADD ON Z*(V-1) SCREEN SECTIONS )
+  U @ 1- ( RETRIEVE COLUMN NUMBER AND NORMALISE TO ZERO )
+  672 * + ( ADD (U-1) SCREEN SECTIONS TO THE ADDRESS )
+  ...
+```
+
+Note that 672 is 32x21 which is the number of bytes in a screen section.
 
 
 ## Status
