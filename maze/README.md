@@ -28,13 +28,15 @@ After displaying some brief instructions, you are asked to choose a maze size. N
 
 Having chosen the maze size, you will see the computer create a maze at random, in realtime. The small maze fits on one screen and takes around a minute to produce. The medium maze fits on 2-by-2 screens and takes around four minutes. The large maze is 3-by-3 screens and takes around eight to ten minutes to produce.
 
-Once the maze is generated, you are asked if you wish to Play or Watch the maze. Selecting Play will position your mouse at the entry to the maze and let you work out the path to the exist, yourself, using the slightly awkward key combination of A, Z, K, and M.
+Once the maze is generated, you are asked if you wish to Play or Watch the maze. Selecting Play will position your mouse at the entrance to the maze and let you work out the path to the exit, yourself, using the slightly awkward key combination of A, Z, K, and M.
 
 Selecting Watch will cause the computer to solve the maze for you, tracing both the correct path and failed paths as it goes.
 
 Once the maze is solved, you return immediately to the menu from which you can choose the next maze size.
 
 ## Recovery Process
+
+This section is best read in conjunction with the [source code](maze.fs).
 
 The game is encapsulated in a top-level word called RUN, which runs through the following steps, each time the game is played:
 
@@ -80,7 +82,7 @@ The two data structures are stored in free memory, starting a little above the e
 
 The location of the start of the maze-state information is fixed, at 30 bytes past the end of the dictionary. In the source code, you will often see the calculation ``HERE 30 +`` used to find this location. For the 'medium' and 'large' maze, the state is stored in a series of 32x21 sections. The variables U and V record which maze section is current, indexed from 1 (confusingly, column and row, respectively). The meaning of current is dependent on which part of the game is active, though generally it is the section where the action is taking place (e.g., in which the mouse is located, when solving the maze). Also, the variable W stores the address of the start of that section in the maze-state information.
 
-The vslue of W could be worked out using the following Forth snippet (noting that the variable Z holds the size specified by the user in Step 2):
+The value of W could be worked out using the following Forth snippet (noting that the variable Z holds the size specified by the user in Step 2):
 
 ```
  ...
