@@ -14,7 +14,7 @@ The good news was that the original _rip_ of the cassette loaded and could be ru
 
 The source code had no information on the origins of the game: who wrote it, who published it, and when it was written. I still have not found any of this information, so would be happy to hear from anyone who knows more.
 
-As I explain below, I have now been able to recover the program so it can be enjoyed once again. During the recovery, I had to rewrite some of the code, so it is not quite the original game, though I have tried to use a light touch and to keep as much of the original code as I could.
+As I explain below, I have now been able to recover the program so it can be enjoyed once again. During the recovery, I had to rewrite some of the code, so it is not quite the original game, though I have tried to use a light touch and to keep as much of the original code as I could. Thankfully, I was able to read the part-recovered version, by using a different emulator ([XAce](http://lawrencewoodman.github.io/xAce/) for Linux), which saved some time for the recovery process.
 
 The game can be played on either an emulator or real hardware (a Jupiter Ace with a 32kb RAM pack, or a Minstrel 4th). Open the TAP or WAV file, as appropriate, power up your Ace and type:
 
