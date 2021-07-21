@@ -64,17 +64,17 @@
 CREATE G ( ARRAY TO HOLD BITMAPS FOR UDGS )
 198 c,  10 c, 238 c, 221 c, 248 c,  59 c,  60 c,  39 c,
 90 c, 247 c, 222 c, 221 c, 241 c,  63 c, 123 c,  57 c,
-
-
+( ... )
 
  ALLOT 48 ( 48 WORDS = 96 BYTES = 12 UDGS )
+
 
 CREATE D ALLOT 48 ( 48 WORDS = 96 BYTES )
 
 0 VARIABLE SEED ( SEED FOR RANDOM-NUMBER GENERATOR )
 
 ( RANDOM NUMBER GENERATED. SEE STEVEN VICKERS 'FORTH PROGRAMMING' P. 82 )
-( FOR DETAILS )
+( FOR DETAILS OF THE IMPLEMENTATION )
 : RND ( N -- RND N )
     SEED @
     75 U* 75 0 D+
@@ -82,6 +82,23 @@ CREATE D ALLOT 48 ( 48 WORDS = 96 BYTES )
     1- DUP SEED !
     U* SWAP DROP
 ;
+
+0 VARIABLE Z
+0 VARIABLE Y
+0 VARIABLE X
+0 VARIABLE W
+0 VARIABLE V
+0 VARIABLE U
+0 VARIABLE T
+0 VARIABLE P
+0 VARIABLE P1
+0 VARIABLE OX
+0 VARIABLE OV
+0 VARIABLE OU
+0 VARIABLE IX
+0 VARIABLE IV
+0 VARIABLE IU
+
 
 ( INITIALISE MAZE GRAPH AND IN-MEMORY COPY OF DISPLAY )
 : CLEAR ( SIZE -- )
@@ -242,159 +259,186 @@ CREATE D ALLOT 48 ( 48 WORDS = 96 BYTES )
 ;
 
 : Y-
- X @ DUP 31 >
- IF
-  32 - W @ +
-  C@ 128 <
-  IF
-   X @ 4 RAM 2
-   SCR 32 - 8 RAM
-   X ! 1
-  ELSE
-   0
-  THEN
- ELSE
-  V @ 1 > OVER
-  608 + W @ +
-  672 Z @ * -
-  C@ 128 < AND
-  IF
-   132 RAM 2 SCR -1
-   YP DUP 32 + 2
-   SCR DROP 8 RAM X
-   ! 1
-  ELSE
-   DROP 0
-  THEN
- THEN
+    X @ DUP 31 >
+    IF
+	32 - W @ +
+	C@ 128 <
+	IF
+	    X @ 4 RAM 2
+	    SCR 32 - 8 RAM
+	    X ! 1
+	ELSE
+	    0
+	THEN
+    ELSE
+	V @ 1 > OVER
+	608 + W @ +
+	672 Z @ * -
+	C@ 128 < AND
+	IF
+	    132 RAM 2 SCR -1
+	    YP DUP 32 + 2
+	    SCR DROP 8 RAM X
+	    ! 1
+	ELSE
+	    DROP 0
+	THEN
+    THEN
 ;
 
 : Y+
- X @ DUP 608 <
- IF
-  32 + W @ +
-  C@ 128 <
-  IF
-   X @ 8 RAM 32
-   + 2 SCR 4 RAM
-   32 RAM X ! 1
-  ELSE
-   0
-  THEN
- ELSE
-  V @ Z @ <
-  OVER 608 - W @
-  + 672 Z @ *
-  + C@ 128 < AND
-  IF
-   136 RAM DUP 32 +
-   2 SCR DROP 1 YP
-   2 SCR 4 RAM 32
-   RAM X ! 1
-  ELSE
-   DROP 0
-  THEN
- THEN
+    X @ DUP 608 <
+    IF
+	32 + W @ +
+	C@ 128 <
+	IF
+	    X @ 8 RAM 32
+	    + 2 SCR 4 RAM
+	    32 RAM X ! 1
+	ELSE
+	    0
+	THEN
+    ELSE
+	V @ Z @ <
+	OVER 608 - W @
+	+ 672 Z @ *
+	+ C@ 128 < AND
+	IF
+	    136 RAM DUP 32 +
+	    2 SCR DROP 1 YP
+	    2 SCR 4 RAM 32
+	    RAM X ! 1
+	ELSE
+	    DROP 0
+	THEN
+    THEN
 ;
 
 : X-
- X @ DUP 31 AND
- 0>
- IF
-  1- W @ + C@
-  128 <
-  IF
-   X @ 2 RAM 1
-   SCR 1- 1 RAM 16
-   RAM X ! 1
-  ELSE
-   0
-  THEN
- ELSE
-  U @ 1 > OVER
-  642 - W @ +
-  C@ 128 < AND
-  IF
-   130 RAM 1 SCR -1
-   XP 1+ 1 SCR 1-
-   1 RAM 16 RAM X
-   ! 1
-  ELSE
-   DROP 0
-  THEN
- THEN
-;
-
-: X+
- X @ DUP 31 AND
- 30 <
- IF
-  1+ W @ + C@
-  128 <
-  IF
-   X @ 1 RAM 1+
-   1 SCR 2 RAM 48
-   RAM X ! 1
-  ELSE
-   0
-  THEN
- ELSE
-  U @ Z @ <
-  OVER 642 + W @
-  + C@ 128 < AND
-  IF
-   129 RAM 1+ 1 SCR
-   1- 1 XP 1 SCR
-   2 RAM 48 RAM X
-   ! 1
-  ELSE
-   DROP 0
-  THEN
- THEN
-;
-
-: SCAN
- X @ W @ +
- C@ 48 AND 16 /
- DUP 0 =
- IF
-  X @ DUP 608 <
-  IF
-   32 + X !
-  ELSE
-   1 YP X !
-  THEN
- ELSE
-  DUP 1 =
-  IF
-   X @ DUP 31 AND
-   30 <
-   IF
-    1+ X !
-   ELSE
-    1 XP X !
-   THEN
-  ELSE
-   DUP 2 =
-   IF
-    X @ DUP 31 >
-    IF
-     32 - X !
-    ELSE
-     -1 YP X !
-    THEN
-   ELSE
     X @ DUP 31 AND
-    0 >
+    0>
     IF
-     1- X !
+	1- W @ + C@
+	128 <
+	IF
+	    X @ 2 RAM 1
+	    SCR 1- 1 RAM 16
+	    RAM X ! 1
+	ELSE
+	    0
+	THEN
     ELSE
-     -1 XP X !
+	U @ 1 > OVER
+	642 - W @ +
+	C@ 128 < AND
+	IF
+	    130 RAM 1 SCR -1
+	    XP 1+ 1 SCR 1-
+	    1 RAM 16 RAM X
+	    ! 1
+	ELSE
+	    DROP 0
+	THEN
     THEN
-   THEN
-  THEN
- THEN
- DROP
+;
+
+( TRY TO GROW MAZE ONE CELL TO THE RIGHT )
+: X+ ( -- FLAG )
+    X @ DUP 31 AND ( EXTRACT COLUMN INDEX OF CURRENT LOCATION )
+
+    ( .S : OFFSET COL )
+    
+    30 < IF ( CHECK NOT RIGHT-MOST COLUMN )
+	( EXTRACT STATUS INFO FOR CELL TO RIGHT )
+	1+ W @ + C@
+
+	128 < IF ( CHECK NOT VISITED ALREADY )
+	    X @
+	    1 RAM ( CONFIRM CAN MOVE RIGHT FROM CURRENT LOCATION - 1 = %00000001 )
+	    1+ ( MOVE RIGHT )
+	    1 SCR ( REMOVE WALL TO LEFT )
+	    2 RAM ( CONFIRM CAN MOVE LEFT - 2 = %00000010 )
+	    48 RAM ( SET BREADCRUMB TRAIL  - 48 = %00110000 )
+	    X ! ( STORE NEW LOCATION )
+	    1 ( CONFIRM SUCCESS )
+	ELSE
+	    0 ( CONFIRM FAILED, AS ALREADY VISITED )
+	THEN
+    ELSE
+	( .S : OFFSET )
+	U @ Z @ < ( CHECK IF SCREEN SECTION TO RIGHT )
+	OVER 642 + ( ASSUME SO, AND EXTRACT STATUS INFO FROM CELL TO RIGHT IN NEXT SECTION - 642 = 32*21 - 30 )
+	W @ + C@ ( RETRIEVE STATUS )
+	128 < ( CHECK NOT VISITED )
+	AND IF ( IF SECTION TO RIGHT AND NOT VISITED )
+	    129 RAM ( MARK AS VISITED AND CONFIRM CAN MOVE RIGHT - 129 = %10000001 )
+	    1+ ( MOVE RIGHT, INTO BOUNDARY COLUMN )
+	    1 SCR ( REMOVE WALL BETWEEN CURRENT LOCATION AND BOUNDARY OF SECTION )
+	    1- ( MOVE BACK TO CURRENT CELL )
+	    1 XP ( MOVE ONE SECTION RIGHT )
+	    1 SCR ( REMOVE BOUNDARY BETWEEN NEW LOCATION AND BOUNDARY OF SECTION )
+	    2 RAM ( CONFIRM CAN MOVE LEFT FROM NEW LOCATION  - 2 = %00000010 )
+	    48 RAM ( SET BREADCRUMB TRAIL  - 48 = %00110000 )
+	    X ! ( STORE NEW LOCATION )
+	    1 ( CONFIRM SUCCESS )
+	ELSE
+	    DROP ( BALANCE STACK )
+	    0 ( CONFIRM FAILURE )
+	THEN
+    THEN
+;
+
+( BACKTRACK FROM A DEAD-END DURING MAZE GENERATION )
+: SCAN ( -- )
+    X @ W @ + ( RETRIEVE STATUS INFORMATION FOR CURRENT LOCATION )
+    C@
+    48 AND 16 / ( EXTRACT BITS 4 AND 5 AND RESCALE ONTO 0..3 )
+
+    DUP 0 = IF ( CAME FROM BELOW )
+	X @ DUP
+
+	608 < IF ( IF NOT BOTTOM ROW, MOVE DOWN ONE ROW )
+	    32 +
+	    X !
+	ELSE ( OTHERWISE MOVE TO NEXT SECTION DOWN )
+	    1 YP
+	    X !
+	THEN
+    ELSE
+	DUP 1 = IF ( CAME FROM RIGHT )
+	    X @ DUP
+
+	    31 AND 30 < IF 9 ( IF NOT RIGHT-MOST COLUMN, MOVE RIGHT )
+		1+
+		X !
+	    ELSE ( OTHERWISE MOVE TO NEXT SECTION RIGHT )
+		1 XP
+		X !
+	    THEN
+	ELSE
+	    DUP 2 = IF ( CAME FROM ABOVE )
+		X @
+		DUP 31 > IF ( IF NOT FIRST ROW, MOVE UP )
+		    32 -
+		    X !
+		ELSE ( OTHERWISE MOVE UP A MAZE SEGMENT )
+		    -1 YP
+		    X !
+		THEN
+	    ELSE ( MUST HAVE COME FROM LEFT )
+		X @
+		DUP 31 AND 0 > IF ( IF NOT LEFT-MOST COLUMN, MOVE LEFT )
+		    1-
+		    X !
+		ELSE ( OTHERWISE ONE SECTION TO LEFT )
+		    -1 XP
+		    X !
+		THEN
+	    THEN
+	THEN
+    THEN
+    
+    DROP ( BALANCE STACK )
 ;
 
 ( USED WHEN CREATING MAZE TO ADVANCE TO NEXT AVAILABLE SQUARE )
