@@ -105,7 +105,25 @@ Having determined the start point, the maze is generated using a version of the 
 
 In the original program, ``PATH`` was the point at which the program crashed. Specifically, the word ``MOVE`` -- which is called repeatedly in ``PATH`` to expand the maze by one cell until it is completed -- was the point at which the program crashes.
 
+The depth-first algorithm is explained nicely on [Wikipedia](https://en.wikipedia.org/wiki/Maze_generation_algorithm). MOVE expands the maze by one cell each time it is called. It starts from the most recently created cell and attempts to grow the maze in one of the four possible directions, randomly chosen from a vector of possible directions pointed to by the variable 'D'.
 
+If the choice of next cell is already populated (indicated by bit 7 being set in the corresponding entry of the maze-status structure), then the computer will try another direction until it has exhausted all four possible directions, at which point it determines it has reached a dead end and needs to backtrack.
+
+In the original corrupted version of the program, the backtrack routine (encoded in a word named SCAN) seems hopelessly corrupted. It contained what looked like interleaved segments of the MOVE routine, with lots of corruption. Worse still, I could not work out how backtracking could possibly work, as there did not seem to be any record of the path the generation program had taken.
+
+The usual approach to backtracking is to create a stack of previous moves and then pop moves off of the stack one by one until you get back to a cell from which you can continue to grow the maze. However, in MAZE, there was no evidence of the use of a stack for this (even though this is FORTH!). Further, the stack could potentially be as long as the maze is large, meaning it would take a significant amount of memory in its own right.
+
+Given the situation, I decided to try to implement my own backtracking program and, to save memory, I recorded the generation path in the maze-status structure.
+
+Fortunately, there are (during generation) two unused bits in the structure. Bit 4, which is not used until later in the program, when solving the maze, and Bit 5, which is unused. These two bits are enough to record from which direction the maze-generation code entered a cell.
+
+For example, if MOVE expands the maze one cell to the right, then in the new cell, I record that the generator came from the left. Then, if the new cell turns out to be a deadend, I can look up from which direction the generator came back backtrack (to the left).
+
+To implement this approach, I needed to completely rewrite the SCAN routine, as well as to update the four words that grow the maze (named 'X+', 'X-', 'Y+', 'Y-', for right, left, down, and up, respectively) to record the backtracking information.
+
+I also needed to reset Bit 5 of every cell in the maze-status structure, so it could be used for later solving the maze. This is done in a new word called CLEARTRAIL.
+
+With the new SCAN routine and other modifications noted above (plus some other small corrections to remove corruption from the code) the program successfully generated a small maze (with size '1'), though crashed for larger maze sizes.
 
 ## Status and Possible Improvements
 
