@@ -125,6 +125,8 @@ I also needed to reset Bit 5 of every cell in the maze-status structure, so it c
 
 With the new SCAN routine and other modifications noted above (plus some other small corrections to remove corruption from the code) the program successfully generated a small maze (with size '1'), though crashed for larger maze sizes.
 
+![](maze_generator.png "Maze generation in progress, with new SCAN routine.")
+
 ## Status and Possible Improvements
 
 The program has now been recovered and, to the best of my knowledge, works are the author intended. I have anotated the [source code](maze.fs) for anyone who is interested to delve into the working of the game.
