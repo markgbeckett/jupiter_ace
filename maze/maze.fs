@@ -908,7 +908,7 @@ CREATE D
 
     ( .S : X X FLAG )
     IF ( IF COLUMN 30 ADD 
-	641 + ( ADD 20 ROWS AND ONE EXTRA )
+	641 + [ ADD 20 ROWS AND ONE EXTRA ] )
     THEN
     
     1+ ( MOVE RIGHT )

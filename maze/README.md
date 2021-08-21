@@ -129,7 +129,25 @@ With the new SCAN routine and other modifications noted above (plus some other s
 
 Further investigation into the program identified some corruption within the code that switched from one maze section to another, when the maze generation moves between sections. With this corruption fixed, it was possible to generate all of the three maze sizes.
 
-_To do : explain how solver routine works_
+Once a maze has been created, the player has two options. They can either try to solve the maze themselves, or get the computer to solve it for them. 
+
+The code used to solve the maze by hand is straightforward. A loop reads the the keyboard and then tries to move in the requested direction. If the move takes the player to the exit, then the game ends.
+
+The code to solve the maze automatically is quite involved and saves memory by saving progress within the maze-status structure. This does have the disadvantage of corrupting the maze, so once it has been solved, a new maze needs to be generated before it can be played again.
+
+The word used to automatically solve the maze is named AUTO. It starts by retrieving the location on the entrance (held in the variables IX, IU and IV) and then works step-by-step to explore the maze until reaching the exit.
+
+Each cell that is visited is marked as visited by setting Bit 4 of the corresponding entry in the maze-status structure. At each step the computer tries to move in the four possible directions, one at a time. It starts by tying to move right, then left, then up and finally down.
+
+If it can move in a direction, then it checks to see if it has been visited before. If it has, then it checks if any other directions are possible. If other directions are possible it tries them. However, if not, then the computer knows it has reached a deadend. Even though the cell has been visited, it backtracks to that cell, and then modifies the maze-status structure to close of the path from which it has come.
+
+To illustrate, look at the screenshot below, which is taken mid-way through the computer trying to solve a maze. Several cells have been highlighted. The yellow circle shows you the current location and you can see that the computer has reached a dead-end. On the next move, the computer will identify that it can move up though, when it does, it will discover the cell has already been visited. As there are no other directions available from the current location, the computer knows it has reached a deadend, so it will replace the marker at the current cell by a small square, moves up to the cell above, but then modifies the maze-status structure to block off the current location, so that it will not follow this path again. It will continue to backtrack until it reaches the cell highlighted in blue, when it will be able to explore (at least, for a couple of moves) a new part of the maze by going down.
+
+Although the maze-status structure is modified to block off deadends, the display version is not, so you do not see the invisible walls that have been added to eliminate wrong turns.
+
+In this way, the computer reduces the maze down to just the path that connects the entrance to the exit and, because the way the maze has been created, the computer will always find a solution in the way.
+
+![](maze_solver.png "Automatic maze solver in progress.")
 
 ## Status and Possible Improvements
 
