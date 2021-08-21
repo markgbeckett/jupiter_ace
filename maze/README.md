@@ -30,9 +30,9 @@ Having chosen the maze size, you will see the computer create a maze at random, 
 
 Once the maze is generated, you are asked if you wish to Play or Watch the maze. Selecting Play will position your _mouse_ at the entrance to the maze and let you work out the path to the exit, yourself, using the slightly awkward key combination of A, Z, K, and M.
 
-Selecting Watch will cause the computer to solve the maze for you, tracing both the correct path and any failed turns it take on the way.
+Selecting Watch will cause the computer to solve the maze for you, tracing both the correct path and any failed turns it takes on the way.
 
-Once the maze is solved, you return immediately to the menu from which you can choose to make another maze.
+Once the maze is solved, you return immediately to the menu from which you can choose to generate and solve another maze.
 
 ## Recovery Process
 
@@ -64,7 +64,9 @@ The maze information is held in two data structures. One structure holds the scr
 
 I noted that Bits 5 is apparently not used, as it is an ideal candidates to work around one of the corruptions I discovered in the game.
 
-The screen sections contain 32x21 arrays of bytes, containing character values between 1 and 12. These correspond to user-defined graphics set up with the word GR, when the instructions are printed. The 12 characters represent three sets of four maze-wall configurations. Characters 1, 2, 3, and 4 contain graphics for walls on top and left, a wall on top, a wall on the left, and a top-left corner only, respectively. To box in a particular cell: the actual cell needs to have top and left walls; the cell immediately to the right needs to have, at least, the left wall set; the cell immediately below needs to have, at least, the top wall set; and the cell down and to the right needs to have at least the top-left corner set. This is why it takes 32x21 characters to store a 31x20 maze: the final column contains mostly 3s, the final row contains mostly 2s, and the bottom-right corner contains 4.
+The screen sections contain arrays of 32x21 bytes, containing character values between 1 and 12. These correspond to user-defined graphics set up with the word GR, when the instructions are printed. The 12 characters represent three sets of four maze-wall configurations. Characters 1, 2, 3, and 4 contain graphics for walls on top and left, a wall on top, a wall on the left, and a top-left corner only, respectively. To box in a particular cell: the actual cell needs to have top and left walls; the cell immediately to the right needs to have, at least, the left wall set; the cell immediately below needs to have, at least, the top wall set; and the cell down and to the right needs to have at least the top-left corner set. This is why it takes 32x21 characters to store a 31x20 maze: the final column contains mostly 3s, the final row contains mostly 2s, and the bottom-right corner contains 4.
+
+The maze is initialised with all walls in place. It looks like an array of squares. Most cells in the screen array contain character 1 (except for the right-most column and bottom row of each maze section, as noted above). 
 
 If that seems confusing take a look at an example screenshots of a maze section. This section shows the top-left 4x3 section of a maze, with the corresponding character codes in yellow. The top left cell has both the top and left wall filled in, so is represented by character 1. The cell to the right of that has just the top wall filled in so is represented by a 2 (remember the bottom wall comes from the cell below). The first cell on the second row has a left wall and right, so will be represented by character 3 with character 1 to the right of it (to fill in the right wall) and so on. Hopefully that makes sense though, if not, draw your own version of this maze segment by filling in the walls that correspond to each character.
 
@@ -121,7 +123,7 @@ For example, if MOVE expands the maze one cell to the right, then in the new cel
 
 To implement this approach, I needed to completely rewrite the SCAN routine, as well as to update the four words that grow the maze (named 'X+', 'X-', 'Y+', 'Y-', for right, left, down, and up, respectively) to record the backtracking information.
 
-I also needed to reset Bit 4 of every cell in the maze-status structure, so it could be used for later solving the maze. This is done in a new word called CLEARTRAIL.
+Once the maze had been generated, I also needed to reset Bit 4 of every cell in the maze-status structure, so it could be used for later solving the maze. This is done in a new word called CLEARTRAIL.
 
 With the new SCAN routine and other modifications noted above (plus some other small corrections to remove corruption from the code) the program successfully generated a small maze (with size '1'), though crashed for larger maze sizes.
 
@@ -131,32 +133,34 @@ Further investigation into the program identified some corruption within the cod
 
 Once a maze has been created, the player has two options. They can either try to solve the maze themselves, or get the computer to solve it for them. 
 
-The code used to solve the maze by hand is straightforward. A loop reads the the keyboard and then tries to move in the requested direction. If the move takes the player to the exit, then the game ends.
+The code used to solve the maze by hand is straightforward. A loop reads the keyboard and then tries to move in the requested direction. If the move takes the player to the exit, then the game ends.
 
-The code to solve the maze automatically is quite involved and saves memory by saving progress within the maze-status structure. This does have the disadvantage of corrupting the maze, so once it has been solved, a new maze needs to be generated before it can be played again.
+The code to solve the maze automatically is quite involved and saves memory by recording progress within the maze-status structure. This does have the disadvantage of corrupting the maze, so once it has been solved, a new maze needs to be generated before it can be played again.
 
-The word used to automatically solve the maze is named AUTO. It starts by retrieving the location on the entrance (held in the variables IX, IU and IV) and then works step-by-step to explore the maze until reaching the exit.
+The word used to automatically solve the maze is named ``AUTO``. It starts by retrieving the location on the entrance (held in the variables 'IX', 'IU' and 'IV') and then works step-by-step to explore the maze until reaching the exit.
 
-Each cell that is visited is marked as visited by setting Bit 4 of the corresponding entry in the maze-status structure. At each step the computer tries to move in the four possible directions, one at a time. It starts by tying to move right, then left, then up and finally down.
+Each cell that is visited is marked as visited by setting Bit 4 of the corresponding entry in the maze-status structure. At each step the computer tries to move in the four possible directions, one at a time. It starts by trying to move right, then left, then up and finally down.
 
-If it can move in a direction, then it checks to see if it has been visited before. If it has, then it checks if any other directions are possible. If other directions are possible it tries them. However, if not, then the computer knows it has reached a deadend. Even though the cell has been visited, it backtracks to that cell, and then modifies the maze-status structure to close of the path from which it has come.
+If it can move in a direction, then it checks to see if the cell in that direction has been visited before. If it has, then it checks if any other directions are possible. If other directions are possible it tries them. However, if not, then the computer knows it has reached a deadend. Even though the cell has been visited, it backtracks to that cell, and then modifies the maze-status structure to close of the path from which it has come.
 
-To illustrate, look at the screenshot below, which is taken mid-way through the computer trying to solve a maze. Several cells have been highlighted. The yellow circle shows you the current location and you can see that the computer has reached a dead-end. On the next move, the computer will identify that it can move up though, when it does, it will discover the cell has already been visited. As there are no other directions available from the current location, the computer knows it has reached a deadend, so it will replace the marker at the current cell by a small square, moves up to the cell above, but then modifies the maze-status structure to block off the current location, so that it will not follow this path again. It will continue to backtrack until it reaches the cell highlighted in blue, when it will be able to explore (at least, for a couple of moves) a new part of the maze by going down.
+To illustrate, look at the screenshot below, which is taken mid-way through the computer trying to solve a maze. Several cells have been highlighted. The yellow circle identifies the current location and you can see that the computer has reached a dead-end. On the next move, the computer will identify that it can move up though, when it does, it will discover the cell has already been visited. As there are no other directions available from the current location, the computer knows it has reached a deadend, so it will replace the marker at the current cell by a small square, moves up to the cell above, but then modifies the maze-status structure to block off the current location, so that it will not follow this path again. It will continue to backtrack until it reaches the cell highlighted in blue, when it will be able to explore (at least, for a couple of moves) a new part of the maze by going down.
 
 Although the maze-status structure is modified to block off deadends, the display version is not, so you do not see the invisible walls that have been added to eliminate wrong turns.
 
-In this way, the computer reduces the maze down to just the path that connects the entrance to the exit and, because the way the maze has been created, the computer will always find a solution in the way.
+In this way, the computer reduces the maze down to just the path that connects the entrance to the exit and, because of the way the maze has been created, the computer will always find a solution in this way.
 
 ![](maze_solver.png "Automatic maze solver in progress.")
 
 ## Status and Possible Improvements
 
-The program has now been recovered and, to the best of my knowledge, works are the author intended. I have anotated the [source code](maze.fs) for anyone who is interested to delve into the working of the game.
+The program has now been recovered and, to the best of my knowledge, works as the author intended. I have annotated the [source code](maze.fs) for anyone who is interested to delve into the workings of the game.
 
-Studying the code has highlighted a few potential improvements, for future work:
+Studying the code has highlighted a few potential improvements:
 
 * The game tends to produce the same mazes each time, as the random-number seed is initialised to a constant value. This could be easily addressed by, for example, initialising the seed using the low word of the internal clock. This is described in Steven Vickers book 'FORTH Programming' (page 82--83), which looks to be from where the author obtained the random-number generator.
 * When the auto-solver completes, the game immediately returns to the main menu, which means you do not get a chance to study the solution. There is a loop in the code, which looks like a wait loop, though the duration of the wait is very short and could be extended. 
-* Better still, for the medium and large mazes, it would be useful to be able to move between the maze sections to see the full solution. The word SP prints each maze sectin in turn, and could be used to allow the player to review the solution at the end of the game. Perhaps this was intended for the original game.
+* Better still, for the medium and large mazes, it would be useful to be able to move between the maze sections to see the full solution. There is an unused word ``SP``, which displays each maze section in turn, and could be used to allow the player to review the solution at the end of the game. Perhaps this was intended for the original game.
 * The game does not check there is enough memory to hold the user's selected maze size, but just assumes there is enough space between the end of the dictionary and the start of the return stack. With a 16-kilobyte RAM pack (that is, 19kb of RAM), there is not enough spare memory for the largest maze size. Attempting to generate the large maze on such a system will cause the computer to crash.
-* The game holds two copies of the maze in memory (along with the active maze segment in the display area). For the largest maze, this requires 2*3*3*32*21 = 12,096 bytes. It should be possible to reduce this by at least half. However, this would slow-down redrawing the on-screen maze segment. This might be okay and could enable even bigger mazes to be supported.
+* The game holds two copies of the maze in memory (along with the active maze segment in the display area). For the largest maze, this requires 2x3x3x32x21 = 12,096 bytes. It should be possible to reduce this by at least half. However, this would slow-down redrawing the on-screen maze segment. This might be okay and could enable even bigger mazes to be supported.
+
+All but the last two of these, I have implemented in an [alternative version fo the game](maze_improved.tap).
