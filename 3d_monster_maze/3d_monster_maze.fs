@@ -405,3 +405,210 @@ CREATE MAZE 16 18 * ALLOT
     DROP
     DROP
 ;
+
+( SEE MANUAL. P. 147 )
+DEFINER CODE
+  DOES>
+    CALL
+;
+
+: GR ( SEE MANUAL, P. 71 )
+    8 * 11263 +
+    DUP 8 +
+
+    DO
+	I C!
+	-1
+    +LOOP
+;
+
+: SETUPUDG
+    ( CROSSHATCH PATTERN )
+    170 85 170 85 170 85 170 85
+    1
+    GR
+;
+
+: TURNLEFT ( DIR -- NEWDIR )
+    3 +
+    4 MOD
+;
+
+: TURNRIGHT ( DIR -- NEWDIR )
+    1+
+    4 MOD
+;
+
+: MOVE ( X Y DIR -- NX NY )
+    DUP
+    2 MOD IF
+	2 -
+	+
+    ELSE
+	1-
+	ROT +
+	SWAP
+    THEN
+;
+
+: 3DUP
+    3 PICK
+    3 PICK
+    3 PICK
+;
+
+( FIRST COL AT DISTANCE )
+CREATE DISTCOL   0 C,  1 C,  4 C,  6 C,  8 C,  9 C, 10 C,
+
+( MAX WALL HEIGHT AT DISTANCE )
+CREATE DISTWALL 20 C, 18 C, 12 C,  8 C,  4,C,  2 C,  2 C,
+
+: DRAWLWALL ( COL FLAG -- )
+    OVER 9216 +
+
+    SWAP ( COL ADDR FLAG )
+
+    IF ( WALL )
+	OVER ?DUP IF
+	    0 DO
+		32 OVER C!
+		32 +
+	    LOOP
+	THEN
+
+	145 OVER C!
+	32 +
+
+	OVER -2 * 18 +
+
+	?DUP IF
+	    0 DO
+		144 OVER C!
+		32 +
+	    LOOP
+	THEN
+
+	140 OVER C!
+	32 +
+
+	OVER ?DUP IF
+	    0 DO
+		32 OVER C!
+		32 +
+	    LOOP
+	THEN
+    ELSE
+	SWAP
+	DISTWALL + C@
+	SWAP
+	OVER 20 SWAP - 2 /
+
+	?DUP IF
+	    0 DO
+		32 OVER C!
+		32 +
+	    LOOP
+	THEN
+
+	OVER 0 DO
+	    1 OVER C!
+	    32 +
+	LOOP
+
+	OVER 20 SWAP - 2 /
+	?DUP IF
+	    0 DO
+		32 OVER C!
+		32 +
+	    LOOP
+	THEN
+    THEN
+
+    DROP
+    DROP
+;
+
+: DRAWRWALL ( COL FLAG -- )
+    OVER 9236 SWAP - SWAP
+
+    IF ( WALL )
+	OVER ?DUP IF
+	    0 DO
+		32 OVER C!
+		32 +
+	    LOOP
+	THEN
+
+	146 OVER C!
+	32 +
+
+	OVER -2 * 18 +
+
+	?DUP IF
+	    0 DO
+		144 OVER C!
+		32 +
+	    LOOP
+	THEN
+
+	23 OVER C!
+	32 +
+
+	OVER ?DUP IF
+	    0 DO
+		32 OVER C!
+		32 +
+	    LOOP
+	THEN
+    ELSE
+	SWAP
+	DISTWALL + C@
+	SWAP
+	OVER 20 SWAP - 2 /
+
+	?DUP IF
+	    0 DO
+		32 OVER C!
+		32 +
+	    LOOP
+	THEN
+
+	OVER 0 DO
+	    1 OVER C!
+	    32 +
+	LOOP
+
+	OVER 20 SWAP - 2 /
+	?DUP IF
+	    0 DO
+		32 OVER C!
+		32 +
+	    LOOP
+	THEN
+    THEN
+
+    DROP
+    DROP
+;
+	
+: DRAWLSEG ( DIST FLAG -- )
+    >R ( SAVE FLAG )
+    DUP DISTCOL + 1+ C@ ( COMPUTE UPPER BOUND ON LOOP )
+    SWAP DISTCOL + C@ ( COMPUTE LOWER BOUND ON LOOP )
+    DO ( DRAW EACH WALL SEGMENT )
+	I J DRAWLWALL
+    LOOP
+
+    R> DROP ( RETRIEVE FLAG AND DROP )
+;
+
+: DRAWRSEG ( DIST FLAG -- )
+    >R ( SAVE FLAG ) 
+    DUP DISTCOL + 1+ C@ ( COMPUTE UPPER BOUND ON LOOP )
+    SWAP DISTCOL + C@ ( COMPUTE LOWER BOUND ON LOOP )
+    DO ( DRAW EACH WALL SEGMENT )
+	I J DRAWRWALL
+    LOOP
+
+    R> DROP ( RETRIEVE FLAG AND DROP )
+;
