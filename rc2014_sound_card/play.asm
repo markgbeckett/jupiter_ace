@@ -1068,9 +1068,10 @@ CHANNEL_2_INFO:
 	db 0x0F			; Volume
 
 	;; Demo tune "Hall Of the Mountain King", E. Grieg
-MK1:	dm "O5T120N3e#fgabg5b3#a#f5#a3af5aN3e#fgabgbENDbgb7D"
+MK1:	dm "O5T120N3e#fgabg5bN3#a#f5#a3af5aN3e#fgabgbENDbgb7D"
 MK1E:
 MK2:	dm "O5V6N3b#C#DE#F#D5#FN3G#D5G3#F#D5#FN3b#C#DE#F#D5#FN3G#D5G7#F"
 MK2E:
 MK3:	dm "O5V6N3Dbgb7DN5&E7&N5&E7&N3e#fgabgbE"
 MK3E:	
+	
