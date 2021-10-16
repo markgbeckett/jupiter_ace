@@ -12,3 +12,4 @@ Some software I have developed for the [Jupiter Ace](http://www.jupiter-ace.co.u
 * `starfield` - inspired by posts on Twitter from @BreakIntoProg, here are several Forth implementations of a star-field simulator.
 * `tut-tut` - an Ace FORTH implementation of David Stephenson's Egyptian-themed arcade game.
 * `3d_monster_maze` - (work in progress) Ace FORTH port of the classic ZX81 game.
+* `utilities` - additional words (mostly from the Jupiter Ace manual), which probably should have been in the Ace FORTH ROM.
