@@ -1,14 +1,32 @@
-	;; Render a wall/ no-wall section
-	;;
-	;; On entry, stack contains ...
-BUFFER:		equ 0x2400
-STACK_TO_BC:	equ 0x084e
-	
-	org 0x499d
+	;; 3D rendering routines 
 
-mfill:	macro char
+BUFFER:		equ 0x3c76	; Address of screen buffer (real screen is 0x2400)
+STACK_TO_BC:	equ 0x084e	; ROM routine to extract TOS into BC pair
+	
+	org 0x49e9		; Set ORG address to be start of 3DVIEW word in dictionary
+
+	;; Jump table to ensure persisent execution addresses for
+	;; Forth-accessible routines
+	jp DRAWLSEG		; 3DVIEW + 0
+	jp DRAWRSEG		; 3DVIEW + 3
+	jp DRAWEWALL		; 3DVIEW + 6
+
+	;; ======================================================
+	;; Macro to print a column of characters
+	;;
+	;; On entry:
+	;;   HL - pointer to first cell in buffer to be populated
+	;;   DE - step size (ususally one row, which is 32 bytes)
+	;;   B  - number of characters to print
+	;; 
+	;; N.B. Z80ASM has simplistic macro support, which does
+	;; not seem to be able to cope with labels, so DJNZ
+	;; command is hand-assembled to work around this.
+	;; ======================================================
+	mfill:	macro char
 
 	ld a, char
+mfill_loop:
 	ld (hl),a
 	add hl,de
 	db 0x10, 0xfc 		; djnz -4
@@ -16,8 +34,9 @@ mfill:	macro char
 	endm
 
 	;; ======================================================
-	;; Fill in one column of wall on left of view 
-	;; On entry, TOS contains column number
+	;; Fill in one column of wall on left of view
+	;; 
+	;; On entry, BC contains column number
 	;; ======================================================
 DRAW_L_WALL:	
 	;; Move to correct display column
@@ -27,9 +46,9 @@ DRAW_L_WALL:
 	ld de, 0x0020		; Displacement to next display row
 		
 	ld b,c			; Move column number into b, so can
-				; use with DJNZ (c is backup)
+				; use with DJNZ (backup copy in c)
 	
-	;;  Check if spaces needed at top
+	;;  Check if spaces needed at top of wall
 	ld a,b
 	and a
 	jr z, NO_L_TOP
@@ -44,9 +63,9 @@ NO_L_TOP:
 
 	;; Print mid-section, if any
 L_MIDDLE:
-	ld b,c
+	ld b,c			; Retrieve column number from backup
 	
-	;; Work out a = 18-2b
+	;; Work out a = 18-2*b
 	sla b
 	ld a, 18
 	sub b
@@ -67,7 +86,7 @@ NO_L_MID:
 	ld a,c
 	and a
 
-	jr z, NO_L_BOT
+	ret z 			; Done, if no space at bottom
 
 L_BOTTOM:
 	ld b,c
@@ -86,10 +105,10 @@ DRAW_R_WALL:
 	;; Move to correct display column
 	ld a,20
 	sub c
-	ld c,a
+	ld c,a			; B=0 already, so BC = column offset
 	
 	ld hl, BUFFER
-	add hl, bc
+	add hl, bc		
 	
 	ld de, 0x0020		; Displacement to next display row
 		
@@ -135,7 +154,7 @@ NO_R_MID:
 	ld a,c
 	and a
 
-	jr z, NO_R_BOT
+	ret z			; Done, if no space at bottom
 
 R_BOTTOM:
 	ld b,c
@@ -156,7 +175,7 @@ DRAW_L_GAP:
 
 	push hl			; Save for later
 
-	;; Work out height of wall
+	;; Work out height of wall at specific column
 	ld hl, DISTWALL
 	add hl,bc
 	ld a,(hl)
@@ -165,23 +184,32 @@ DRAW_L_GAP:
 	pop hl
 	ld de, 0x0020
 	
-	ld b,a
 	ld c,a
 	
 	and a
+
 	jr z, L_GAP
+	ld b,a
 
 TOP_L_GAP:
 	mfill 32
-	
+
+	;; Print 20-2*col wall graphics
 L_GAP:	
 	ld b,c
 	sla b
 	ld a, 20
 	sub b
 	and a
-	jr z, NO_L_GAP
+	jr nz, L_FACE_LOOP
 
+	sbc hl,de
+	ld (hl),2
+	add hl,de
+	ld (hl),3
+	add hl,de
+	jr NO_L_GAP
+	
 L_FACE_LOOP:
 	ld b,a
 
@@ -190,7 +218,7 @@ L_FACE_LOOP:
 NO_L_GAP:
 	ld a,c
 	and a
-	jr z, NO_L_B_GAP
+	ret z 			; Done, if no space at bottom
 
 BOT_L_GAP:
 	ld b,c
@@ -209,12 +237,12 @@ DRAW_R_GAP:
 	;; Move to correct display column
 	ld a,20
 	sub c
-	ld c,a
+	ld c,a			; B=0, so BC = column offset
 	
 	ld hl, BUFFER
 	add hl, bc
 
-	;; Retrieve column and copy into b
+	;; Retrieve column
 	pop bc
 
 	;; Work out height of wall
@@ -222,27 +250,34 @@ DRAW_R_GAP:
 	ld hl, DISTWALL
 	add hl,bc
 	ld a,(hl)
+	ld c,a
 
 	;; Retrieve display pointer
 	pop hl
 	ld de, 0x0020
 	
-	ld b,a
-	ld c,a
-	
 	and a
 	jr z, R_GAP
+	ld b,a
 
 TOP_R_GAP:
 	mfill 32
 	
+	;; Print 20-2*col wall graphics
 R_GAP:	
 	ld b,c
 	sla b
 	ld a, 20
 	sub b
 	and a
-	jr z, NO_R_GAP
+	jr nz, R_FACE_LOOP
+
+	sbc hl,de
+	ld (hl),2
+	add hl,de
+	ld (hl),3
+	add hl,de
+	jr NO_R_GAP
 
 R_FACE_LOOP:
 	ld b,a
@@ -252,7 +287,7 @@ R_FACE_LOOP:
 NO_R_GAP:
 	ld a,c
 	and a
-	jr z, NO_R_B_GAP
+	ret z			; Done, if no space at bottom
 
 BOT_R_GAP:
 	ld b,c
@@ -262,11 +297,12 @@ NO_R_B_GAP:
 	ret
 
 
+	;; ======================================================
 	;; Draw lefthand wall segment. On entry, TOS is a flag
 	;; (1=wall, 0=gap), 2OS is distance
-	;;
+	;; ======================================================
 DRAWLSEG:
-	rst 0x18		; Retrieve Flag
+	rst 0x18		; Retrieve flag into DE
 
 	ld a,e			; Save flag 
 	push af
@@ -278,7 +314,7 @@ DRAWLSEG:
 
 	ld c,(hl)		; Retrieve starting column
 	inc hl
-	ld a, (hl)		; Retrieve finishing column
+	ld a, (hl)		; Retrieve one more than final column
 
 	sub c			; Work out number of columns to print
 	ld b,a			; and move to loop counter
@@ -290,8 +326,7 @@ DLS_LOOP:
 	push bc			; Save loop counter
 	ld b,0x00
 
-	and a			; Check if wall of gap
-
+	and a			; Check if wall or gap
 	jr z, DLS_GAP
 	call DRAW_L_WALL
 	jr DLS_CONT
@@ -309,23 +344,24 @@ DLS_CONT:
 	
 	jp (iy)			; Done
 	
+	;; ======================================================
 	;; Draw righthand wall segment. On entry, TOS is a flag
 	;; (1=wall, 0=gap), 2OS is distance
-	;;
+	;; ======================================================
 DRAWRSEG:
-	rst 0x18		; Retrieve Flag
+	rst 0x18		; Retrieve flag into DE
 
 	ld a,e			; Save flag 
 	push af
 
-	rst 0x18		; Retrieve distance
+	rst 0x18		; Retrieve distance into DE
 
 	ld hl, DISTCOL		; Retrieve column info
 	add hl, de
 
 	ld c,(hl)		; Retrieve starting column
 	inc hl
-	ld a, (hl)		; Retrieve finishing column
+	ld a, (hl)		; Retrieve one more than final column
 
 	sub c			; Work out number of columns to print
 	ld b,a			; and move to loop counter
@@ -338,7 +374,6 @@ DRS_LOOP:
 	ld b,0x00
 
 	and a			; Check if wall of gap
-
 	jr z, DRS_GAP
 	call DRAW_R_WALL
 	jr DRS_CONT
@@ -357,10 +392,90 @@ DRS_CONT:
 	jp (iy)			; Done
 
 
+	;; ======================================================
+	;; Draw end-wall section. On entry, TOS contains
+	;; distance.
+	;; ======================================================
+DRAWEWALL:
+	rst 0x18		; Retrieve TOS into DE
+
+	ld hl, DISTWIDTH
+	add hl,de
+	ld b,(hl)
+
+	ld hl, DISTHEIGHT
+	add hl,de
+	ld c,(hl)
+
+	;; BC contains width and height of end-wall section
+
+	push bc			; Save it
+
+	;; Work out row offset of end-wall section
+	ld a, 20
+	sub c
+	sra a			; A contains row offset
+
+	ld hl, BUFFER		; Start of display buffer
+	ld de, 0x0020		; Row offset
+
+	and a			; Check if non-zero offset to be applied
+	jr z, DEW_COL_OFFSET
+
+	ld b,a			; Move to counter
+
+DEW_ROWSTEP:
+	add hl, de
+	djnz DEW_ROWSTEP
+
+DEW_COL_OFFSET:
+	;; HL contains start of row buffer
+	
+	pop bc			; Retrieve end-wall size
+	push bc
+
+	;;  Work out column offset
+	ld a,21
+	sub b
+	sra a
+
+	ld b,0
+	ld c,a
+	add hl,bc
+
+	;; HL now points to top-left corner of end-wall section
+	ld a,0x01
+
+	pop bc
+DEW_RLOOP:
+	push bc
+	push hl
+
+DEW_CLOOP:	
+	ld (hl),a
+	inc hl
+	djnz DEW_CLOOP
+
+	pop hl
+	pop bc
+
+	add hl,de		; Move to next row
+
+	dec c			; Check if any more rows
+	jr nz, DEW_RLOOP
+
+	;; Done
+	jp (iy)
+	
+
 DISTWALL:
-	 db 1, 4, 4, 4, 6, 6, 8, 8, 9, 9                                                                                
+	 db 1, 4, 4, 4, 6, 6, 8, 8, 9, 10                                                                                
 DISTCOL:
 	db 0, 1, 4, 6, 8, 9, 10
 
+DISTWIDTH: db 21, 19, 13, 9, 5, 3, 1
+	
+DISTHEIGHT: db 20, 18, 12, 8, 4, 2, 2
+	
 END:	
 
