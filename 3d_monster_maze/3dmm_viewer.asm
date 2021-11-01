@@ -7,9 +7,11 @@ STACK_TO_BC:	equ 0x084e	; ROM routine to extract TOS into BC pair
 
 	;; Jump table to ensure persisent execution addresses for
 	;; Forth-accessible routines
-	jp DRAWLSEG		; 3DVIEW + 0
-	jp DRAWRSEG		; 3DVIEW + 3
-	jp DRAWEWALL		; 3DVIEW + 6
+	jp DRAWLSEG		; 3DVIEW + 00
+	jp DRAWRSEG		; 3DVIEW + 03
+	jp DRAWEWALL		; 3DVIEW + 06
+	jp DRAWEXIT		; 3DVIEW + 09
+	jp CYCLE_PATTERN	; 3DVIEW + 12
 
 	;; ======================================================
 	;; Macro to print a column of characters
@@ -468,6 +470,117 @@ DEW_CLOOP:
 	jp (iy)
 	
 
+	
+	;; ======================================================
+	;; Draw exit, face-on. On entry, TOS contains
+	;; distance (measured in segments).
+	;; ======================================================
+DRAWEXIT:
+	rst 0x18		; Retrieve TOS into DE
+
+	;; Check distance
+	ld a,e
+	cp 6
+	jr c, DE_VISIBLE
+
+	jp (iy)
+	
+	;; Work out width of exit, based on distance
+DE_VISIBLE:
+	ld hl, DISTCOL
+	add hl, de
+
+	ld d,(hl)		; Retrieve starting column for distance
+	sla d
+	ld a,21 		; Width of screen view + 1
+
+	sub d			; A is width of exit + 1
+
+	ld c,a			; Save it
+	ld b,2			; Initial width
+
+	;; Draw centre of exit
+	ld hl, BUFFER + 0x14a 	; Offset to middle of view
+	ld de, EXIT_PATTERN + 0x0b ; Last character in pattern
+
+DE_SQUARE:
+	dec de			; Advance to next character
+	push de			; Save it
+	push bc			; Save width data
+
+	ld a,(de)		; Retrieve next character
+
+	ld de, 0x0020		; One-row offset
+
+	;; Print top of square
+	dec hl 			; Move left
+
+	and a
+	sbc hl, de		; Move up
+
+DE_TOP:	ld (hl),a
+	inc hl
+	djnz DE_TOP
+
+	pop bc			; Restore current width
+	push bc
+
+	dec b
+	
+DE_RIGHT:
+	ld (hl),a
+	add hl,de		; Move to next row
+	djnz DE_RIGHT
+
+	pop bc			; Restore current width
+	push bc
+
+DE_BOTTOM:
+	ld (hl),a
+	dec hl			; Move left
+	djnz DE_BOTTOM
+
+	pop bc			; Restore current width
+	push bc
+
+	dec b
+
+DE_LEFT:
+	ld (hl),a
+	and a
+	sbc hl,de		; Move up
+	djnz DE_LEFT
+
+	pop bc			; Retrieve width info
+	pop de			; Retrieve pointer to exit pattern
+
+	inc b			; Next level out is two chars wider
+	inc b
+
+	ld a,b			; Check if done
+	sub c
+
+	jr c, DE_SQUARE
+
+	jp (iy)
+
+CYCLE_PATTERN:
+	ld hl, EXIT_PATTERN + 1
+	ld de, EXIT_PATTERN
+	ld bc, 0x000a
+	ldir
+
+	ex de,hl		; DE is address for new char
+	dec de
+	
+	rst 0x10		; DE to stack
+
+	jp (iy)
+	
+	
+EXIT_PATTERN:
+	db "V", "`", "/", "W", "X", "B", "I", "V", "C", "S", "G"
+	
 DISTWALL:
 	 db 1, 4, 4, 4, 6, 6, 8, 8, 9, 10                                                                                
 DISTCOL:
