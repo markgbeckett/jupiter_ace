@@ -1,10 +1,16 @@
 	;; 3D rendering routines 
 
-BUFFER:		equ 0x3c76	; Address of screen buffer (real screen is 0x2400)
+BUFFER:		equ 0x3c76	; Address of screen buffer
+				; To write directly to screen, use 0x2400
 STACK_TO_BC:	equ 0x084e	; ROM routine to extract TOS into BC pair
-	
-	org 0x49e9		; Set ORG address to be start of 3DVIEW word in dictionary
 
+	include "jupiter_chars.asm"
+	
+	org 0x49e9		; Set ORG address to be start of 3DVIEW 
+				; word in dictionary, and make sure
+				; word has enough space for END - ORG
+				; addr.
+	
 	;; Jump table to ensure persisent execution addresses for
 	;; Forth-accessible routines
 	jp DRAWLSEG		; 3DVIEW + 00
@@ -12,7 +18,14 @@ STACK_TO_BC:	equ 0x084e	; ROM routine to extract TOS into BC pair
 	jp DRAWEWALL		; 3DVIEW + 06
 	jp DRAWEXIT		; 3DVIEW + 09
 	jp CYCLE_PATTERN	; 3DVIEW + 12
+	jp DRAW_REX		; 3DVIEW + 15
 
+	;; Variables
+REX_STEPS:	db 0x00		; Count steps
+
+	;; Character data for different views of Rex
+	include "3dmm_graphics.asm"
+	
 	;; ======================================================
 	;; Macro to print a column of characters
 	;;
@@ -56,11 +69,11 @@ DRAW_L_WALL:
 	jr z, NO_L_TOP
 
 	;; Fill on spaces
-L_TOP:	mfill 32
+L_TOP:	mfill _SPACE
 
 	;; Print sloping wall 
 NO_L_TOP:
-	ld (hl), 145
+	ld (hl), _TOPRIGHTWHITE
 	add hl, de
 
 	;; Print mid-section, if any
@@ -78,11 +91,11 @@ L_MIDDLE:
 	ld b,a			; B contains number of wall
 				; sections to print
 	
-L_MID:	mfill 144
+L_MID:	mfill _BLACK
 
 	;; Print lower diagonal wall section
 NO_L_MID:
-	ld (hl),140
+	ld (hl), _BOTTOMRIGHTWHITE
 	add hl, de
 
 	ld a,c
@@ -92,7 +105,7 @@ NO_L_MID:
 
 L_BOTTOM:
 	ld b,c
-	mfill 32
+	mfill _SPACE
 	
 NO_L_BOT:
 	ret
@@ -128,7 +141,7 @@ R_TOP:	mfill 32
 
 	;; Print sloping wall 
 NO_R_TOP:
-	ld (hl), 146
+	ld (hl), _TOPLEFTWHITE
 	add hl, de
 
 	;; Print mid-section, if any
@@ -146,11 +159,11 @@ R_MIDDLE:
 	ld b,a			; B contains number of wall
 				; sections to print
 	
-R_MID:	mfill 144
+R_MID:	mfill _BLACK
 
 	;; Print lower diagonal wall section
 NO_R_MID:
-	ld (hl),23
+	ld (hl), _BOTTOMLEFTWHITE
 	add hl, de
 
 	ld a,c
@@ -160,7 +173,7 @@ NO_R_MID:
 
 R_BOTTOM:
 	ld b,c
-	mfill 32
+	mfill _SPACE
 	
 NO_R_BOT:
 	ret
@@ -194,7 +207,7 @@ DRAW_L_GAP:
 	ld b,a
 
 TOP_L_GAP:
-	mfill 32
+	mfill _SPACE
 
 	;; Print 20-2*col wall graphics
 L_GAP:	
@@ -215,7 +228,7 @@ L_GAP:
 L_FACE_LOOP:
 	ld b,a
 
-	mfill 1
+	mfill _CHEQUERBOARD
 
 NO_L_GAP:
 	ld a,c
@@ -224,7 +237,7 @@ NO_L_GAP:
 
 BOT_L_GAP:
 	ld b,c
-	mfill 32
+	mfill _SPACE
 	
 NO_L_B_GAP:
 	ret
@@ -263,7 +276,7 @@ DRAW_R_GAP:
 	ld b,a
 
 TOP_R_GAP:
-	mfill 32
+	mfill _SPACE
 	
 	;; Print 20-2*col wall graphics
 R_GAP:	
@@ -275,16 +288,16 @@ R_GAP:
 	jr nz, R_FACE_LOOP
 
 	sbc hl,de
-	ld (hl),2
+	ld (hl),_TOPWHITEBOTTOMCHEQUER
 	add hl,de
-	ld (hl),3
+	ld (hl),_TOPCHEQUERBOTTOMWHITE
 	add hl,de
 	jr NO_R_GAP
 
 R_FACE_LOOP:
 	ld b,a
 
-	mfill 1
+	mfill _CHEQUERBOARD
 
 NO_R_GAP:
 	ld a,c
@@ -293,7 +306,7 @@ NO_R_GAP:
 
 BOT_R_GAP:
 	ld b,c
-	mfill 32
+	mfill _SPACE
 	
 NO_R_B_GAP:
 	ret
@@ -589,6 +602,87 @@ DISTCOL:
 DISTWIDTH: db 21, 19, 13, 9, 5, 3, 1
 	
 DISTHEIGHT: db 20, 18, 12, 8, 4, 2, 2
+
+	;; Print Rex
+	;;
+	;; On entry, TOS contains distance
+DRAW_REX:
+	rst 0x18			; Retrieve TOS into DE
+
+	;; Check within view
+	ld a,e
+	cp 0x06
+	jr nc, DR_DONE
+	
+	sla e				; Multiply E by 4 (D = 0)
+	sla e
+	
+	;;  Check if left or right foot forward
+	ld a, (REX_STEPS)
+	and %00000001
+	jr z, DR_RIGHT_FOOT
+	inc e			; If left, add 2 to E
+	inc e
+
+DR_RIGHT_FOOT:
+	;; Find address of relevant Rex data
+	ld hl, REX_TABLE
+	add hl, de
+
+	ld e,(hl)
+	inc hl
+	ld d,(hl)
+
+	ex de,hl		; HL points to Rex data
+
+	;; Work out offset into BUFFER (**high byte first**)
+	ld d,(hl)
+	inc hl
+	ld e,(hl)
+	inc hl			; HL now points to row length
+
+	push hl			; Save pointer
+	ld hl,BUFFER
+	add hl,de		; HL points to first print location
+
+	pop de			; DE points into Rex data
+
+	ex de,hl		; DE points into BUFFER and HL points into Rex data
+
+	ld b,0x00
+	ld c,(hl) 		; Length of Row
+	inc hl
+
+	jr DR_PRINT_ROW
+
+DR_NEXT_ROW:
+	ld a,(hl)		; Retrieve next offset
+	inc hl
+
+	;; If zero, done
+	and a
+	jr Z, DR_DONE
+
+	;;  Add offset to DE
+	add a,e
+	jr nc, DR_NO_CARRY
+	inc d			; Apply carry
+
+DR_NO_CARRY:
+	ld e,a
+	
+	;; Retrieve row length
+	ld b,0x00
+	ld c,(hl)
+	inc hl
+
+DR_PRINT_ROW:
+	ldir
+
+	jr DR_NEXT_ROW
+
+DR_DONE:
+	jp (iy)
 	
 END:	
 
