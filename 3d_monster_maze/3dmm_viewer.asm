@@ -6,7 +6,7 @@ STACK_TO_BC:	equ 0x084e	; ROM routine to extract TOS into BC pair
 
 	include "jupiter_chars.asm"
 	
-	org 0x49e9		; Set ORG address to be start of 3DVIEW 
+	org 0x49f3		; Set ORG address to be start of 3DVIEW 
 				; word in dictionary, and make sure
 				; word has enough space for END - ORG
 				; addr.
