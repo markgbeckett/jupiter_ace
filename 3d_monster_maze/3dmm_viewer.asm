@@ -619,7 +619,7 @@ DRAW_REX:
 	
 	;;  Check if left or right foot forward
 	ld a, (REX_STEPS)
-	and %00000001
+	and %00000010
 	jr z, DR_RIGHT_FOOT
 	inc e			; If left, add 2 to E
 	inc e

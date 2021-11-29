@@ -1,16 +1,16 @@
 REX_TABLE:
 	dw REX_R_00
 	dw REX_L_00
-	dw REX_L_01
 	dw REX_R_01
+	dw REX_L_01
 	dw REX_R_02
 	dw REX_L_02
-	dw REX_L_03
 	dw REX_R_03
+	dw REX_L_03
 	dw REX_R_04
 	dw REX_L_04
-	dw REX_L_05
 	dw REX_R_05
+	dw REX_L_05
 	
 	;; Rex data
 
