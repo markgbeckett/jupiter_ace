@@ -1,3 +1,10 @@
+MAZE:		equ 0x41a8
+EXITVIS:	equ 0x5d95
+_WALL:		equ 0x80
+_EXIT:		equ 0x40
+_MAZEH:		equ 0x0012
+_MAZEW:		equ 0x0012
+	
 	;; 3D rendering routines 
 
 BUFFER:		equ 0x3c76	; Address of screen buffer
@@ -13,15 +20,16 @@ STACK_TO_BC:	equ 0x084e	; ROM routine to extract TOS into BC pair
 	
 	;; Jump table to ensure persisent execution addresses for
 	;; Forth-accessible routines
-	jp DRAWLSEG		; 3DVIEW + 00
-	jp DRAWRSEG		; 3DVIEW + 03
-	jp DRAWEWALL		; 3DVIEW + 06
-	jp DRAWEXIT		; 3DVIEW + 09
-	jp CYCLE_PATTERN	; 3DVIEW + 12
-	jp DRAW_REX		; 3DVIEW + 15
-
+	jp DRAWVIEW		; 3DVIEW + 0x00
+	jp DRAWEXIT		; 3DVIEW + 0x03
+	jp CYCLE_PATTERN	; 3DVIEW + 0x06
+	jp DRAW_REX		; 3DVIEW + 0x09
+	jp FRAME_CLEAR		; 3DVIEW + 0x0C
+	jp FRAME_UPDATE		; 3DVIEW + 0x0F
+	jp FRAME_GRAB		; 3DVIEW + 0x12
+	
 	;; Variables
-REX_STEPS:	db 0x00		; Count steps
+REX_STEPS:	db 0x00		; Count steps (3DVIEW + 0x15)
 
 	;; Character data for different views of Rex
 	include "3dmm_graphics.asm"
@@ -313,17 +321,17 @@ NO_R_B_GAP:
 
 
 	;; ======================================================
-	;; Draw lefthand wall segment. On entry, TOS is a flag
-	;; (1=wall, 0=gap), 2OS is distance
+	;; Draw lefthand wall segment.
+	;; 
+	;; On entry:
+	;; 	A = flag to print wall/ gap
+	;; 	DE = distance from player
+	;;
+	;; On exit:
+	;; 
 	;; ======================================================
 DRAWLSEG:
-	rst 0x18		; Retrieve flag into DE
-
-	ld a,e			; Save flag 
 	push af
-
-	rst 0x18		; Retrieve distance
-
 	ld hl, DISTCOL		; Retrieve column info
 	add hl, de
 
@@ -356,21 +364,22 @@ DLS_CONT:
 	djnz DLS_LOOP
 	
 	pop af			; Balance stack
-	
-	jp (iy)			; Done
+
+	ret
+	;; jp (iy)			; Done
 	
 	;; ======================================================
-	;; Draw righthand wall segment. On entry, TOS is a flag
-	;; (1=wall, 0=gap), 2OS is distance
+	;; Draw righthand wall segment.
+	;; 
+	;; On entry:
+	;; 	A = flag to print wall/ gap
+	;; 	DE = distance from player
+	;;
+	;; On exit:
+	;; 
 	;; ======================================================
 DRAWRSEG:
-	rst 0x18		; Retrieve flag into DE
-
-	ld a,e			; Save flag 
 	push af
-
-	rst 0x18		; Retrieve distance into DE
-
 	ld hl, DISTCOL		; Retrieve column info
 	add hl, de
 
@@ -403,17 +412,33 @@ DRS_CONT:
 	djnz DRS_LOOP
 	
 	pop af			; Balance stack
-	
-	jp (iy)			; Done
+	ret
+	;; jp (iy)			; Done
 
 
 	;; ======================================================
-	;; Draw end-wall section. On entry, TOS contains
-	;; distance.
+	;; Draw end-wall section.
+	;;
+	;; On entry:
+	;; 	DE - Distance to player
+	;;
+	;; On exit:
+	;; 	AF, BC, DE, HL - corrupted
 	;; ======================================================
 DRAWEWALL:
-	rst 0x18		; Retrieve TOS into DE
+	;; Check if maximum distance (which is 6)
+	ld a,e
+	cp 0x06
+	jr c, DE_CONT
 
+	ld hl, BUFFER+298
+	ld (hl), _TOPWHITEBOTTOMCHEQUER
+	ld hl, BUFFER+330
+	ld (hl), _TOPCHEQUERBOTTOMWHITE
+
+	ret
+	
+DE_CONT:
 	ld hl, DISTWIDTH
 	add hl,de
 	ld b,(hl)
@@ -480,10 +505,239 @@ DEW_CLOOP:
 	jr nz, DEW_RLOOP
 
 	;; Done
-	jp (iy)
+	ret
 	
 
+	;; ======================================================
+	;; Move position
+	;;
+	;; On entry:
+	;; 	A - direction
+	;; 	D - current row
+	;; 	E - current col
+	;;
+	;; On exit:
+	;; 	A = direction
+	;; 	D = new row
+	;; 	E = new col
+	;; 	B corrupted
+	;; ======================================================
+MOVE:
+	ld b,a 			; Save direction
+
+	;; Check if east-west
+	and %00000001		; Z false, if so
+
+	ld a,b			; Restore direction
+
+	jr z, MOVE_NS
+MOVE_EW:
+	sub 2			; A = -1 for E, 1 for W
+	sub e			; Apply to column counter
+	cpl
+	inc a
 	
+	ld e,a			; Save new column value
+	
+	ld a,b			; Restore direction
+	ret			; Done
+
+MOVE_NS:
+	dec a
+	add d
+
+	ld d,a
+	
+	ld a,b
+	ret
+
+	;; ======================================================
+	;; Retrieve maze address corresponding to coordinate in
+	;; DE
+	;;
+	;; On entry:
+	;; 	D = row
+	;;      E = col
+	;; 
+	;; On exit:
+	;; 	HL = address
+	;; 	D = row
+	;;      E = col
+	;;      A, B corrupted
+	;; ======================================================
+MAZE_ADDR:	
+	ld hl, MAZE
+	
+	ld b,d			; B = row number
+	inc b			; Do one extra, to avoid zero loop
+
+	push de			; Save coordinates
+	ld de, _MAZEW		; DE = one-row offset
+
+MA_LOOP:
+	add hl,de
+	djnz MA_LOOP
+
+	;; Correct for extra row
+	and a
+	sbc hl,de
+
+	pop de			; Retrieve coordinates
+	push de
+
+	ld d,0
+	add hl, de
+
+	pop de			; Restore coordinates
+
+	ret
+	
+	;; ======================================================
+	;; Draw view
+	;;
+	;; On entry:
+	;; 	TOS - Direction
+	;;      2OS - Column
+	;; 	3OS - Row
+	;; ======================================================
+DRAWVIEW:	
+	;; Set exit to not visible
+	ld hl, EXITVIS
+	ld (hl), 0xFF
+	inc hl
+	ld (hl), 0xFF
+	
+	;; Retrieve coordinates and direction
+	rst 0x18		; Retrieve direction into DE
+	ld a,e			; Move to A
+	push af			; ... and save
+
+	rst 0x18		; Retrieve column value
+
+	ld l,e			; Move to L
+	push hl			; ... and save it
+
+	rst 0x18		; Retrieve row value
+
+	pop hl			; Restore column value
+	ld h,e			; Incorporate row value
+	ex de,hl
+	
+	pop af			; Restore direction
+		
+	;; Start from distance 0
+	ld b, 0x00
+	
+	;; Get cell to left
+VIEW_LOOP:
+	push af			; Save direction and location
+	push de			; Save location
+	push bc			; Saver distance counter
+	
+	add a, 0x03		; Turn left
+	and %00000011
+	
+	call MOVE
+	call MAZE_ADDR
+	ld a,(hl)		; Retrieve cell value
+	
+	;; Draw wall or gap
+	and _WALL
+	pop bc
+	push bc
+	
+	ld d,0
+	ld e,b
+
+	call DRAWLSEG
+
+	;; Get cell to right
+	pop bc
+	pop de
+	pop af
+	push af
+	push de
+	push bc
+
+	inc a			; Turn right
+	and %00000011
+
+	call MOVE
+	call MAZE_ADDR
+	ld a,(hl)		; Retrieve cell value
+
+	;; Draw wall or gap
+	and _WALL
+	pop bc
+	push bc
+	
+	ld d,0
+	ld e,b
+
+	call DRAWRSEG
+FORWARD:	
+	;; Move forward
+	pop bc
+	pop de
+	pop af
+	push af
+
+	inc b
+	push bc
+	call MOVE
+	call MAZE_ADDR
+	pop bc
+	
+	;; Check for exit
+	ld a,(hl)
+	cp _EXIT
+	jr NZ, WALL_CHECK
+
+	ld hl, EXITVIS
+	ld (hl),b
+	inc hl
+	ld (hl),0x00
+	
+	pop af			; Balance stack
+
+	jp (iy)			; Done
+	
+	;; Check for wall (special case for distance 6)
+WALL_CHECK:
+	cp _WALL
+	jr nz, NEXT_STEP
+
+	;; Transfer current distance to DE
+	ld e,b
+	ld d,0x00
+	call DRAWEWALL
+
+	pop af			; Balance stack
+	
+	jp (iy)
+
+	;; Check if done
+NEXT_STEP:
+	pop hl 			; Dirn is temporarily in H
+
+	ld a,b
+	cp 0x06			; Check if reached maximum distance
+	jr z, VIEW_DONE
+
+	ld a,h			; Restore distance
+	jr VIEW_LOOP
+	
+VIEW_DONE:
+	;; Draw horizon at distance 6
+	ld hl, BUFFER+298
+	ld (hl), _BOTTOMBLACK
+	ld hl, BUFFER+330
+	ld (hl), _TOPBLACK
+
+	jp (iy)
+
+	
+
 	;; ======================================================
 	;; Draw exit, face-on. On entry, TOS contains
 	;; distance (measured in segments).
@@ -683,6 +937,154 @@ DR_PRINT_ROW:
 
 DR_DONE:
 	jp (iy)
-	
-END:	
 
+	;; Clear buffer and apply template text
+	;; ( TEMPLATE -- )
+FRAME_CLEAR:
+	ld hl, BUFFER+0x02bf
+	ld a, _SPACE		; Space character
+	ld (hl),a
+	ld de, BUFFER + 0x02be
+	ld bc, 0x02bf
+	lddr
+
+	rst 0x18		; Retrieve template code to DE
+
+	;;  HL = MESSAGE_TABLE + 2*DE
+	ld hl, FC_MESSAGE_TABLE
+	add hl, de
+	add hl, de
+
+	;; Retrieve address into HL
+	ld e,(hl)
+	inc hl
+	ld d,(hl)
+	ex de, hl
+
+	;; Retrieve offset
+FC_NEWLINE:
+	ld c, (hl)
+	inc hl
+	ld b,(hl)
+	inc hl
+
+	;; Check for -1 (i.e., end of message)
+	inc bc
+	ld a,b
+	or c
+
+	jr z, FC_DONE
+	dec bc
+
+	;; Work out offset into BUFFER and store in DE
+	;; Preserve HL also
+	ld de,BUFFER
+	ex de,hl
+	add hl,bc
+	ex de,hl 
+	
+FC_LOOP:
+	ld a,(hl)
+	inc hl
+	cp 0x0D			; Check for end of message
+	jr z, FC_NEWLINE
+	ld (de),a
+	inc de
+	jr FC_LOOP
+
+FC_DONE:
+	jp (iy)
+
+FC_MESSAGE_TABLE:
+	dw FC_MESS_1
+	dw FC_MESS_2
+	dw FC_MESS_3
+
+FC_MESS_1:
+	dw 0xffff 		; No message
+
+FC_MESS_2:
+	dw 10*32+22
+	db "SCORE", 0x0d
+	dw 0xffff
+
+FC_MESS_3:
+	dw 1*32+22
+	db "YOU HAVE", 0x0d
+	dw 2*32+22
+	db "ELUDED", 0x0d
+	dw 3*32+22
+	db "HIM AND", 0x0d
+	dw 4*32+22
+	db "SCORED", 0x0d
+	dw 6*32+22
+	db "POINTS", 0x0d
+	dw 8*32+22
+	db "REX IS", 0x0d
+	dw 9*32+22
+	db "VERY", 0x0d
+	dw 10*32+22
+	db "ANGRY", 0x0d
+	dw 12*32+22
+	db "YOU'LL", 0x0d
+	dw 13*32+22
+	db "NEED MORE", 0x0d
+	dw 14*32+22
+	db "LUCK THIS", 0x0d
+	dw 15*32+22
+	db "TIME", 0x0d
+	dw 0xffff
+
+	;; Update display with contents of buffer
+	;; ( -- )
+FRAME_UPDATE:
+	ld hl, BUFFER
+	ld de, 0x2400		; Start of display buffer
+	ld bc, 0x02c0
+	ldir
+	jp (iy)
+
+	;; Copy current screen into buffer
+	;; ( TEMPLATE -- )
+FRAME_GRAB:
+	ld hl, 0x2400
+	ld de, BUFFER
+	ld bc, 0x02c0
+	ldir
+	jp (iy)
+	
+TEST:
+	;;  Retrieve direction
+	rst 0x18
+	ld a,e
+
+	;; Retrieve column
+	rst 0x18
+	ld l,e
+
+	;; Save it and retrieve row
+	push hl
+	rst 0x18
+	pop hl
+
+	ld h,e
+
+	;; Move row and col to DE
+	ex de,hl
+
+	call MOVE
+
+	;; Push coordinates back onto stack
+	push af
+	
+	rst 0x10
+
+	pop af
+
+	;; Push direction back onto stack
+	ld e,a
+	ld d,0
+	rst 0x10
+	
+	jp (iy)
+END:	
