@@ -27,9 +27,10 @@ STACK_TO_BC:	equ 0x084e	; ROM routine to extract TOS into BC pair
 	jp FRAME_CLEAR		; 3DVIEW + 0x0C
 	jp FRAME_UPDATE		; 3DVIEW + 0x0F
 	jp FRAME_GRAB		; 3DVIEW + 0x12
+	jp FTYPE		; 3DVIEW + 0x15
 	
 	;; Variables
-REX_STEPS:	db 0x00		; Count steps (3DVIEW + 0x15)
+REX_STEPS:	db 0x00		; Count steps (3DVIEW + 0x18)
 
 	;; Character data for different views of Rex
 	include "3dmm_graphics.asm"
@@ -1052,6 +1053,43 @@ FRAME_GRAB:
 	ld bc, 0x02c0
 	ldir
 	jp (iy)
+	
+	;; ======================================================
+	;; FTYPE - transcribe text from pad into buffer
+	;;
+	;; On entry:
+	;; 	TOS - Offset into buffer
+	;;      2OS - Length of text
+	;; 	3OS - Address of text
+	;; ======================================================
+FTYPE:
+	;;  Work out offset into buffer
+	rst 0x18		; Retrieve offset into DE
+	ld hl, BUFFER		
+	add hl, de		; Add offset to start of buffer
+
+	push hl			; Save offset
+
+	call 0x084e		; Retrieve length into BC
+	rst 0x18		; Retrieve start address into DE
+
+	pop hl			; Retrieve buffer offset
+
+FT_LOOP:
+	ld a,b			; Check if any characters still to print
+	or c
+	jr z, FT_DONE
+
+	ld a,(de)		; Retrieve next character
+	inc de			; Advance message pointer
+	dec bc			; Decrement character count
+	ld (hl),a		; Write character to BUFFER location
+	inc hl			; Move to next location
+
+	jr FT_LOOP		; Repeat
+	
+FT_DONE:
+	jp (iy)			; Return to FORTH
 	
 TEST:
 	;;  Retrieve direction
