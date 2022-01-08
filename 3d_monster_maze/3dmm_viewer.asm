@@ -952,23 +952,14 @@ DR_PRINT_ROW:
 DR_DONE:
 	jp (iy)
 
-FRAME_FULL_CLEAR:
+	;; Clear buffer and apply template text
+	;; ( TEMPLATE -- )
+FRAME_CLEAR:
 	ld hl, BUFFER + 0x02bf
 	ld a, _SPACE		; Space character
 	ld (hl),a
 	ld de, BUFFER + 0x02be
 	ld bc, 0x02bf
-	lddr
-	jp (iy)
-	
-	;; Clear buffer and apply template text
-	;; ( TEMPLATE -- )
-FRAME_CLEAR:
-	ld hl, BUFFER + 0x029f
-	ld a, _SPACE		; Space character
-	ld (hl),a
-	ld de, BUFFER + 0x029e
-	ld bc, 0x029f
 	lddr
 
 	rst 0x18		; Retrieve template code to DE
