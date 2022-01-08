@@ -32,6 +32,19 @@ STACK_TO_BC:	equ 0x084e	; ROM routine to extract TOS into BC pair
 	;; Variables
 REX_STEPS:	db 0x00		; Count steps (3DVIEW + 0x18)
 
+	;; Status messages
+STATUS_MSG:	 		; 3DVIEW + 0x1B 
+	db "   REX LIES IN WAIT   " ; Status = 0
+	db _SPACE, _INVR, _INVU, _INVN
+	dm " HE IS BEHIND YOU " ; Status = 1
+	db _SPACE, _INVR, _INVU, _INVN
+	dm " HE IS BESIDE YOU " ; Status = 2
+	db "   REX HAS SEEN YOU   " ; Status = 3
+	db " FOOTSTEPS APPROACHING" ; Status = 4
+	db " HE IS HUNTING FOR YOU" ; Status = 5
+	db "                      " ; Status = 6
+	
+	
 	;; Character data for different views of Rex
 	include "3dmm_graphics.asm"
 	
@@ -939,14 +952,23 @@ DR_PRINT_ROW:
 DR_DONE:
 	jp (iy)
 
-	;; Clear buffer and apply template text
-	;; ( TEMPLATE -- )
-FRAME_CLEAR:
-	ld hl, BUFFER+0x02bf
+FRAME_FULL_CLEAR:
+	ld hl, BUFFER + 0x02bf
 	ld a, _SPACE		; Space character
 	ld (hl),a
 	ld de, BUFFER + 0x02be
 	ld bc, 0x02bf
+	lddr
+	jp (iy)
+	
+	;; Clear buffer and apply template text
+	;; ( TEMPLATE -- )
+FRAME_CLEAR:
+	ld hl, BUFFER + 0x029f
+	ld a, _SPACE		; Space character
+	ld (hl),a
+	ld de, BUFFER + 0x029e
+	ld bc, 0x029f
 	lddr
 
 	rst 0x18		; Retrieve template code to DE

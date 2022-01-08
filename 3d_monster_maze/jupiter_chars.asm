@@ -49,5 +49,7 @@ _INVC:			equ $c3
 _INVN:			equ $ce
 _INVO:			equ $cf
 _INVP:			equ $d0
+_INVR:			equ $d2
 _INVS:			equ $d3
 _INVT:			equ $d4
+_INVU:			equ $d5
