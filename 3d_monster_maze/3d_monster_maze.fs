@@ -1067,7 +1067,7 @@ CREATE 3DVIEW 768 ALLOT ( SPACE FOR M/CODE )
 	THEN
 	
 	( CHECK IF PLAYER CAUGHT )
-	2DUP CHECKCAUGHT
+	3 PICK 3 PICK CHECKCAUGHT
 	IF 
 	    0 FRAMECLEAR
 	    0 [ 3DVIEW 9 + ] LITERAL CALL
@@ -1454,3 +1454,65 @@ CREATE 3DVIEW 768 ALLOT ( SPACE FOR M/CODE )
     FTYPE 
 ;
 
+: CMOVE ( SRC DEST CNT -- )
+    0 DO
+	OVER C@
+	OVER C!
+	1+ SWAP
+	1+ SWAP
+    LOOP
+
+    DROP DROP
+;
+
+: RINGMASTER ( ADDR ROWS -- )
+    2400 SWAP 0 DO
+	OVER OVER 10 CMOVE
+	SWAP 10 +
+	SWAP 32 +
+    LOOP
+
+    DROP DROP
+;
+
+( SCROLL MESSAGE WINDOW )
+CODE SCROLLWIN
+    0x21 C, 0x2A C, 0x24 C, ( ld hl, #242a )
+    0x11 C, 0x0A C, 0x24 C, ( ld de, #240a )
+    0x06 C, 0x14 C,         ( ld b, #14 )
+    0xc5 C,                 ( push bc )
+    0x01 C, 0x16 C, 0x00 C, ( ld bc, $0016 )
+    0xed C, exb0 C,         ( ldir )
+    0x01 C, 0x0A C, 0x00 C, ( ld bc, $000A )
+    0x09 C,                 ( add hl, bc )
+    0xEB C,                 ( ex de, hl )
+    0x09 C,                 ( add hl, bc )
+    0xEB C,                 ( ex de, hl )
+    0xC1 C,                 ( pop bc )
+    0x10 C, 0xF0 C,         ( djnz -$10 )
+    0xFD C, 0xE9 C,         ( jp <iy> )
+
+( PAUSE FOR N/50 SECONDS ) 
+: PAUSE ( NN -- )
+    0 DO
+	HALT
+    LOOP
+;
+
+: PRINTINST
+    9866 SWAP 0 DO
+	OVER OVER 22 CMOVE
+	SWAP 22 + SWAP 
+	28 PAUSE
+	SCROLLWIN
+	20 10 AT 22 SPACES
+	26 PAUSE
+SCROLLWIN
+    LOOP
+
+    DROP DROP
+;
+
+CREATE INSTRUCTIONS  1526 ALLOT
+	
+	
