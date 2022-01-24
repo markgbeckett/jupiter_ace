@@ -132,9 +132,9 @@ CONTROLS:
 
         DB _SPACE, _SPACE, _SPACE, _5, _FULLSTOP, _FULLSTOP, _FULLSTOP, _FULLSTOP, _T, _U, _R, _N, _SPACE, _L, _E, _F, _T, _SPACE, _SPACE, _SPACE, _SPACE, _SPACE
 
-; "   7....MOVE FORWARD  "
+; "   6....MOVE FORWARD  "
 
-        DB _SPACE, _SPACE, _SPACE, _7, _FULLSTOP, _FULLSTOP, _FULLSTOP, _FULLSTOP, _M, _O, _V, _E, _SPACE, _F, _O, _R, _W, _A, _R, _D, _SPACE, _SPACE
+        DB _SPACE, _SPACE, _SPACE, _6, _FULLSTOP, _FULLSTOP, _FULLSTOP, _FULLSTOP, _M, _O, _V, _E, _SPACE, _F, _O, _R, _W, _A, _R, _D, _SPACE, _SPACE
 
 ; "   8....TURN RIGHT    "
 
@@ -184,13 +184,13 @@ CONTROLS:
 
         DB _SPACE, _T, _R, _Y, _I, _N, _G, _SPACE, _T, _O, _SPACE, _M, _O, _V, _E, _SPACE, _SPACE, _SPACE, _SPACE, _SPACE, _SPACE, _SPACE
 
-; " TOWARDS HIS PREY,A   "
+; " TOWARDS HIS PREY, A  "
 
-        DB _SPACE, _T, _O, _W, _A, _R, _D, _S, _SPACE, _H, _I, _S, _SPACE, _P, _R, _E, _Y, _COMMA, _A, _SPACE, _SPACE, _SPACE
+        DB _SPACE, _T, _O, _W, _A, _R, _D, _S, _SPACE, _H, _I, _S, _SPACE, _P, _R, _E, _Y, _COMMA, _SPACE, _A, _SPACE, _SPACE
 
-; " SKILFUL ADVENTURER   "
+; " SKILLFUL ADVENTURER  "
 
-        DB _SPACE, _S, _K, _I, _L, _F, _U, _L, _SPACE, _A, _D, _V, _E, _N, _T, _U, _R, _E, _R, _SPACE, _SPACE, _SPACE
+        DB _SPACE, _S, _K, _I, _L, _L, _F, _U, _L, _SPACE, _A, _D, _V, _E, _N, _T, _U, _R, _E, _R, _SPACE, _SPACE
 
 ; " CAN CONTROL THE      "
 
@@ -200,9 +200,9 @@ CONTROLS:
 
         DB _SPACE, _M, _O, _N, _S, _T, _E, _R, _S, _SPACE, _M, _O, _V, _E, _M, _E, _N, _T, _S, _SPACE, _T, _O
 
-; " IMPROVE HIS SCORE.   "
+; " IMPROVE THEIR SCORE. "
 
-        DB _SPACE, _I, _M, _P, _R, _O, _V, _E, _SPACE, _H, _I, _S, _SPACE, _S, _C, _O, _R, _E, _FULLSTOP, _SPACE, _SPACE, _SPACE
+        DB _SPACE, _I, _M, _P, _R, _O, _V, _E, _SPACE, _T, _H, _E, _I, _R, _SPACE, _S, _C, _O, _R, _E, _FULLSTOP, _SPACE
 
 ; " THE ESCAPE ROUTE,    "
 
@@ -212,9 +212,9 @@ CONTROLS:
 
         DB _SPACE, _W, _H, _I, _C, _H, _SPACE, _I, _S, _SPACE, _A, _T, _SPACE, _T, _H, _E, _SPACE, _E, _N, _D, _SPACE, _SPACE
 
-; " OF A CUL-DE-SAC,IS   "
+; " OF A CUL-DE-SAC, IS  "
 
-        DB _SPACE, _O, _F, _SPACE, _A, _SPACE, _C, _U, _L, _MINUS, _D, _E, _MINUS, _S, _A, _C, _COMMA, _I, _S, _SPACE, _SPACE, _SPACE
+        DB _SPACE, _O, _F, _SPACE, _A, _SPACE, _C, _U, _L, _MINUS, _D, _E, _MINUS, _S, _A, _C, _COMMA, _SPACE, _I, _S, _SPACE, _SPACE
 
 ; " VISIBLE UP TO 5 MOVES"
 
@@ -248,4 +248,34 @@ CONTROLS:
 
         DB _SPACE, _C, _A, _R, _R, _I, _E, _D, _SPACE, _F, _O, _R, _W, _A, _R, _D, _FULLSTOP, _SPACE, _SPACE, _SPACE, _SPACE, _SPACE
 
+MISTS_OF_TIME:
+	; "   THE MISTS OF TIME  "
+
+        db _SPACE, _SPACE, _SPACE, _T, _H, _E, _SPACE, _M, _I, _S, _T, _S, _SPACE, _O, _F, _SPACE, _T, _I, _M, _E, _SPACE, _SPACE
+
+; " WILL PASS OVER YOU   "
+
+        db _SPACE, _W, _I, _L, _L, _SPACE, _P, _A, _S, _S, _SPACE, _O, _V, _E, _R, _SPACE, _Y, _O, _U, _SPACE, _SPACE, _SPACE
+
+; " FOR ABOUT 30 SECONDS "
+
+        db _SPACE, _F, _O, _R, _SPACE, _A, _B, _O, _U, _T, _SPACE, _3, _0, _SPACE, _S, _E, _C, _O, _N, _D, _S, _SPACE
+
+; " WHILE TRANSPORTING   "
+
+        db _SPACE, _W, _H, _I, _L, _E, _SPACE, _T, _R, _A, _N, _S, _P, _O, _R, _T, _I, _N, _G, _SPACE, _SPACE, _SPACE
+
+; " YOU TO THE LAIR OF   "
+
+        db _SPACE, _Y, _O, _U, _SPACE, _T, _O, _SPACE, _T, _H, _E, _SPACE, _L, _A, _I, _R, _SPACE, _O, _F, _SPACE, _SPACE, _SPACE
+
+; " TYRANNOSAURUS REX.   "
+
+        db _SPACE, _T, _Y, _R, _A, _N, _N, _O, _S, _A, _U, _R, _U, _S, _SPACE, _R, _E, _X, _FULLSTOP, _SPACE, _SPACE, _SPACE
+
+; "   BEST OF LUCK.....  "
+
+        db _SPACE, _SPACE, _SPACE, _B, _E, _S, _T, _SPACE, _O, _F, _SPACE, _L, _U, _C, _K, _FULLSTOP, _FULLSTOP, _FULLSTOP, _FULLSTOP, _FULLSTOP, _SPACE, _SPACE
+
+	
 INST_END:	
