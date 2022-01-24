@@ -29,5 +29,6 @@ You can move around the maze using `5` to turn left, `6` to move forward, and `8
 In simple terms:
 
 - Test pure FORTH version
-- Add option to exit game, if you get caught.
-- Make timing more consistent, when approaching a dead-end.
+- Add option to exit game, if you get caught
+- Make timing more consistent, when approaching a dead-end
+- Add instructions on how to change/ improve the game
