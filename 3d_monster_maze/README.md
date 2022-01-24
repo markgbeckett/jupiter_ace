@@ -12,30 +12,22 @@ This port of 3D Monster Maze aims to exploit the capabilities of the Jupiter Ace
 
 There are two version of the 3D-viewer code: one (almost) completely written in FORTH; and one part-ported to machine code for extra speed.
 
-To switch between the two, edit the word TEST, and replace the word DRAWVIEW (machine code) with DRAWVIEWF (FORTH version), or vice versa.
+To switch between the two, edit the word PLAYMAZE, and replace the word DRAWVIEW (machine code) with DRAWVIEWF (FORTH version), or vice versa.
 
 ## Preview
 
-You can run the in-progress implementation, using the following steps:
+The current version is  a technology preview. It is a candidate, complete game but needs a little tuning to get timing right. To play the game,
 
 1. Open "3d_monster_maze.TAP" in your preferred emulator.
-2. Enter `LOAD 3DMM`.
-3. Set up UDGs with `SETUPUDG`.
-4. Set up maze with `CLEARMAZE`, `CREATEMAZE`, `MAKEEXIT`, `PLACEREX`. Note that the create-maze step takes around 15 seconds to complete.
-5. Optionally, view maze with `CLS`, `PRINTMAZE`.
-6. Start demo with `TEST`.
-7. You can move around the maze using `5` to turn left, `6` to move forward, and `8` to turn right.
+2. Enter `LOAD 3DMM` (case of filename is important).
+3. Type `3DMM` (case does not matter).
 
-You can break out of the demo, using `Shift-SPACE`.
-
-This is an in-progress project, so some elements of the game have not yet been ported. Further, timing and game-play is still to be tuned. However, a first version of the exit animation has been implemented (though reaching the exit does not end the game) and Rex is present in the maze (though does not move nor catch you).
+You can move around the maze using `5` to turn left, `6` to move forward, and `8` to turn right.
 
 ## To-do List
 
 In simple terms:
 
-- Movement of Rex
-- Test for being caught by Rex
-- Test for reaching the exit (win the game)
-- Scoring
-- Opening screen and instructions
+- Test pure FORTH version
+- Add option to exit game, if you get caught.
+- Make timing more consistent, when approaching a dead-end.
