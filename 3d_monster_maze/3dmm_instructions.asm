@@ -1,9 +1,9 @@
  	include "jupiter_chars.asm"
 	
 ROLLUP: ; 36 seconds
-	; "   ROLL UP,ROLL UP,   "
+	; "  ROLL UP, ROLL UP,    "
 
-        DB _SPACE, _SPACE, _SPACE, _R, _O, _L, _L, _SPACE, _U, _P, _COMMA, _SPACE, _R, _O, _L, _L, _SPACE, _U, _P, _COMMA, _SPACE, _SPACE
+        DB _SPACE, _SPACE, _R, _O, _L, _L, _SPACE, _U, _P, _COMMA, _SPACE, _R, _O, _L, _L, _SPACE, _U, _P, _COMMA, _SPACE, _SPACE, _SPACE
 
 ; " SEE THE AMAZING      "
 
@@ -47,15 +47,15 @@ ROLLUP: ; 36 seconds
 
 ; "   IF YOU DARE TO     "
 
-        DB _SPACE, _SPACE, _SPACE, _I, _F, _SPACE, _Y, _O, _U, _SPACE, _D, _A, _R, _E, _SPACE, _T, _O, _SPACE, _SPACE, _SPACE, _SPACE, _SPACE
+        DB _SPACE, _SPACE, _I, _F, _SPACE, _Y, _O, _U, _SPACE, _D, _A, _R, _E, _SPACE, _T, _O, _SPACE, _E, _N, _T, _E, _R
 
 ; " ENTER HIS LAIR,YOU DO"
 
-        DB _SPACE, _E, _N, _T, _E, _R, _SPACE, _H, _I, _S, _SPACE, _L, _A, _I, _R, _COMMA, _Y, _O, _U, _SPACE, _D, _O
+        DB _SPACE, _H, _I, _S, _SPACE, _L, _A, _I, _R, _COMMA, _SPACE, _Y, _O, _U, _SPACE, _D, _O, _SPACE, _S, _O, _SPACE, _SPACE
 
 ; " SO AT YOUR OWN RISK. "
 
-        DB _SPACE, _S, _O, _SPACE, _A, _T, _SPACE, _Y, _O, _U, _R, _SPACE, _O, _W, _N, _SPACE, _R, _I, _S, _K, _FULLSTOP, _SPACE
+        DB _SPACE, _A, _T, _SPACE, _Y, _O, _U, _R, _SPACE, _O, _W, _N, _SPACE, _R, _I, _S, _K, _FULLSTOP, _SPACE, _SPACE, _SPACE, _SPACE
 
 ; " THE MANAGEMENT ACCEPT"
 
@@ -95,11 +95,11 @@ ROLLUP: ; 36 seconds
 
 ; "   IF YOU ARE IN ANY  "
 
-        DB _SPACE, _SPACE, _SPACE, _I, _F, _SPACE, _Y, _O, _U, _SPACE, _A, _R, _E, _SPACE, _I, _N, _SPACE, _A, _N, _Y, _SPACE, _SPACE
+        DB  _SPACE, _SPACE, _I, _F, _SPACE, _Y, _O, _U, _SPACE, _A, _R, _E, _SPACE, _I, _N, _SPACE, _A, _N, _Y, _SPACE, _SPACE, _SPACE
 
 ; " DOUBT,THEN PRESS stop"
 
-        DB _SPACE, _D, _O, _U, _B, _T, _COMMA, _T, _H, _E, _N, _SPACE, _P, _R, _E, _S, _S, _SPACE, _INVS, _INVT, _INVO, _INVP
+        DB _SPACE, _D, _O, _U, _B, _T, _COMMA, _SPACE, _T, _H, _E, _N, _SPACE, _P, _R, _E, _S, _S, _SPACE, _INVA, _SPACE, _SPACE
 
 ; " IF INSTRUCTIONS ARE  "
 
@@ -111,18 +111,17 @@ ROLLUP: ; 36 seconds
 
 ; " THEN PRESS       list"
 
-        DB _SPACE, _T, _H, _E, _N, _SPACE, _P, _R, _E, _S, _S, _SPACE, _SPACE, _SPACE, _SPACE, _SPACE, _SPACE, _SPACE, _INVL, _INVI, _INVS, _INVT
+        DB _SPACE, _T, _H, _E, _N, _SPACE, _P, _R, _E, _S, _S, _SPACE, _SPACE, _SPACE, _SPACE, _SPACE, _SPACE, _SPACE, _SPACE, _INVK, _SPACE, _SPACE
 
 ; " OTHERWISE PRESS  cont"
 
-        DB _SPACE, _O, _T, _H, _E, _R, _W, _I, _S, _E, _SPACE, _P, _R, _E, _S, _S, _SPACE, _SPACE, _INVC, _INVO, _INVN, _INVT
-
+        DB _SPACE, _O, _T, _H, _E, _R, _W, _I, _S, _E, _SPACE, _P, _R, _E, _S, _S, _SPACE, _SPACE, _SPACE, _INVC, _SPACE, _SPACE
 
 CONTROLS:
 
 ; "   THE ONLY CONTROLS  "
 
-        DB _SPACE, _SPACE, _SPACE, _T, _H, _E, _SPACE, _O, _N, _L, _Y, _SPACE, _C, _O, _N, _T, _R, _O, _L, _S, _SPACE, _SPACE
+        DB _SPACE, _SPACE, _T, _H, _E, _SPACE, _O, _N, _L, _Y, _SPACE, _C, _O, _N, _T, _R, _O, _L, _S, _SPACE, _SPACE, _SPACE
 
 ; " YOU REQUIRE ARE:-    "
 
@@ -154,7 +153,7 @@ CONTROLS:
 
 ; "   FOR EACH MOVE      "
 
-        DB _SPACE, _SPACE, _SPACE, _F, _O, _R, _SPACE, _E, _A, _C, _H, _SPACE, _M, _O, _V, _E, _SPACE, _SPACE, _SPACE, _SPACE, _SPACE, _SPACE
+        DB  _SPACE, _SPACE, _F, _O, _R, _SPACE, _E, _A, _C, _H, _SPACE, _M, _O, _V, _E, _COMMA, _SPACE, _SPACE, _SPACE, _SPACE, _SPACE, _SPACE
 
 ; " SCORING IS AS FOLLOWS"
 
@@ -178,7 +177,7 @@ CONTROLS:
 
 ; "   SINCE REX IS ALWAYS"
 
-        DB _SPACE, _SPACE, _SPACE, _S, _I, _N, _C, _E, _SPACE, _R, _E, _X, _SPACE, _I, _S, _SPACE, _A, _L, _W, _A, _Y, _S
+        DB _SPACE, _SPACE, _S, _I, _N, _C, _E, _SPACE, _R, _E, _X, _SPACE, _I, _S, _SPACE, _A, _L, _W, _A, _Y, _S, _SPACE
 
 ; " TRYING TO MOVE       "
 
@@ -198,51 +197,51 @@ CONTROLS:
 
 ; " MONSTERS MOVEMENTS TO"
 
-        DB _SPACE, _M, _O, _N, _S, _T, _E, _R, _S, _SPACE, _M, _O, _V, _E, _M, _E, _N, _T, _S, _SPACE, _T, _O
+        DB _SPACE, _M, _O, _N, _S, _T, _E, _R, _APOSTROPHE, _S, _SPACE, _M, _O, _V, _E, _M, _E, _N, _T, _S, _SPACE, _SPACE 
 
 ; " IMPROVE THEIR SCORE. "
 
-        DB _SPACE, _I, _M, _P, _R, _O, _V, _E, _SPACE, _T, _H, _E, _I, _R, _SPACE, _S, _C, _O, _R, _E, _FULLSTOP, _SPACE
+        DB _SPACE, _T, _0, _SPACE, _I, _M, _P, _R, _O, _V, _E, _SPACE, _T, _H, _E, _I, _R, _SPACE, _SPACE, _SPACE, _SPACE, _SPACE
 
 ; " THE ESCAPE ROUTE,    "
 
-        DB _SPACE, _T, _H, _E, _SPACE, _E, _S, _C, _A, _P, _E, _SPACE, _R, _O, _U, _T, _E, _COMMA, _SPACE, _SPACE, _SPACE, _SPACE
+        DB _SPACE, _S, _C, _O, _R, _E, _FULLSTOP, _SPACE, _T, _H, _E, _SPACE, _E, _S, _C, _A, _P, _E, _SPACE, _SPACE, _SPACE, _SPACE
 
 ; " WHICH IS AT THE END  "
 
-        DB _SPACE, _W, _H, _I, _C, _H, _SPACE, _I, _S, _SPACE, _A, _T, _SPACE, _T, _H, _E, _SPACE, _E, _N, _D, _SPACE, _SPACE
+        DB _SPACE, _R, _O, _U, _T, _E, _COMMA, _SPACE, _W, _H, _I, _C, _H, _SPACE, _I, _S, _SPACE, _A, _T, _SPACE, _SPACE, _SPACE
 
 ; " OF A CUL-DE-SAC, IS  "
 
-        DB _SPACE, _O, _F, _SPACE, _A, _SPACE, _C, _U, _L, _MINUS, _D, _E, _MINUS, _S, _A, _C, _COMMA, _SPACE, _I, _S, _SPACE, _SPACE
+        DB _SPACE, _T, _H, _E, _SPACE, _E, _N, _D, _SPACE, _O, _F, _SPACE, _A, _SPACE, _SPACE, _SPACE, _SPACE, _SPACE, _SPACE, _SPACE, _SPACE, _SPACE
 
 ; " VISIBLE UP TO 5 MOVES"
 
-        DB _SPACE, _V, _I, _S, _I, _B, _L, _E, _SPACE, _U, _P, _SPACE, _T, _O, _SPACE, _5, _SPACE, _M, _O, _V, _E, _S
+        DB _SPACE,  _C, _U, _L, _MINUS, _D, _E, _MINUS, _S, _A, _C, _COMMA, _SPACE, _I, _S, _SPACE, _SPACE, _SPACE, _SPACE, _SPACE, _SPACE, _SPACE
 
 ; " AWAY.                "
 
-        DB _SPACE, _A, _W, _A, _Y, _FULLSTOP, _SPACE, _SPACE, _SPACE, _SPACE, _SPACE, _SPACE, _SPACE, _SPACE, _SPACE, _SPACE, _SPACE, _SPACE, _SPACE, _SPACE, _SPACE, _SPACE
+        DB _SPACE, _V, _I, _S, _I, _B, _L, _E, _SPACE, _U, _P, _SPACE, _T, _O, _SPACE, _5, _SPACE, _M, _O, _V, _E, _S
 
 ; "   THE GAME ENDS WHEN "
 
-        DB _SPACE, _SPACE, _SPACE, _T, _H, _E, _SPACE, _G, _A, _M, _E, _SPACE, _E, _N, _D, _S, _SPACE, _W, _H, _E, _N, _SPACE
+        DB _SPACE, _A, _W, _A, _Y, _FULLSTOP, _SPACE, _T, _H, _E, _SPACE, _G, _A, _M, _E, _SPACE, _E, _N, _D, _S, _SPACE, _SPACE
 
 ; " HE CATCHES YOU.IF YOU"
 
-        DB _SPACE, _H, _E, _SPACE, _C, _A, _T, _C, _H, _E, _S, _SPACE, _Y, _O, _U, _FULLSTOP, _I, _F, _SPACE, _Y, _O, _U
+        DB _SPACE, _W, _H, _E, _N, _SPACE, _H, _E, _SPACE, _C, _A, _T, _C, _H, _E, _S, _SPACE, _Y, _O, _U, _FULLSTOP, _SPACE
 
 ; " ESCAPE A NEW MAZE IS "
 
-        DB _SPACE, _E, _S, _C, _A, _P, _E, _SPACE, _A, _SPACE, _N, _E, _W, _SPACE, _M, _A, _Z, _E, _SPACE, _I, _S, _SPACE
+        DB _SPACE, _I, _F, _SPACE, _Y, _O, _U, _SPACE, _E, _S, _C, _A, _P, _E, _COMMA, _SPACE, _A, _SPACE, _N, _E, _W, _SPACE
 
 ; " GENERATED AND YOUR   "
 
-        DB _SPACE, _G, _E, _N, _E, _R, _A, _T, _E, _D, _SPACE, _A, _N, _D, _SPACE, _Y, _O, _U, _R, _SPACE, _SPACE, _SPACE
+        DB _SPACE,  _M, _A, _Z, _E, _SPACE, _I, _S, _SPACE, _G, _E, _N, _E, _R, _A, _T, _E, _D, _SPACE, _A, _N, _D 
 
 ; " PREVIOUS SCORE       "
 
-        DB _SPACE, _P, _R, _E, _V, _I, _O, _U, _S, _SPACE, _S, _C, _O, _R, _E, _SPACE, _SPACE, _SPACE, _SPACE, _SPACE, _SPACE, _SPACE
+        DB _SPACE, _Y, _O, _U, _R, _SPACE, _P, _R, _E, _V, _I, _O, _U, _S, _SPACE, _S, _C, _O, _R, _E, _SPACE, _SPACE
 
 ; " CARRIED FORWARD.     "
 
@@ -251,7 +250,7 @@ CONTROLS:
 MISTS_OF_TIME:
 	; "   THE MISTS OF TIME  "
 
-        db _SPACE, _SPACE, _SPACE, _T, _H, _E, _SPACE, _M, _I, _S, _T, _S, _SPACE, _O, _F, _SPACE, _T, _I, _M, _E, _SPACE, _SPACE
+        db _SPACE, _SPACE, _T, _H, _E, _SPACE, _M, _I, _S, _T, _S, _SPACE, _O, _F, _SPACE, _T, _I, _M, _E, _SPACE, _SPACE, _SPACE
 
 ; " WILL PASS OVER YOU   "
 
@@ -275,7 +274,7 @@ MISTS_OF_TIME:
 
 ; "   BEST OF LUCK.....  "
 
-        db _SPACE, _SPACE, _SPACE, _B, _E, _S, _T, _SPACE, _O, _F, _SPACE, _L, _U, _C, _K, _FULLSTOP, _FULLSTOP, _FULLSTOP, _FULLSTOP, _FULLSTOP, _SPACE, _SPACE
+        db _SPACE, _SPACE, _B, _E, _S, _T, _SPACE, _O, _F, _SPACE, _L, _U, _C, _K, _FULLSTOP, _FULLSTOP, _FULLSTOP, _FULLSTOP, _FULLSTOP, _SPACE, _SPACE, _SPACE
 
 	
 INST_END:	

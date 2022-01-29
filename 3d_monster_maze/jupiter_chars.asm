@@ -7,6 +7,7 @@ _SPACE:			equ $20
 _TOPLEFTBLACK:		equ $12     
 _TOPRIGHTBLACK:		equ $11     
 _TOPBLACK:		equ $13
+_APOSTROPHE:		equ $27
 _CLOSEBRACKET: 		equ $29
 _ASTERISK:		equ $2A
 _PLUS:			equ $2B
@@ -66,8 +67,10 @@ _W:			equ $57
 _X:			equ $58
 _Y:			equ $59
 _Z:			equ $5a
+_INVA:			equ $c1
 _INVC:			equ $c3
 _INVI:			equ $c9
+_INVK:			equ $cb
 _INVL:			equ $cc
 _INVN:			equ $ce
 _INVO:			equ $cf
