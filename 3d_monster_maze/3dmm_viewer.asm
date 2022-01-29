@@ -13,7 +13,7 @@ STACK_TO_BC:	equ 0x084e	; ROM routine to extract TOS into BC pair
 
 	include "jupiter_chars.asm"
 	
-	org 0x49e6		; Set ORG address to be start of 3DVIEW 
+	org 0x49f6		; Set ORG address to be start of 3DVIEW 
 				; word in dictionary, and make sure
 				; word has enough space for END - ORG
 				; addr.
@@ -60,13 +60,13 @@ STATUS_MSG:	 		; 3DVIEW + 0x1B
 	;; not seem to be able to cope with labels, so DJNZ
 	;; command is hand-assembled to work around this.
 	;; ======================================================
-	mfill:	macro char
+	mfill:	macro char	; (2+B*31)
 
-	ld a, char
+	ld a, char 		; (7)
 mfill_loop:
-	ld (hl),a
-	add hl,de
-	db 0x10, 0xfc 		; djnz -4
+	ld (hl),a		; (7)
+	add hl,de		; (11)
+	db 0x10, 0xfc 		; djnz -4 (13/8)
 	
 	endm
 
@@ -75,62 +75,62 @@ mfill_loop:
 	;; 
 	;; On entry, BC contains column number
 	;; ======================================================
-DRAW_L_WALL:	
+DRAW_L_WALL:			; (~779)
 	;; Move to correct display column
-	ld hl, BUFFER
-	add hl, bc
+	ld hl, BUFFER		; (10)
+	add hl, bc		; (11)
 
-	ld de, 0x0020		; Displacement to next display row
+	ld de, 0x0020		; Displacement to next display row (10)
 		
-	ld b,c			; Move column number into b, so can
+	ld b,c			; Move column number into b, so can (4)
 				; use with DJNZ (backup copy in c)
 	
 	;;  Check if spaces needed at top of wall
-	ld a,b
-	and a
-	jr z, NO_L_TOP
+	ld a,b			; (4)
+	and a			; (4)
+	jr z, NO_L_TOP		; (12/7)
 
 	;; Fill on spaces
-L_TOP:	mfill _SPACE
+L_TOP:	mfill _SPACE		; (2+31*B)
 
 	;; Print sloping wall 
 NO_L_TOP:
-	ld (hl), _TOPRIGHTWHITE
-	add hl, de
+	ld (hl), _TOPRIGHTWHITE ; (10)
+	add hl, de		; (11)
 
 	;; Print mid-section, if any
 L_MIDDLE:
-	ld b,c			; Retrieve column number from backup
+	ld b,c			; Retrieve column number from backup (4)
 	
 	;; Work out a = 18-2*b
-	sla b
-	ld a, 18
-	sub b
+	sla b			; (4)
+	ld a, 18		; (7)
+	sub b			; (4)
 
-	and a
-	jr z, NO_L_MID
+	and a			; (4)
+	jr z, NO_L_MID		; (12/7)
 
-	ld b,a			; B contains number of wall
+	ld b,a			; B contains number of wall (4)
 				; sections to print
 	
-L_MID:	mfill _BLACK
+L_MID:	mfill _BLACK		; (2+31*B)
 
 	;; Print lower diagonal wall section
 NO_L_MID:
-	ld (hl), _BOTTOMRIGHTWHITE
-	add hl, de
+	ld (hl), _BOTTOMRIGHTWHITE ; (10)
+	add hl, de		   ; (11)
 
-	ld a,c
-	and a
+	ld a,c			; (4)
+	and a			; (4)
 
-	ret z 			; Done, if no space at bottom
+	ret z 			; Done, if no space at bottom (11/5)
 
 L_BOTTOM:
-	ld b,c
-	mfill _SPACE
+	ld b,c 			; (4)
+	mfill _SPACE		; (2+31*B)
 	
 NO_L_BOT:
-	ret
+	ret			; (10)
 
 	;; ======================================================
 	;; Fill in one column of wall on right of view 
@@ -203,65 +203,67 @@ NO_R_BOT:
 
 	;; ======================================================
 	;; Fill in one column of gap on left of view 
-	;; On entry, TOS contains column number
+	;; On entry:
+	;; 	BC is column to be filled
 	;; ======================================================
-DRAW_L_GAP:
+DRAW_L_GAP:			; (~859)
 	;; Move to correct display column
-	ld hl, BUFFER
-	add hl,bc
+	ld hl, BUFFER		; (10)
+	add hl,bc		; (11)
 
-	push hl			; Save for later
+	push hl			; Save for later (11)
 
 	;; Work out height of wall at specific column
-	ld hl, DISTWALL
-	add hl,bc
-	ld a,(hl)
+	ld hl, DISTWALL 	; (10)
+	add hl,bc		; (11)
+	ld a,(hl)		; (7)
 
 	;; Retrieve display pointer
-	pop hl
-	ld de, 0x0020
+	pop hl			; (10)
+	ld de, 0x0020		; (10)
 	
-	ld c,a
+	ld c,a			; (4)
 	
-	and a
+	and a			; (4)
 
-	jr z, L_GAP
-	ld b,a
+	jr z, L_GAP		; (12/7)
+	ld b,a			; (4)
 
 TOP_L_GAP:
-	mfill _SPACE
+	mfill _SPACE		; (2+31*B)
 
 	;; Print 20-2*col wall graphics
 L_GAP:	
-	ld b,c
-	sla b
-	ld a, 20
-	sub b
-	and a
-	jr nz, L_FACE_LOOP
+	ld b,c			; (4)
+	sla b			; (4)
+	ld a, 20		; (7)
+	sub b			; (4)
+	and a			; (4)
+	jr nz, L_FACE_LOOP	; (12/7)
 
-	sbc hl,de
-	ld (hl),2
-	add hl,de
-	ld (hl),3
-	add hl,de
-	jr NO_L_GAP
+	sbc hl,de		; (15)
+	ld (hl),2		; (10)
+	add hl,de		; (11)
+	ld (hl),3		; (10)
+	add hl,de		; (11)
+	dec c			; (4)
+	jr NO_L_GAP		; (12)
 	
 L_FACE_LOOP:
-	ld b,a
+	ld b,a			; (4)
 
-	mfill _CHEQUERBOARD
+	mfill _CHEQUERBOARD	; (2+31*B)
 
 NO_L_GAP:
-	ld a,c
-	and a
-	ret z 			; Done, if no space at bottom
+	ld a,c			; (4)
+	and a			; (4)
+	ret z 			; Done, if no space at bottom (12/7)
 
 BOT_L_GAP:
-	ld b,c
-	mfill _SPACE
+	ld b,c			; (4)
+	mfill _SPACE		; (2+31*B)
 	
-NO_L_B_GAP:
+NO_L_B_GAP:			; (10)
 	ret
 	
 	;; ======================================================
@@ -314,6 +316,7 @@ R_GAP:
 	add hl,de
 	ld (hl),_TOPCHEQUERBOTTOMWHITE
 	add hl,de
+	dec c
 	jr NO_R_GAP
 
 R_FACE_LOOP:
@@ -344,42 +347,42 @@ NO_R_B_GAP:
 	;; On exit:
 	;; 
 	;; ======================================================
-DRAWLSEG:
-	push af
-	ld hl, DISTCOL		; Retrieve column info
-	add hl, de
+DRAWLSEG:			;  (~130 + 820*SEG)
+	push af			; (11)
+	ld hl, DISTCOL		; Retrieve column info (10)
+	add hl, de		; (11)
 
-	ld c,(hl)		; Retrieve starting column
-	inc hl
-	ld a, (hl)		; Retrieve one more than final column
+	ld c,(hl)		; Retrieve starting column (7)
+	inc hl			; (6)
+	ld a, (hl)		; Retrieve one more than final column (7)
 
-	sub c			; Work out number of columns to print
-	ld b,a			; and move to loop counter
+	sub c			; Work out number of columns to print (4)
+	ld b,a			; and move to loop counter (4)
 
 DLS_LOOP:
-	pop af			; Retrieve flag
-	push af
+	pop af			; Retrieve flag (10)
+	push af			; (11)
 
-	push bc			; Save loop counter
-	ld b,0x00
+	push bc			; Save loop counter (11)
+	ld b,0x00		; (7)
 
-	and a			; Check if wall or gap
-	jr z, DLS_GAP
-	call DRAW_L_WALL
-	jr DLS_CONT
+	and a			; Check if wall or gap (4)
+	jr z, DLS_GAP		; (12/7)
+	call DRAW_L_WALL	; (17 + 779)
+	jr DLS_CONT		; (12)
 	
 DLS_GAP:	
-	call DRAW_L_GAP
+	call DRAW_L_GAP		; (17 + 859)
 
 DLS_CONT:
-	pop bc			; Retrieve loop counter and col
-	inc c			; Move to next column
+	pop bc			; Retrieve loop counter and col (10)
+	inc c			; Move to next column (4)
 
-	djnz DLS_LOOP
+	djnz DLS_LOOP		; (13/8)
 	
-	pop af			; Balance stack
+	pop af			; Balance stack (10)
 
-	ret
+	ret			; (10)
 	;; jp (iy)			; Done
 	
 	;; ======================================================
@@ -536,34 +539,34 @@ DEW_CLOOP:
 	;; 	E = new col
 	;; 	B corrupted
 	;; ======================================================
-MOVE:
-	ld b,a 			; Save direction
+MOVE:	; (59/53)
+	ld b,a 			; Save direction (4)
 
 	;; Check if east-west
-	and %00000001		; Z false, if so
+	and %00000001		; Z false, if so (7)
 
-	ld a,b			; Restore direction
+	ld a,b			; Restore direction (4)
 
-	jr z, MOVE_NS
+	jr z, MOVE_NS		; (12/7)
 MOVE_EW:
-	sub 2			; A = -1 for E, 1 for W
-	sub e			; Apply to column counter
-	cpl
-	inc a
+	sub 2			; A = -1 for E, 1 for W (7)
+	sub e			; Apply to column counter (4)
+	cpl			; (4)
+	inc a			; (4)
 	
-	ld e,a			; Save new column value
+	ld e,a			; Save new column value (4)
 	
-	ld a,b			; Restore direction
-	ret			; Done
+	ld a,b			; Restore direction (4)
+	ret			; Done (10)
 
 MOVE_NS:
-	dec a
-	add d
+	dec a			; (4)
+	add d			; (4)
 
-	ld d,a
+	ld d,a			; (4)
 	
-	ld a,b
-	ret
+	ld a,b			; (4)
+	ret			; (10)
 
 	;; ======================================================
 	;; Retrieve maze address corresponding to coordinate in
@@ -579,32 +582,32 @@ MOVE_NS:
 	;;      E = col
 	;;      A, B corrupted
 	;; ======================================================
-MAZE_ADDR:	
-	ld hl, MAZE
+MAZE_ADDR:			; (106+B*23 => 336)
+	ld hl, MAZE		; (10)
 	
-	ld b,d			; B = row number
-	inc b			; Do one extra, to avoid zero loop
+	ld b,d			; B = row number (4)
+	inc b			; Do one extra, to avoid zero loop (4)
 
-	push de			; Save coordinates
-	ld de, _MAZEW		; DE = one-row offset
+	push de			; Save coordinates (11)
+	ld de, _MAZEW		; DE = one-row offset (10)
 
 MA_LOOP:
-	add hl,de
-	djnz MA_LOOP
+	add hl,de		; (10)
+	djnz MA_LOOP		; (13/8)
 
 	;; Correct for extra row
-	and a
-	sbc hl,de
+	and a			; (4)
+	sbc hl,de		; (10)
 
-	pop de			; Retrieve coordinates
-	push de
+	pop de			; Retrieve coordinates (10)
+	push de			; (11)
 
-	ld d,0
-	add hl, de
+	ld d,0			; (7)
+	add hl, de		; (10)
 
-	pop de			; Restore coordinates
+	pop de			; Restore coordinates (10)
 
-	ret
+	ret			; (10)
 	
 	;; ======================================================
 	;; Draw view
@@ -615,7 +618,7 @@ MA_LOOP:
 	;; 	3OS - Row
 	;; ======================================================
 DRAWVIEW:	
-	;; Set exit to not visible
+	;; Set exit to not visible (indicated by -1)
 	ld hl, EXITVIS
 	ld (hl), 0xFF
 	inc hl
@@ -644,102 +647,109 @@ DRAWVIEW:
 	
 	;; Get cell to left
 VIEW_LOOP:
-	push af			; Save direction and location
-	push de			; Save location
-	push bc			; Saver distance counter
+	push af			; Save direction and location (11)
+	push de			; Save location               (11)
+	push bc			; Saver distance counter      (11)
 	
-	add a, 0x03		; Turn left
-	and %00000011
+	add a, 0x03		; Turn left (7)
+	and %00000011		; (7)
 	
-	call MOVE
-	call MAZE_ADDR
-	ld a,(hl)		; Retrieve cell value
+	call MOVE		; (17 + 59/53)
+	call MAZE_ADDR		; (17 + 336)
+	ld a,(hl)		; Retrieve cell value (7)
 	
 	;; Draw wall or gap
-	and _WALL
-	pop bc
-	push bc
+	and _WALL 		; (7)
+	pop bc			; (10)
+	push bc			; (10)
 	
-	ld d,0
-	ld e,b
+	ld d,0			; (7)
+	ld e,b			; (4)
 
-	call DRAWLSEG
+	call DRAWLSEG		; (17 + 130+N*820)
 
 	;; Get cell to right
-	pop bc
-	pop de
-	pop af
-	push af
-	push de
-	push bc
+	pop bc			; (10)
+	pop de			; (10)
+	pop af			; (10)
+	push af			; (11)
+	push de			; (11)
+	push bc			; (11)
 
-	inc a			; Turn right
-	and %00000011
+	inc a			; Turn right (4)
+	and %00000011		; (7)
 
-	call MOVE
-	call MAZE_ADDR
-	ld a,(hl)		; Retrieve cell value
+	call MOVE		; (17)
+	call MAZE_ADDR		; (17)
+	ld a,(hl)		; Retrieve cell value (7)
 
 	;; Draw wall or gap
-	and _WALL
-	pop bc
-	push bc
+	and _WALL		; (7)
+	pop bc			; (10)
+	push bc			; (11)
 	
-	ld d,0
-	ld e,b
+	ld d,0			; (7)
+	ld e,b			; (4)
 
-	call DRAWRSEG
+	call DRAWRSEG		; (17  + 130+N*820)
 FORWARD:	
 	;; Move forward
-	pop bc
-	pop de
-	pop af
-	push af
+	pop bc			; (10)
+	pop de			; (10)
+	pop af			; (10)
+	push af			; (11)
 
-	inc b
-	push bc
-	call MOVE
-	call MAZE_ADDR
-	pop bc
+	inc b			; (4)
+	push bc			; (11)
+	call MOVE		; (17)
+	call MAZE_ADDR		; (17)
+	pop bc			; (10)
 	
 	;; Check for exit
-	ld a,(hl)
-	cp _EXIT
-	jr NZ, WALL_CHECK
+	ld a,(hl)		; (7)
+	cp _EXIT		; (7)
+	jr NZ, WALL_CHECK	; (true = 12)
 
-	ld hl, EXITVIS
+	ld hl, EXITVIS		
 	ld (hl),b
 	inc hl
 	ld (hl),0x00
+
+;;;  	call WAITB		; Introduce delay to slow code for shallow views
 	
 	pop af			; Balance stack
 
-	jp (iy)			; Done
+	jr WALL_DONE		; Done
 	
 	;; Check for wall (special case for distance 6)
 WALL_CHECK:
-	cp _WALL
-	jr nz, NEXT_STEP
+	cp _WALL		; (7)
+	jr nz, NEXT_STEP	; (true = 12)
 
 	;; Transfer current distance to DE
 	ld e,b
 	ld d,0x00
+	
+	push bc
 	call DRAWEWALL
-
+	pop bc
+	
+ 	call WAITB		; Introduce delay to slow code for shallow views
+	
 	pop af			; Balance stack
 	
-	jp (iy)
+	jr WALL_DONE
 
 	;; Check if done
 NEXT_STEP:
-	pop hl 			; Dirn is temporarily in H
+	pop hl 			; Dirn is temporarily in H (10)
 
-	ld a,b
-	cp 0x06			; Check if reached maximum distance
-	jr z, VIEW_DONE
+	ld a,b			; (4)
+	cp 0x06			; Check if reached maximum distance (7)
+	jr z, VIEW_DONE		; (7)
 
-	ld a,h			; Restore distance
-	jr VIEW_LOOP
+	ld a,h			; Restore distance (4)
+	jr VIEW_LOOP		; (12)
 	
 VIEW_DONE:
 	;; Draw horizon at distance 6
@@ -748,10 +758,31 @@ VIEW_DONE:
 	ld hl, BUFFER+330
 	ld (hl), _TOPBLACK
 
+WALL_DONE:
 	jp (iy)
 
 	
+WAIT_NO_DRAW:
+	ld b,14
+	call WAIT4000
+	jp (iy)
 
+WAITB:
+	ld a,7			; Work out 7-b
+	sub b
+	ld b,a
+WAIT4000:	
+	ld de,80
+WAIT_LOOP:
+	dec de			; (6)
+	ld a,d			; (4)
+	or e			; (4)
+	jr nz, WAIT_LOOP	; (12/7)
+	djnz WAIT4000
+	
+	ret
+	
+	
 	;; ======================================================
 	;; Draw exit, face-on. On entry, TOS contains
 	;; distance (measured in segments).

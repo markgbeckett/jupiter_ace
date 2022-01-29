@@ -26,8 +26,19 @@ You can move around the maze using `5` to turn left, `6` to move forward, and `8
 
 ## To-do List
 
-In simple terms:
+Bugs and missing features that need attention:
 
-- Test pure FORTH version
-- Add option to exit game, if you get caught.
-- Make timing more consistent, when approaching a dead-end.
+- [x] Fix flickering status message
+- [x] Fix late score update, when reaching the exit
+- [x] Fix issue when can walk through Rex
+- [x] Make timing more consistent, when approaching a dead-end
+- [ ] Test Rex's movement pattern and speed
+- [ ] Update keyboard options for List, Cont, Stop, etc.
+- [ ] Reflow instruction text, to remove errors (inherited from ZX81 version)
+- [ ] Create WAV file for use on real hardware
+- [ ] Add option to exit game, if you get caught
+- [ ] Test pure FORTH version
+- [ ] Add testing for status-message code
+- [ ] Fix Rex movement timing (four iters per move when player stationary)
+- [ ] Improve maze view to include player location
+- [ ] Add Rex's footprints and update maze map accordingly

@@ -9,3 +9,4 @@ serial_int/Makefile.xmodem~
 *.sym
 clock_check/clock_check.wav
 serial_int/serial.wav
+3d_monster_maze/symbols.txt
