@@ -201,7 +201,7 @@ CONTROLS:
 
 ; " IMPROVE THEIR SCORE. "
 
-        DB _SPACE, _T, _0, _SPACE, _I, _M, _P, _R, _O, _V, _E, _SPACE, _T, _H, _E, _I, _R, _SPACE, _SPACE, _SPACE, _SPACE, _SPACE
+        DB _SPACE, _T, _O, _SPACE, _I, _M, _P, _R, _O, _V, _E, _SPACE, _T, _H, _E, _I, _R, _SPACE, _SPACE, _SPACE, _SPACE, _SPACE
 
 ; " THE ESCAPE ROUTE,    "
 
