@@ -33,10 +33,10 @@ Bugs and missing features that need attention:
 - [x] Fix issue when can walk through Rex
 - [x] Make timing more consistent, when approaching a dead-end
 - [ ] Test Rex's movement pattern and speed
-- [ ] Update keyboard options for List, Cont, Stop, etc.
-- [ ] Reflow instruction text, to remove errors (inherited from ZX81 version)
+- [x] Update keyboard options for List, Cont, Stop, etc.
+- [x] Reflow instruction text, to remove errors (inherited from ZX81 version)
 - [ ] Create WAV file for use on real hardware
-- [ ] Add option to exit game, if you get caught
+- [x] Add option to exit game, if you get caught
 - [ ] Test pure FORTH version
 - [ ] Add testing for status-message code
 - [ ] Fix Rex movement timing (four iters per move when player stationary)
