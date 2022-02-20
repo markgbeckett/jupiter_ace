@@ -258,7 +258,7 @@ MISTS_OF_TIME:
 
 ; " FOR ABOUT 30 SECONDS "
 
-        db _SPACE, _F, _O, _R, _SPACE, _A, _B, _O, _U, _T, _SPACE, _3, _0, _SPACE, _S, _E, _C, _O, _N, _D, _S, _SPACE
+        db _SPACE, _F, _O, _R, _SPACE, _A, _B, _O, _U, _T, _SPACE, _1, _0, _SPACE, _S, _E, _C, _O, _N, _D, _S, _SPACE
 
 ; " WHILE TRANSPORTING   "
 
