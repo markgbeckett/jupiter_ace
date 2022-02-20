@@ -14,15 +14,29 @@ There are two version of the 3D-viewer code: one (almost) completely written in 
 
 To switch between the two, edit the word PLAYMAZE, and replace the word DRAWVIEW (machine code) with DRAWVIEWF (FORTH version), or vice versa.
 
-## Preview
+## Playing the Game
 
-The current version is  a technology preview. It is a candidate, complete game but needs a little tuning to get timing right. To play the game,
+To play the game in an emulator:
 
 1. Open "3d_monster_maze.TAP" in your preferred emulator.
 2. Enter `LOAD 3DMM` (case of filename is important).
 3. Type `3DMM` (case does not matter).
 
-You can move around the maze using `5` to turn left, `6` to move forward, and `8` to turn right.
+To play the game on a Jupiter Ace (with 16KB RAM pack) or a Minstrel 4th:
+
+1. Connect the audio output from your PC to the Ear socket on your Ace/ Minstrel 4th using a suitable audio lead.
+
+2. Open "3d_monster_maze.WAV" in your preferred media player.
+
+3. Enter `LOAD 3DMM` (case of filename is important) on you Ace/ Minstrel 4th.
+
+3. Start audio playback on the PC (with volume set to loud). The game takes around 90 seconds to load and success is confirmed with an OK prompt.
+
+4. Type `3DMM` (case does not matter).
+
+Loading games into a real Ace/ Minstrel 4th may require a little trial and error to get the volume correct.
+
+Instructions are included in the game. The aim of the game is to find the exit from the maze before Rex catches you. You can move around the maze using `5` to turn left, `6` to move forward, and `8` to turn right.
 
 ## To-do List
 
@@ -32,13 +46,13 @@ Bugs and missing features that need attention:
 - [x] Fix late score update, when reaching the exit
 - [x] Fix issue when can walk through Rex
 - [x] Make timing more consistent, when approaching a dead-end
-- [ ] Test Rex's movement pattern and speed
+- [x] Test Rex's movement pattern and speed
 - [x] Update keyboard options for List, Cont, Stop, etc.
 - [x] Reflow instruction text, to remove errors (inherited from ZX81 version)
-- [ ] Create WAV file for use on real hardware
+- [x] Create WAV file for use on real hardware
 - [x] Add option to exit game, if you get caught
 - [ ] Test pure FORTH version
-- [ ] Add testing for status-message code
+- [x] Add testing for status-message code
 - [ ] Fix Rex movement timing (four iters per move when player stationary)
 - [ ] Improve maze view to include player location
 - [ ] Add Rex's footprints and update maze map accordingly
