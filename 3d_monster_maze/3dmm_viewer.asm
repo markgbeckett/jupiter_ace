@@ -1,5 +1,5 @@
-MAZE:		equ 0x419b
-EXITVIS:	equ 0x5c7c
+MAZE:		equ 0x4199
+EXITVIS:	equ 0x5c79
 _WALL:		equ 0x80
 _EXIT:		equ 0x40
 _MAZEH:		equ 0x0012
@@ -13,7 +13,7 @@ STACK_TO_BC:	equ 0x084e	; ROM routine to extract TOS into BC pair
 
 	include "jupiter_chars.asm"
 	
-	org 0x49e6		; Set ORG address to be start of 3DVIEW 
+	org 0x49e3		; Set ORG address to be start of 3DVIEW 
 				; word in dictionary, and make sure
 				; word has enough space for END - ORG
 				; addr.
@@ -33,7 +33,7 @@ STACK_TO_BC:	equ 0x084e	; ROM routine to extract TOS into BC pair
 REX_STEPS:	db 0x00		; Count steps (3DVIEW + 0x18)
 
 	;; Status messages
-STATUS_MSG:	 		; 3DVIEW + 0x1B 
+STATUS_MSG:	 		; 3DVIEW + 0x19 
 	db "   REX LIES IN WAIT   " ; Status = 0
 	db _SPACE, _INVR, _INVU, _INVN
 	dm " HE IS BEHIND YOU " ; Status = 1

@@ -54,5 +54,35 @@ Bugs and missing features that need attention:
 - [ ] Test pure FORTH version
 - [x] Add testing for status-message code
 - [ ] Fix Rex movement timing (four iters per move when player stationary)
-- [ ] Improve maze view to include player location
+- [x] Improve maze view to include player location
+- [ ] Optimise `PRINTMAZE` routine 
 - [ ] Add Rex's footprints and update maze map accordingly
+
+## Background
+
+I had two motives for porting 3D Monster Maze to the Minstrel 4th (and Jupiter Ace). First, I wanted to contribute to the small but growing range of new software available for the machine(s). Second, I wanted to further understand the scope for using Forth as a production programming language (avoiding the need to write in machine code).
+
+The Minstrel 4th version is ported directly from the ZX81 version and this has been significantly aided by Paul Farrow's [commented disassembly of the original game](http://www.fruitcake.plus.com/Sinclair/ZX81/Disassemblies/MonsterMaze.htm) and by the [description of the game mechanics](https://softtangouk.wixsite.com/soft-tango-uk/3d-monster-maze) by Soft Tango UK.
+
+Having spent some time studying the sources above and playing the original ZX81 game, I decided to tackle the port in eight stages:
+
+1. Maze generation
+2. 3D renderer
+3. Player movement
+4. Exit rendering
+5. Rex's rendering
+6. Rex's movement
+7. Scoring and game loop
+8. Introduction and instructions
+
+My original aim was to write the port entirely in Forth though, as you will read, I subsequently decided to rewrite the 3D renderer in machine code.
+
+Maze generation was relatively straightforward to port, following the same approach as taken in the ZX81 version. The maze is held in a block of memory referenced by the word MAZE. In this version, the maze size is (sort of) configurable. The height and width are stored in two constants `MAZEH` and `MAZEW`, which are then referenced throughout the program. To change the maze size is should be enough to redefine these constants and then recreate the buffer used to hold the maze. However, there are some machine code routines that sit above the maze in the dictionary and the calls into some of these routines need to be updated as well.
+
+The code to generate a maze is held in words `CLEARMAZE`, `CREATEMAZE`, `MAKEEXIT`, and `PLACEREX`. The procedure should be relatively clear, if read in conjunction with Soft Tango UK's description.
+
+Having addressed maze generation, I moved on to the 3D renderer, which gives the player's view of the maze during gameplay. Here I took a different approach to the ZX81 version, which looks to be over-complicated. As Soft Tango UK notes, it looks as if the original plan was to support a more flexible maze design with a possibility of corridors wider than one cell. Because of this, there is some unnecessary complexity in the ZX81 version.
+
+Given that I wanted to create a 3D renderer in Forth, I decided to start from scratch, focusing on speed and efficiency. 
+
+To be continued ...
