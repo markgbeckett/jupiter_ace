@@ -16,7 +16,7 @@ Code is available pre-assembled in a relocatable code block in "clock-check.tap"
 
 `  65280 0 BLOAD CLOCKCHCK ( LOAD M/CODE )`
 
-`  CALL 65280 ( RUN ROUTINE )`
+`  65280 CALL ( RUN ROUTINE )`
 
 `  . ( PRINT RESULT )`
 
