@@ -1,0 +1,29 @@
+3D MONSTER MAZE
+
+"Roll up, roll up. See the amazing Tyrannosauras Rex in his lair.
+Perfectly preserved in silicon since prehistoric times, he us brought to
+you for your entertainment and exhileration.
+
+If you dare to enter his lair, you do so at your own risk. The
+management accepts no responsibility for the health and safety of the
+adventurer who enters the realm. The management advise that this is not
+a game for those of a nervous disposition."
+
+Can you find your way through the maze and escape before Rex catches
+you? This is a remake of the classic ZX81 game, ported to the Jupiter
+Ace (with 16kb RAM pack) or Minstrel 4th, and exploiting the speed and
+compactness of Forth to make the most terrifying version yet.
+
+LOADING
+
+1. Connect the audio output from your cassette player to the Ear socket on your Ace/ Minstrel 4th.
+
+2. Enter LOAD 3DMM (case of filename is important) on you Ace/ Minstrel 4th.
+
+3. Press play on the cassette player (with volume set to loud). The game takes around 90 seconds to load and success is confirmed with an OK prompt.
+
+4. Type 3DMM to start the game.
+
+Loading games into a real Ace/ Minstrel 4th may require a little trial and error to get the volume correct.
+
+Instructions are included in the game. The aim of the game is to find the exit before Rex catches you. You can move around the maze using 5 to turn left, 6 to move forward, and 8 to turn right.
