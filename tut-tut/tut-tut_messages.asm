@@ -29,6 +29,7 @@ MESSAGES:
 	dw MESSAGE1
 	dw MESSAGE2
 	dw MESSAGE3
+	dw MESSAGE4
 MESSAGE0:
 	db 3, 13, 1, 13
 	db 4, 3
@@ -97,8 +98,8 @@ MESSAGE2:
 	dm "PHARAOH'S TREASURE"
 	db 13, 12
 MESSAGE3:
-	db 3, 7
-	dm "CONTROLS"
+	db 3, 3
+	dm "KEYBOARD CONTROLS"
 	db 13, 4, 7
         dm "* UP    Q"
 	db 13, 5, 7
@@ -107,10 +108,32 @@ MESSAGE3:
 	dm "* LEFT  O"
 	db 13, 7, 7
 	dm "* RIGHT P"
-	db 13, 9, 7
+	db 13, 8, 7
 	dm "* PAUSE W"
-	db 13, 10, 7
+	db 13, 9, 7
 	dm "* RESET R"
+	db 13, 11, 3
+	dm "<J FOR JOYSTICK>"
+	db 13, 16, 3
+	dm "SEEK YOUR FORTUNE"
+	db 13, 12
+MESSAGE4:
+	db 3, 3
+	dm "JOYSTICK CONTROLS"
+	db 13, 4, 3
+        dm "* UP    JOY_UP"
+	db 13, 5, 3
+	dm "* DOWN  JOY_DN"
+	db 13, 6, 3
+	dm "* LEFT  JOY_LE"
+	db 13, 7, 3
+	dm "* RIGHT JOY_RI"
+	db 13, 8, 3
+	dm "* PAUSE      W"
+	db 13, 9, 3
+	dm "* RESET R"
+	db 13, 11, 3
+	dm "<K FOR KEYBOARD>"
 	db 13, 16, 3
 	dm "SEEK YOUR FORTUNE"
 	db 13, 12

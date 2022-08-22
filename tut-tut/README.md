@@ -20,7 +20,9 @@ Once you have started the emulator, (if necessary) switch to Jupiter Ace emulati
 
 Ace Forth is not usually case-sensitive, though the file-name 'TUTTUT' in the `load` command is.
 
-However, I have also published the source code in the hope that some people will be inspired to type it in themselves (as was common practice in the early 1980s) and then adapt/ improve on the basic game.
+After the opening credits, a cycling splashscreen will be displayed. From here, you can select keyboard controls by pressing 'K'; select joystick by pressing 'J' (if you have a Boldfield joystick interface, or equivalent); press any key (or, if enabled, Joystick Fire) to start game.
+
+I have also published the source code in the hope that some people will be inspired to type it in themselves (as was common practice in the early 1980s) and then adapt/ improve on the basic game.
 
 Enjoy!
 
