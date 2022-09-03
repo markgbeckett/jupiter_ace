@@ -14,6 +14,8 @@ However, in the interim, a patched version of the game was uploaded to the Jupit
 
 Buulding on that approach, I have further updated the patch so that it does work with the Minstrel 4th. To do this, I have moved the vector table into the top half of memory, at 8000h, and filled the table with the value 7F, so that the interrupt will call a routine at address 0x7F7F, whatever value is found on the databus. Then, at address 0x7F7F, I have insert a machine code sequence C3h, 90h, 3Ch, which represents `JP 3C90h` (3C90h is the real entry point for the interrupt routine).
 
+The original game also relied on being able to use any even port address to drive the internal speaker; whereas, on the Minstrel 4th, I/O is fully decoded and so you have to use port FEh to control the internal speaker. I have corrected all code that drives the internal speaker to use port FEh so, even if you do not have an RC2014 sound card, you can enjoy the basic sound effects (which are pretty good).
+
 Valkyr does not require memory above 7000h so, while seeming a little wasteful, the above patch keeps the patch code well clear of the game code.
 
 ## Playing the game
