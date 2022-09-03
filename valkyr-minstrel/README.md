@@ -12,7 +12,7 @@ Some emulators also put the wrong value on the data bus, so have problems runnin
 
 However, in the interim, a patched version of the game was uploaded to the Jupiter Ace Archive that will work in Eightyone Version 1.23 and earlier. The patch changes the location of the vector table for IM2 and then pokes the address for the interrupt routine at location 0xFF in that table.
 
-Buulding on that approach, I have further updated the patch so that it does work with the Minstrel 4th. To do this, I have moved the vector table into the top half of memory, at 8000h, and filled the table with the value 7F, so that the interrupt will call a routine at address 0x7F7F, whatever value is found on the database. Then, at address 0x7F7F, I have insert a machine code C3h, 90h, 3Ch, which represents `JP 3C90h` (3C90h is the real entry point for the interrupt routine).
+Buulding on that approach, I have further updated the patch so that it does work with the Minstrel 4th. To do this, I have moved the vector table into the top half of memory, at 8000h, and filled the table with the value 7F, so that the interrupt will call a routine at address 0x7F7F, whatever value is found on the databus. Then, at address 0x7F7F, I have insert a machine code sequence C3h, 90h, 3Ch, which represents `JP 3C90h` (3C90h is the real entry point for the interrupt routine).
 
 Valkyr does not require memory above 7000h so, while seeming a little wasteful, the above patch keeps the patch code well clear of the game code.
 
@@ -22,9 +22,9 @@ To run Valkyr on your Minstrel 4th, simply load the game from the TAP or WAV fil
 
 The word `EM` is a wrapper for the game routine, which first updates the interrupt vector table.
 
-Use 'J' and 'L' to move left and right, respectively, and 'A' to fire. To launch your pulse bomb (when charged) press 'A' and 'S' simultaneously.
+Full instructions are provided within the game. In summary, you use 'J' and 'L' to move left and right, respectively, and 'A' to fire. To launch your pulse bomb (when charged) press 'A' and 'S' simultaneously.
 
-Joystick controls, if you have a suitable interface, are also available.
+Joystick controls, if you have a suitable interface, are also available. You have to wiggle the joystick up and down to fire your pusle bomb.
 
 ## Sound Support
 
@@ -38,9 +38,11 @@ Slightly unexpectedly, Valkyr reads a register on the AY-3-8910 via the data por
 
 The game, as provided, will work with the YM2149 Sound Card for RC2014 Rev 5 with default port settings. Simply select 'Soundbox (EME/Boldfield)' from the options screen.
 
-I have included a word `PATCH` that is used to update the port settings for the sound card. This in turn relies on a word PATCHK to search for and replace sound-card input and output in sections of memory.
+### Using Different Sound Card Port Settings
 
-Before proceeding, it is best to switch to hexidecimal numbers, by using `DECIMAL 16 BASE C!`. In hexidecimal base, as supplied, `PATCHK` looks like:
+I have included a word `PATCH` that is used to update the port settings for the sound card. This in turn relies on a word PATCHK to search for and replace sound-card input and output in sections of memory. You can use `PATCH` to update the game to work with different port settings.
+
+Before proceeding, it is best to switch to hexidecimal numbers, by using `DECIMAL 16 BASE C!`. In hexidecimal, as supplied, `PATCHK` looks like:
 
 ```
 PATCHK
@@ -56,4 +58,4 @@ The second number on each line represents the original code to search for (with 
 
 To update PATCHK for your sound card, you need to replace the first number on each line with the correct code sequence for your sound card. For example, if your sound card had the register port listing on F8h and the data port on address F0h, you would replace the first number on each line with F8D3, F0D3, and F8DB, respectively.
 
-Remember to 'REDEFINE PATCHK' once you have completed your edits and then run the command 'PATCH'. After a few seconds, patching will be completed, and you can type 'EM' to run the game and enjoy enhanced in-game sound. Once you have a working version of the game, you may want to save to a new tape or TAP file.
+Remember to 'REDEFINE PATCHK' once you have completed your edits and then run the command 'PATCH'. After a few seconds, patching will be completed, and you can type 'EM' to run the game and enjoy enhanced in-game sound. Once you have a working version of the game, you may want to save it to a new tape or TAP file.
