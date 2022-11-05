@@ -8,7 +8,7 @@ However, FORTH has several idiosyncrasies that can deter those who are new to th
 
 While a stack is primitive, it is much faster to access than program variables. In FORTH, data is (usually) passed to and from routines via the stack rather than as parameters or variables, something that can be confusing to the uninitiated. FORTH has a common notation for describing the state of the stack: the value on the top of the stack is called TOS and the next lower value on the stack is called 2OS.
 
-Because the stack is so important in FORTH, the language relies heavily on Reverse Polish notation, in which parameters precede the procedures that act upon them. For example, in BASIC, you can set the print location on the screen using something like `AT 12, 14`. The equivalent expression in FORTH is `12 14 AT`. The parameters appear before the function (and there is no punctuation, other than spaces).
+Because the stack is so important in FORTH, the language relies heavily on Reverse Polish Notation, in which parameters precede the procedures that act upon them. For example, in BASIC, you can set the print location on the screen using something like `AT 12, 14`. The equivalent expression in FORTH is `12 14 AT`. The parameters appear before the function (and there is no punctuation, other than spaces).
 
 If you can get past these idiosyncrasies, you will find that your Minstrel 4th/ 4D gives you lots of scope to indulge your passion for micro-computing and to create useful and interesting programs.
 
@@ -16,7 +16,7 @@ If you can get past these idiosyncrasies, you will find that your Minstrel 4th/ 
 
 ![Output of VLIST](intro_0.png)
 
-At the heart of Forth is a dictionary of procedures, referred to as *words*, which encapsulates the functionality of the computer. You can see a list of built-in words, in the Minstrel 4th/ 4D, by typing the command `VLIST`. Looking at the list produced, there will probably be some words, such as `PLOT` and `BEEP`, for which their purpose seems obvious, but also many words for which it is not. In fact, words such as `.` and `:` may look more like punctuation than words. However, rest assured that they are words and it is important to remember that when writing FORTH. 
+At the heart of Forth is a 'dictionary' of procedures, which are referred to as *words*, encapsulating the functionality of the computer. You can see a list of built-in words, in the Minstrel 4th/ 4D, by typing the command `VLIST`. Looking at the list produced, there will probably be some words, such as `PLOT` and `BEEP`, for which their purpose seems obvious, but also many words for which it is not. In fact, words such as `.` and `:` may look more like punctuation than words. However, rest assured that they are words and it is important to remember that, when writing FORTH. 
 
 The syntax of FORTH is very simple, with programs being built up from sequences of (FORTH) words and numbers, separated by spaces. There is no other punctuation in FORTH other than space.
 
@@ -30,11 +30,11 @@ When you press Enter, the expression is copied to the upper part of the screen a
 
 ![Sample FORTH Command](intro_1.png)
 
-The field near the bottom of the screen, where you enter commands, is called the Input Buffer. When you press Enter, the Minstrel looks to see what instructions are in the Input Buffer and processes them item by item. The first item it will come across in this case is the '3'. It will check to see if '3' is a word in its dictionary. It is not, so it will then try to interpret '3' as a number. This will succeed, so it will add 3 to the top of the stack (it will also move the item to the upper part of the screen, to indicate it has been processed).
+The field near the bottom of the screen, where you enter commands, is called the Input Buffer. When you press Enter, the Minstrel 4th/ 4D looks to see what instructions are in the Input Buffer and processes them item by item. The first item it will come across in this case is the '3'. It will check to see if '3' is a word in its dictionary. It is not, so it will then try to interpret '3' as a number. This will succeed, so it will add 3 to the top of the stack (it will also move the item to the upper part of the screen, to indicate it has been processed).
 
-The Minstrel then checks if there is anything else in the Input Buffer. It finds '4' and again will interpret this as a number. It will add '4' to the stack and move it to the top of the screen. The stack now contains two values '3' and '4' in positions 2OS and TOS, respectively.
+The computer then checks if there is anything else in the Input Buffer. It finds '4' and again will interpret this as a number. It will add '4' to the stack and move it to the top of the screen. The stack now contains two values '3' and '4' in positions 2OS and TOS, respectively.
 
-The next item it finds is '+'. The Minstrel will search its dictionary and find a word named + that takes the top two items off of the stack, adds them together, and puts the answer back on the stack. The + will be echoed to the upper screen and the stack will now contain one value, 7.
+The next item it finds is '+'. The Minstrel 4th/ 4D will search its dictionary and find a word named + that takes the top two items off of the stack, adds them together, and puts the answer back on the stack. The + will be echoed to the upper screen and the stack will now contain one value, 7.
 
 Continuing on, it will add 10 to the stack and then execute the next word '*' which will multiply the top two number on the stack and replace them with the answer.
 
@@ -54,7 +54,7 @@ The above example is not exactly earth shattering, but it does explain how Forth
 
 ![Limitations of FORTH arithmetic](intro_3.png)
 
-If you are familiar with machine code, you may spot immediately what has happened. If not, I will explain. Numbers on the Minstrel 4th/ 4D are, by default held as 16-bit, signed integers, which can hold values between -32,768 and +32,767. If you happen to overflow this range (200 × 200 = 40,000, which is too big to fit in a 16-bit, signed integer), the answer will simply overflow and lose its most significant bit, leading to the wrong answer. However, the computer will not tell you this has happened: It will happily compute and report the wrong answer. This is a potential downside of a language like FORTH. If you tried the same calculation in BASIC, it would have succeeded, though would have spent some time turning your inputs into its generic internal representation, consuming around five times as much memory and taking quite a bit longer to produce the answer. The trade-off for fast FORTH arithmetic is that it relies on the programmer being aware of and checking for its limitations. By the way, FORTH on the Minstrel can deal with bigger numbers (and floating-point numbers, too) though this requires the use of different words, which are best kept until you know some more FORTH.
+If you are familiar with machine code, you may spot immediately what has happened. If not, I will explain. Numbers on the Minstrel 4th/ 4D are, by default, held as 16-bit, signed integers, which can hold values between -32,768 and +32,767. If you happen to overflow this range (200 × 200 = 40,000, which is too big to fit in a 16-bit, signed integer), the answer will simply overflow and lose its most significant bit, leading to the wrong answer. However, the computer will not tell you this has happened: it will happily compute and report the wrong answer. This is a potential downside of a language like FORTH. If you tried the same calculation in BASIC, it would have succeeded, though would have spent some time turning your inputs into its generic internal representation, consuming around five times as much memory and taking quite a bit longer to produce the answer. The trade-off for fast FORTH arithmetic is that it relies on the programmer being aware of and checking for its limitations. By the way, FORTH on the Minstrel 4th/ 4D can deal with bigger numbers (and floating-point numbers, too) though this requires the use of different words, which are best kept until you know some more FORTH.
 
 ## Writing Programs
 
@@ -91,7 +91,7 @@ To update our word definition, for DOUBLE, we type `EDIT DOUBLE`. This will open
   2 *
 ;
 ```
-For longer word definitions, `EDIT` will divide the definition into sections of around 12 lines long. Once you have finished editing the current section, press Enter to move on to the next one. Pressing Enter in the last section will end the editing session. Sadly, you cannot go back to the previous section in an editing session, so, if you need to backtrack, you will have to skip through the remaining sessions and EDIT the word again (though you should read on before doing too much EDIT-ing).
+For longer word definitions, `EDIT` will divide the definition into sections of around 12 lines long. Once you have finished editing the current section, press Enter to move on to the next one. Pressing Enter in the last section will end the editing session. Sadly, you cannot go back to the previous section in an editing session, so, if you need to backtrack, you will have to skip through the remaining sections and EDIT the word again (though you should read on before doing too much EDIT-ing).
 
 You might naturally assume that the definition of DOUBLE has been updated, in the dictionary. However, this is not quite what happens. When the Minstrel 4th/ 4D exits the editing session, it creates a new word at the top of the dictionary, which is effectively an edited version of the old word (which is also still in the dictionary). You can see this by entering `VLIST`, which will confirm you have two copies of the word DOUBLE.
 
@@ -103,7 +103,7 @@ The process for EDIT-ing and REDEFINE-ing words is a potential source of problem
 
 ![](intro_5.png)
 
-To correct the issue, you would need to type the following:
+To correct the issue, you would need to type the following (though not the comments):
 
 ```
 FORGET TRIPLE ( FORGETS ALL WORDS AFTER AND INCLUDING TRIPLE )
@@ -120,7 +120,7 @@ When you turn the Minstrel 4th/ 4D off, any new words you have defined will be w
 
 To save your work on the Minstrel 4th, in typical 1980s style, you need a cassette recorder (or a modern-day substitute, such as a PC with a mic jack). 
 
-You need to connect your cassette recorder to the ear and mic sockets on the Minstrel 4th, using a 3.5mm headphone lead (contrary to the usual convention, the mic socket is used to capture audio output from the Minstrel 4th, to save on tape, and the Ear socket is used to play-back a saved program into the Minstrel's memory).
+You need to connect your cassette recorder to the ear and mic sockets on the Minstrel 4th, using a 3.5mm headphone lead (contrary to the usual convention, the mic socket is used to capture audio output from the Minstrel 4th, to save on tape, and the Ear socket is used to play-back a saved program into the Minstrel 4th's memory).
 
 If you have a Minstrel 4D, then you can save your work onto a suitably formatted SD card. The Forth procedure for doing this is the same as on the Minstrel 4th. However, on the 4D you do not need to set up a cassette recorder, the Minstrel SD will automatically handle the mechanics of save. (You can actually save to cassette from the 4D, if you prefer. Follow the instructions in the 4D manual for disabling Save to SD and then follow these instructions as if you are using a Minstrel 4th). 
 
@@ -130,11 +130,11 @@ If you are using a cassette recorder, before pressing Enter, you should press 'R
 
 If you are saving to the Minstrel SD card, the computer will automatically ensure the data is recorded to the card. The computer runs at 6.5 MHz for this, so takes around 2.5 seconds per kilobyte to save your work.
 
-Before powering off, it is worthwhile to check that you have saved your work successfully and, to do this, you use VERIFY. If using cassette, rewind your tape to just before the saved session and enter `VERIFY MYWORDS`. You can then play back the saved audio, so that the Minstrel 4th/ 4D can check it agrees with what is in memory. By default, when saving to the Minstrel SD, the computer will automatically verify your work.
+Before powering off, it is worthwhile to check that you have saved your work successfully and, to do this, you use VERIFY. If using cassette, rewind your tape to just before the saved session and enter `VERIFY MYWORDS`. You can then play back the saved audio, so that the Minstrel 4th/ 4D can check it agrees with what is in memory. By default, when saving to an SD card on the Minstrel 4D, the computer will automatically verify your work.
 
-How you load your previously save work back into the computer, in a future, depends on whether you are using a Minstrel 4th or Minstrel 4D.
+How you load your previously save work back into the computer depends on whether you are using a Minstrel 4th or Minstrel 4D.
 
-To load your work back into memory, from cassette on the Minstrel 4th, use `LOAD MYWORDS`.
+To load your work back into memory from cassette on the Minstrel 4th, use `LOAD MYWORDS`.
 
 On the Minstrel 4D, you load your work via the built-in menu system: using either 'Browse SD Card' or 'Load from Tape', as appropriate.
 
@@ -148,6 +148,6 @@ Trial and error is required to get a reliable process for saving and loading to 
 
 This is the end of your quick tour of the Minstrel 4th and Minstrel 4D. However, there are lots of other resources available to help you take your next steps. 
 
-The Minstrel 4th/ 4D uses a variant of FORTH, called Ace Forth, developed for an early 1980s micro called the Jupiter Ace. The Minstrel 4th/ 4D is a very compatible with the Ace and runs the same monitor and FORTH system as the Ace did. Software written for the Ace (and books about the Ace) should work on (and be relevant to) the Minstrel 4th/ 4D. In particular, the original Ace user guide, called "Jupiter Ace FORTH Programming" by Steven Vickers, is an excellent book for learning to program the Minstrel 4th. It was recently re-printed to celebrate the Ace's 40th birthday, so is relatively easy to find on retro-computing auction sites. Further, along with lots of software and other materials, you can find a PDF copy of the user guide on the [Jupiter Ace archive website](www.jupiter-ace.co.uk).
+The Minstrel 4th/ 4D uses a variant of FORTH, called Ace Forth, developed for an early 1980s micro called the Jupiter Ace. The Minstrel 4th/ 4D is fully compatible with the Ace and runs the same monitor and FORTH system as the Ace did. Software written for the Ace (and books about the Ace) should work on (and be relevant to) the Minstrel 4th/ 4D. In particular, the original Ace user guide, called "Jupiter Ace FORTH Programming" by Steven Vickers, is an excellent book for learning to program the Minstrel 4th/ 4D. It was recently re-printed to celebrate the Ace's 40th birthday, so is relatively easy to find on retro-computing auction sites. Further, along with lots of software and other materials, you can find a PDF copy of the user guide on the [Jupiter Ace archive website](www.jupiter-ace.co.uk).
 
 Hopefully, you will go on to have a great deal of fun programming your Minstrel 4th/ 4D, and to become a convert to the FORTH way. However, even if you do not, you will still be able to enjoy the wide range of software that others have written for the (Jupiter Ace and) Minstrel 4th/ 4D. 
