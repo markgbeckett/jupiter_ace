@@ -2,7 +2,7 @@
 
 ## Introduction
 
-The Minstrel 4th and Minstrel 4D stand out from many other micros, in that they ship with Forth as their built-in language, rather than the otherwise ubiquitous BASIC. The Minstrel 4D is an expanded version of the Minstrel 4th, but runs the same code. So, herein, Minstrel 4th will be used to refer to both machines, expect for cases specific to the Minstrel 4D.
+The Minstrel 4th and Minstrel 4D stand out from many other micros, in that they ship with Forth as their built-in language, rather than the otherwise ubiquitous BASIC. The Minstrel 4D is an expanded version of the Minstrel 4th, but runs the same code. So, herein, Minstrel 4th will be used to refer to both machines, except for cases specific to the Minstrel 4D.
 
 Forth has several big advantages that make it a good match to the Minstrel 4th. First, it is fast, and, in particular, it is much faster than BASIC. Forth programs are compiled and interact with the hardware on a lower level than they do in BASIC, meaning it is not uncommon for a Forth version of a program to run ten times faster than the BASIC equivalent. Second, a Forth program is lean, using much less memory than its BASIC equivalent. This means you can write fast and compact programs for the Minstrel 4th, without having to resort to machine code.
 
@@ -36,13 +36,13 @@ The field near the bottom of the screen, where you enter commands, is called the
 
 The computer then checks if there is anything else in the Input Buffer. It finds '4' and again will interpret this as a number. It will add 4 to the stack and move it to the top of the screen. The stack now contains two values, 3 and 4, in positions 2OS and TOS, respectively.
 
-The next item it finds is '+'. The Minstrel 4th/ 4D will search its dictionary and find a word named '+' that takes the top two items off of the stack, adds them together, and puts the answer back on the stack. The + will be echoed to the upper screen and the stack will now contain one value, 7.
+The next item it finds is '+'. The Minstrel 4th will search its dictionary and find a word `+` that takes the top two items off of the stack, adds them together, and puts the answer back on the stack. The + will be echoed to the upper screen and the stack will now contain one value, 7.
 
-Continuing on, it will add 10 to the stack and then execute the next word '*' which will multiply the top two number on the stack and replace them with the answer, 70.
+Continuing on, it will add 10 to the stack and then execute the next word `*`, which will multiply the top two number on the stack and replace them with the answer, 70.
 
 There are no more items in the Input Buffer, so the computer prints 'OK' to indicate it has successfully processed all of the instructions it has been given.
 
-But where is the answer, you say? The answer is on the stack. If you want to see the answer, you need to ask the computer to print the value on the top of the stack and to do this you type the word '.' (that is, a full stop). This is another standard Forth word: it removes the top number from the stack and prints it on the screen. 
+But where is the answer, you say? The answer is on the stack. If you want to see the answer, you need to ask the computer to print the value on the top of the stack and to do this you type the word `.` (that is, a full stop). This is another standard Forth word: it removes the top number from the stack and prints it on the screen. 
 
 Notice that Reverse Polish Notation helps here as it allows items to be specified in an unambiguous order. To write the same example in BASIC, would involve something such as `(3+4)*10`, using parentheses to ensure the individual calculations are completed in the correct order. In Forth, there is no need for parentheses: RPN means there is no ambiguity in the order.
 
@@ -105,7 +105,7 @@ The process for EDIT-ing and REDEFINE-ing words is a potential source of problem
 
 ![](intro_5.png)
 
-To correct the issue, you would need to type the following (though not the comments):
+To correct the issue, you would need to type the following:
 
 ```
 FORGET TRIPLE
@@ -120,7 +120,7 @@ In this case, the error is not too costly. However, in longer programs, it could
 
 When you turn the computer off, any new words you have defined will be wiped from memory. However, having spent time creating some new words, it is useful to be able to keep them for future use. Depending on whether you have a Minstrel 4th or Minstrel 4D, there are different ways to do this.
 
-Both the Minstrel 4th and the Minstrel 4D can save to tape, in typical 1980s style. You can use either a cassette recorder or a modern-day substitute, such as a PC with a mic jack. You need to connect the audio-in on your cassette recorder (or PC) to the mic sockets on the Minstrel 4th, using a 3.5mm audio lead.
+Both the Minstrel 4th and the Minstrel 4D can save to tape, in typical 1980s style. You can use either a cassette recorder or a modern-day substitute, such as a PC with a mic jack. You need to connect the audio-in on your cassette recorder (or PC) to the mic socket on the Minstrel 4th, using a 3.5mm audio lead.
 
 When you want to save your work, you use the word `SAVE` followed by the name you wish to give your work. For example:
 
@@ -132,26 +132,26 @@ Before pressing Enter, you should press 'Record' on your cassette recorder/ PC, 
 
 Before powering off, it is worthwhile to check that you have saved your work successfully and, to do this, you use `VERIFY`. Connect the audio out on your cassette recorder/ PC to the Ear socket on the Minstrel 4th. Rewind the tape to just before the saved session and (continuing with our example) enter `VERIFY MYWORDS`. You can then play back the saved audio, so that the Minstrel 4th can check it agrees with what is in memory.
 
-To load your work back into memory from cassette on the Minstrel 4th, (having connected the cables as for VERIFY) use
+Similarly, to load your work back into memory from cassette (having connected the cables as for VERIFY), use
 
 ```
 LOAD MYWORDS
 ```
 
-If you have a Minstrel 4D, you can store your work onto a suitably formatted SD card. The Forth procedure is similar to saving to cassette, though there are no cables to connect and no Record button to press: if you are saving to the Minstrel SD card, the computer will automatically ensure the data is recorded to the card. During the save operation, the screen border will show thin, horizontal, black and white lines, which indicate that data is being written to the SD card.
+If you have a Minstrel 4D, you can store your work onto a suitably formatted SD card. The Forth procedure is similar to saving to cassette, though there are no cables to connect and no Record button to press: if you are saving to the Minstrel SD card, the computer will automatically ensure the data is recorded to the card. During the save operation, the screen border will show thin, horizontal, black and white lines, which indicate that data is being written to the SD card. The computer will also automatically VERIFY the data, so there is no need to do that.
 
 You load your work back into memory from the SD card via the built-in menu system, using 'Browse SD Card'.
 
 ![Saving your work on the Minstrel 4th](intro_6.png)
 
-If using a cassette recorder, it is worth noting that the Minstrel 4th and, to a lesser extent, the Minstrel 4D are hard of hearing. When using a cassette, you will need to play back your saved audio at a high volume (though, thankfully, you will not hear it, as it goes straight into the computer's Ear socket). In my experience, you should set a tape recorder to play-back at around three quarters of maximum volume (or, on a PC, full volume is likely to be needed).
+If using a cassette recorder (or a PC sound card), it is worth noting that the Minstrel 4th and, to a lesser extent, the Minstrel 4D are hard of hearing. You will need to play back your saved audio at a high volume (though, thankfully, you will not hear it, as it goes straight into the computer's Ear socket). In my experience, you should set a tape recorder to play-back at around three quarters of maximum volume (or, on a PC, full volume is likely to be needed).
 
-Trial and error is required to get a reliable process for saving and loading to cassette, so it is worthwhile to get to grips with this early on. This is a little easier on the Minstrel 4D, which will show lines on the screen border when loading (and saving) the dictionary. When loading, you should adjust the volume to try to get even-sized black and white lines. You can also adjust the threshold volume on the 4D to support a wider range of audio sources (see the manual for details).
+Trial and error is required to get a reliable process for saving and loading to cassette, so it is worthwhile to get to grips with this early on. This is a little easier on the Minstrel 4D, which will show lines on the screen border when loading the dictionary. You should adjust the volume to try to get even-sized black and white lines. You can also adjust the threshold volume on the 4D to support a wider range of audio sources (see the manual for details).
 
 ## Next steps
 
-This is the end of your quick tour of the Minstrel 4th and Minstrel 4D. However, there are lots of other resources available to help you take your next steps. 
+This is the end of your quick tour of the Minstrel 4th (and Minstrel 4D). However, there are lots of other resources available to help you take your next steps. 
 
-The Minstrel 4th uses a variant of Forth, called Ace Forth, developed for an early 1980s micro called the Jupiter Ace. The Minstrel 4th is fully compatible with the Ace and runs the same monitor and Forth system as the Ace did. Software written for the Ace (and books about the Ace) should work on (and be relevant to) the Minstrel 4th. In particular, the original Ace user guide, called "Jupiter Ace Forth Programming" by Steven Vickers, is an excellent book for learning to program the Minstrel 4th/ 4D. It was recently re-printed to celebrate the Ace's 40th birthday, so is relatively easy to find on retro-computing auction sites. Further, along with lots of software and other materials, you can find a PDF copy of the user guide on the [Jupiter Ace archive website](https://www.jupiter-ace.co.uk).
+The Minstrel 4th uses a variant of Forth, called Ace Forth, developed for an early 1980s micro called the Jupiter Ace. The Minstrel 4th is fully compatible with the Ace and runs the same monitor and Forth system as the Ace did. Software written for the Ace (and books about the Ace) should work on (and be relevant to) the Minstrel 4th. In particular, the original Ace user guide, called "Jupiter Ace Forth Programming" by Steven Vickers, is an excellent book for learning to program the Minstrel 4th. It was recently re-printed to celebrate the Ace's 40th birthday, so is relatively easy to find on retro-computing auction sites. Further, along with lots of software and other materials, you can find a PDF copy of the user guide on the [Jupiter Ace archive website](https://www.jupiter-ace.co.uk).
 
-Hopefully, you will go on to have a great deal of fun programming your Minstrel 4th/ 4D, and to become a convert to the Forth way. However, even if you do not, you will still be able to enjoy the wide range of software that others have written for the (Jupiter Ace and) Minstrel 4th/ 4D. 
+Hopefully, you will go on to have a great deal of fun programming your Minstrel 4th, and to become a convert to the Forth way. However, even if you do not, you will still be able to enjoy the wide range of software that others have written for the (Jupiter Ace and) Minstrel 4th. 
