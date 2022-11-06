@@ -130,7 +130,7 @@ SAVE MYWORDS
 
 Before pressing Enter, you should press 'Record' on your cassette recorder/ PC, as the Minstrel 4th will immediately begin transmitting the data. It takes around 5 seconds per kilobyte to save your work (at 3.5 MHz). Note that, on the Minstrel 4D, if you have a suitable SD card installed, the dictionary will also be saved to the SD card.
 
-Before powering off, it is worthwhile to check that you have saved your work successfully and, to do this, you use `VERIFY`. Connect the audio out on your cassette recorder/ PC to the Ear socket on the Minstrel 4th. Rewind the tape to just before the saved session and (continuing with our example) enter `VERIFY MYWORDS`. You can then play back the saved audio, so that the Minstrel 4th can check it agrees with what is in memory.
+Before powering off, it is worthwhile to check that you have saved your work successfully and, to do this, you use `VERIFY`. Connect the EAR on your cassette recorder (or LINE_OUT on your PC) to the EAR socket on the Minstrel 4th. Rewind the tape to just before the saved session and (continuing with our example) enter `VERIFY MYWORDS`. You can then play back the saved audio, so that the Minstrel 4th can check it agrees with what is in memory.
 
 Similarly, to load your work back into memory from cassette (having connected the cables as for VERIFY), use
 
