@@ -88,7 +88,7 @@ For this simple word, it is reasonably easy to work out what is going on, even i
 
 To update our word definition, for DOUBLE, we type `EDIT DOUBLE`. This will open the existing definition of DOUBLE in the input buffer and allow us to edit it, to something like:
 ```
-: DOUBLE ( N -- 2*n ) 
+: DOUBLE ( N -- 2*N ) 
   ( MULTIPLY VALUE ON STACK BY TWO )
   2 *
 ;
@@ -120,7 +120,7 @@ In this case, the error is not too costly. However, in longer programs, it could
 
 When you turn the computer off, any new words you have defined will be wiped from memory. However, having spent time creating some new words, it is useful to be able to keep them for future use. Depending on whether you have a Minstrel 4th or Minstrel 4D, there are different ways to do this.
 
-Both the Minstrel 4th and the Minstrel 4D can save to tape, in typical 1980s style. You can use either a cassette recorder or a modern-day substitute, such as a PC with a mic jack. You need to connect the audio-in on your cassette recorder (or PC) to the mic socket on the Minstrel 4th, using a 3.5mm audio lead.
+Both the Minstrel 4th and the Minstrel 4D can save to tape, in typical 1980s style. You can use either a cassette recorder or a modern-day substitute, such as a PC with a line-in jack. You need to connect the MIC socket on your cassette recorder (or LINE_IN on your PC) to the MIC socket on the Minstrel 4th, using a 3.5mm audio lead.
 
 When you want to save your work, you use the word `SAVE` followed by the name you wish to give your work. For example:
 
