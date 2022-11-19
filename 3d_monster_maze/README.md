@@ -1,6 +1,6 @@
 # 3D Monster Maze for the Jupiter Ace (16k)/ Minstrel 4th
 
-This is a port of the classic ZX81 game "3D Monster Maze" to the Jupiter Ace and Minstrel 4th.
+This is a port of the classic ZX81 game "3D Monster Maze" to the Jupiter Ace and Minstrel 4th/ 4D.
 
 The game was written by Malcolm Evans and published by J.K. Greye software in 1982. It was one of the first examples of a 3D arcade game for a home computer and was considered an amazing feat, given the limited capabilities of the humble ZX81.
 
@@ -24,7 +24,7 @@ To play the game in an emulator:
 2. Enter `LOAD 3DMM` (case of filename is important).
 3. Type `3DMM` (case does not matter).
 
-To play the game on a Jupiter Ace (with 16KB RAM pack) or a Minstrel 4th:
+To play the game on a Jupiter Ace (with 16KB RAM pack), Minstrel 4th, or Minstrel 4D:
 
 1. Connect the audio output from your PC to the Ear socket on your Ace/ Minstrel 4th using a suitable audio lead.
 
@@ -38,7 +38,11 @@ To play the game on a Jupiter Ace (with 16KB RAM pack) or a Minstrel 4th:
 
 Loading games into a real Ace/ Minstrel 4th may require a little trial and error to get the volume correct.
 
+You may also copy the file "3d_monster_maze.TAP" to an SD card for faster loading on the Minstrel 4D.
+
 Instructions are included in the game. The aim of the game is to find the exit from the maze before Rex catches you. You can move around the maze using `5` to turn left, `6` to move forward, and `8` to turn right.
+
+You can play the game with a Boldfield/ Tynemouth joystick interface (such as built-in joystick interface on Minstrel 4D). If a suitable joystick interface is detected, it will be automatically supported (though keyboard support will also work).
 
 ## To-do List
 
