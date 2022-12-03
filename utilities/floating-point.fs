@@ -1,73 +1,91 @@
-: pi 3.14159 ;
+: PI 3.14159 ;
 
-: dr pi 180 f/ ;
+: DR PI 180 F/ ;
 
-: rd 1 dr f/ ;
+: RD 1 DR F/ ;
 
-: 2drop ( fp -- )
-    drop drop
+: 2DROP ( FP -- )
+    DROP DROP
 ;
 
-: 2dup ( fp -- fp fp )
-    over over
+: 2DUP ( FP -- FP FP )
+    OVER OVER
 ;
 
-: 2swap ( fp1 fp2 -- fp2 fp1 )
-    4 roll 4 roll
+: 2SWAP ( FP1 FP2 -- FP2 FP1 )
+    4 ROLL 4 ROLL
 ;
 
-: 2over ( fp1 fp2 -- fp1 fp2 fp1 )
-    4 pick 4 pick
+: 2OVER ( FP1 FP2 -- FP1 FP2 FP1 )
+    4 PICK 4 PICK
 ;
 
-: 2rot ( fp1 fp2 fp3 -- fp2 fp3 fp1 )
-    6 roll 6 roll
+: 2ROT ( FP1 FP2 FP3 -- FP2 FP3 FP1 )
+    6 ROLL 6 ROLL
 ;
 
-: 2@ ( addr -- fp )
-    dup @ swap 2+ @
+: 2@ ( ADDR -- FP )
+    DUP @ SWAP 2+ @
 ;
 
-: 2! ( fp addr -- )
-    rot over ! 2+ !
+: 2! ( FP ADDR -- )
+    ROT OVER ! 2+ !
 ;
 
-: 2roll ( fpn ... fp1 n -- fpn-1 ... fp1 fpn )
-    2 * dup 1+
-    roll swap roll
+: 2ROLL ( FPN ... FP1 N -- FPN-1 ... FP1 FPN )
+    2 * DUP 1+
+    ROLL SWAP ROLL
 ;
 
-: sqrt ( fp -- fp )
-    1.0 10 0 do
-	2over 2over f/ f+
-	0.5 f*
-    loop
+: SQRT ( FP -- FP )
+    1.0 10 0 DO
+	2OVER 2OVER F/ F+
+	0.5 F*
+    LOOP
 
-    2swap 2drop
+    2SWAP 2DROP
 ;
 
-: sin ( fp -- fp )
-    2dup 2dup 2dup f* fnegate
-    2rot 2rot
-    27 2 do
-	6 pick 6 pick
-	f* i i 1+ *
-	ufloat f/
-	2dup 2rot f+ 2swap
+: SIN ( FP -- FP )
+    2DUP 2DUP 2DUP F* FNEGATE
+    2ROT 2ROT
+    27 2 DO
+	6 PICK 6 PICK
+	F* I I 1+ *
+	UFLOAT F/
+	2DUP 2ROT F+ 2SWAP
 	2
-    +loop
+    +LOOP
 
-    2drop 2swap 2drop
+    2DROP 2SWAP 2DROP
 ;
 
-: cos ( fp -- fp )
+: COS ( FP -- FP )
     1.57080
-    2swap f-
-    sin
+    2SWAP F-
+    SIN
 ;
 
-: tan ( fp -- fp )
-    2dup sin
-    2swap cos
-    f/
+: TAN ( FP -- FP )
+    2DUP SIN
+    2SWAP COS
+    F/
+;
+
+: ATN ( FP -- FP )
+    ( COMPUTE ARCTAN OF -1 < FP < 1 RADIANS. CONVERGES SLOWLY )
+    2DUP 2DUP 2DUP F* FNEGATE ( X X -X^2 )
+    2ROT 2ROT ( -X^2 X X )
+
+    101 3 DO
+	6 PICK 6 PICK F*
+	I UFLOAT F/
+
+	( MULTIPLIER SUM NEXT_TERM )
+	2DUP 2ROT F+ 2SWAP
+    2 +LOOP
+
+    2DROP ( MULTIPLIER SUM )
+    2SWAP
+    2DROP ( SUM )
 ;
