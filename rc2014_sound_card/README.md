@@ -21,26 +21,27 @@ You also need to configure the Z80 Clock jumper on the Minstrel 4th board to pas
 Ed Brindley has created a repository of useful information and tools for the sound card on [GitHub](https://github.com/electrified/rc2014-ym2149), including a simple BASIC test script. A Forth version of the script, suitable for the Minstrel 4th, is as follows:
 
 ```
-216 CONSTANT REG
-208 CONSTANT DAT
+216 CONSTANT REGPORT
+208 CONSTANT DATPORT
 
 DEFINER CODE DOES> CALL ;
 
 CODE HALT 118 C, 253 C, 233 C,
 
 : TEST
- 7 REG OUT
- 62 DAT OUT
+ 7 REGPORT OUT
+ 62 DATPORT OUT
 
- 8 REG OUT
- 15 DAT OUT
+ 8 REGPORT OUT
+ 15 DATPORT OUT
 
- 0 REG OUT
+ 0 REGPORT OUT
 
  BEGIN
   255 1
   DO
-   I DAT OUT HALT
+   I DATPORT OUT
+   HALT
   LOOP
   0
  UNTIL ( INFINITE LOOP, BREAK TO EXIT )
@@ -230,3 +231,69 @@ Some notes to get you started:
 - The driver should be reasonably portable to other Z80-based computers. The key areas of difference are likely to be: the address used to reference the sound-card ports, plus the exit and error-handling routines. As the source code supports either a Minstrel 4th or a ZX Spectrum you can easily find the sections of code that you will need to change by searching for IFDEF directives.
 - The pitch values used for the supported octave range are read from a separate source file, which is included towards the end of `play.asm`. I have provided pitch files for a 1.625 MHz clock (e.g., default configuration of the Minstrel 4th) and a 1.77 MHz clock (e.g., as for the ZX Spectrum 128k). If you create additional pitch-value tables, update the `include` command accordingly.
 - When developing the driver, I did lots of early testing using a ZX Spectrum+  128k machine. The reason was that I could test the code in an emulator (there is no emulator of a Jupiter Ace/ Minstrel 4th, with an RC2014 sound card). The ZX Spectrum has full PLAY support built in to the BASIC. However, if you want to use the driver, here, on a ZX Spectrum, just define the variable ZXSPECTRUM -- e.g., change the second line of the Makefile to `AFLAGS = --sym=play.sym --raw=play.bin -DZXSPECTRUM`.
+
+## Soundbox Utility
+
+The RC2014 YM2149 sound card is actually very similar to the Boldfield Soundbox, which was an add-on for the Jupiter Ace available in the mid-1980s. It also featured an AY-3-8910 sound chip.
+
+Boldfield provided some software to help the programmer to use the Soundbox, on a [Utilities cassette](http://www.jupiter-ace.co.uk/sw_soundbox_util_tape.html).
+
+I have ported this software to work with the RC2014 YM2149 sound card. The dictionary source is available in [sounndbox.fs](soundbox.fs). You can either type this into your Minstrel 4th or, if you have a USB keyboard interface such as Shirley Knot's, you can transmit the source code over a serial connection from a PC.
+
+Before using the dictionary, you may need to set up some configuration parameters. First you need to set the port addresses for the registry and data ports by adjusting the values of the constants 'REGPORT' and 'DATPORT', respectively.
+
+Second, you need to confirm the clock-divide setting you have configured on the sound card, by adjusting the value of the constant `RCCLOCKDIVIDE`. This should be set to either 2 or 4 accordingly.
+
+Before using any Soundbox commands, you should enter `SINIT`. This will detect the clock speed of the Minstrel 4th -- either 3.25 MHz or 6.5 MHZ -- and set the variable TURBO to either 1 or 2, respectively.
+
+The original documentation for the Boldfield Soundbox utility seems to be lost. Here are some pointers to get you started, based on what I learned when porting the code:
+
+* `SOUNDOFF ( -- )` will disable all three sound channels and set the corresponding amplitudes to 0.
+
+* `CHA ( -- )`, `CHB ( -- )`, and `CHC ( -- )` select the current channel to be acted on by other words.
+
+* `VOLUME ( N -- )` sets the volume of the current channel.
+
+* `TONEON ( -- )` / `TONEOFF ( -- )` activates / deactivates tone output on the current channel.
+
+* `NOISEON ( -- )` / `NOISEOFF ( -- )` activates/ deactivates noise output on the current channel.
+
+* `NOISE ( N -- )` sets the frequency of noise sources.
+
+* `FREQ ( N -- )` sets the tone (in Hertz) of the current channel.
+
+* `ENV ( -- )` sets the current channel to use the envelope pattern for amplitude (equivalent to `16 VOLUME`).
+
+* `ENVSHAPE ( N -- )` sets the envelope pattern to be used for subsequent volume effects.
+
+* `CHE ( -- )` sets a pointer in the dictionary, so `PERIOD` will update the envelope period (rather than one of the sound channels, as is usual).
+
+* `PERIOD ( N -- )` sets the period of the envelope pattern or current sound channel. For sound channels, it is probably easier to use `FREQ`.
+
+* `PAUSE ( N -- )` causes the computer to wait for a short while. At 3.25 MHz, `900 PAUSE` gives approximately a one-second pause.
+
+Other words in the vocabulary are used to support the more user-facing words above, as follows:
+
+* `SIN ( R -- N )` -- read the current value from one of the sound registers.
+
+* `SOUT ( R N -- )` -- write a value to one of the sound registers.
+
+* `TOGGLE ( MASK FLAG -- )` -- apply AND / OR mask to the mixer register.
+
+Finally, there are three words providing example sounds:
+
+* `TRIMPHONE ( -- )` -- sound similar to a 1980s phone. Press a key to stop ringer.
+
+* `TRAIN ( -- )` -- sound of a steam train getting up to speed. Use `SOUNDOFF` to cancel sound.
+
+* `WOLF ( -- )` -- not very convincing Wolf Whistle sound.
+
+* `SWEEP ( M N P Q -- )` -- used by WOLF to create a slowly changing tone effect.
+
+* `ALL ( -- )` -- cycle through all three sound effects.
+
+
+
+
+
+
