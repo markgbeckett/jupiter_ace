@@ -20,7 +20,7 @@ Valkyr does not require memory above 7000h so, while seeming a little wasteful, 
 
 ## Playing the game
 
-To run Valkyr on your Minstrel 4th, simply load the game from the TAP or WAV file with `LOAD valkyr` and type `EM` to run.
+To run Valkyr on your Minstrel 4th, simply load the game from the TAP or WAV file with `LOAD valkyr` and type `valkyr` to run.
 
 The word `EM` is a wrapper for the game routine, which first updates the interrupt vector table.
 
