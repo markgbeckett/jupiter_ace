@@ -6,7 +6,7 @@ The game was written by Malcolm Evans and published by J.K. Greye software in 19
 
 The Jupiter Ace had many similarities to the ZX81, built around the Z80 processor and with a simple, character-based display: but, whereas the ZX81 shipped with BASIC as its built-in language, the Jupiter Ace shipped with FORTH.
 
-FORTH was chosen for the Jupiter Ace, because it produced lean and fast programs, allowing the user to write effective programs even within the constrained memory of the base model (3 kilobytes).
+FORTH was chosen for the Jupiter Ace, because it produced lean and fast programs, allowing the user to write effective applications, even within the constrained memory of the base model (3 kilobytes).
 
 This port of 3D Monster Maze aims to exploit the capabilities of the Jupiter Ace's built-in FORTH interpetter, while reproducing the original game as accurately as possible, favouring FORTH over machine code whenever possible.
 
@@ -43,6 +43,12 @@ You may also copy the file "3d_monster_maze.TAP" to an SD card for faster loadin
 Instructions are included in the game. The aim of the game is to find the exit from the maze before Rex catches you. You can move around the maze using `5` to turn left, `6` to move forward, and `8` to turn right.
 
 You can play the game with a Boldfield/ Tynemouth joystick interface (such as built-in joystick interface on Minstrel 4D). If a suitable joystick interface is detected, it will be automatically supported (though keyboard support will also work).
+
+## 4D Monster Maze
+
+There is a special addition of the game to celebrate the launch of the Minstrel 4D. It is called, as you might guess, 4D Monster Maze. It has several 'Easter Eggs' not in the original game. To find them, you will need to take a look at the source code "4d_monster_maze.TAP". To get you started, 4D Monster Maze can use the [RC2014 Digital I/O card's](https://rc2014.co.uk/modules/digital-io/) LEDs to show how close Rex is to your current location. To enable the feature, press 'r' on the opening screen, when asked "Is anyone there?". You will then be asked to confirm which port you have configured for sending output to the card.
+
+Although written to celebrate the 4D, the game will work equally well on the Minstrel 4th (plus most of the features will work on the Jupiter Ace).
 
 ## To-do List
 
