@@ -50,6 +50,8 @@ There is a special addition of the game to celebrate the launch of the Minstrel 
 
 Although written to celebrate the 4D, the game will work equally well on the Minstrel 4th (plus most of the features will work on the Jupiter Ace).
 
+![RC2014 Digital I/O card](4d_monster_maze.jpg)
+
 ## To-do List
 
 Bugs and missing features that need attention:
