@@ -1,0 +1,219 @@
+16 BASE C!
+
+0 VARIABLE SEED
+
+: SEEDON ( -- NEXT_SEED )
+    SEED @ 4B U*
+    4B 0 D+
+    OVER OVER U<
+    - -
+    1-
+    DUP
+    SEED !
+;
+
+: RND ( LIMIT -- VALUE )
+    SEEDON
+    U*
+    SWAP DROP
+;
+
+: RAND ( SEED -- )
+    ( THIS IS A MODIFIED VERSION OF RAND, REMOVING )
+    ( A LIKELY BUG IN PRINTED ORIGINAL )
+    ?DUP 0= IF
+	3C2B @ ( READ LOW TWO BYTES OF FRAMES )
+    THEN
+    SEED !
+;
+
+: GR ( L0 L1 L2 L3 L4 L5 L6 L7 CHR -- )
+    8 * 2BFF + DUP 8 + DO
+	I C!
+	-1
+    +LOOP
+;
+
+: INITSANTA ( -- )
+    00 00 00 00 88 50 60 70 1 GR
+    00 00 02 02 07 07 07 0E 2 GR
+    00 00 00 00 00 00 88 8C 3 GR
+    1F 1F 1F 1D 19 2A 2A 00 4 GR
+    55 97 97 9E 9F 8F 83 00 5 GR
+    86 7B 7B 7B FF FE FC 00 6 GR
+;
+
+: PRINTSANTA ( M N -- )
+    DUP 0 = IF ( LEFT-HAND )
+	OVER OVER AT
+	2 EMIT 3 EMIT
+	
+	SWAP 1+ SWAP AT
+	5 EMIT 6 EMIT
+    ELSE
+	DUP 1F = IF ( RIGHT-HAND )
+	    1- ( M N-1 )
+	    OVER OVER AT
+	    1 EMIT 2 EMIT
+	    
+	    SWAP 1+ SWAP AT
+	    4 EMIT 4 EMIT
+	ELSE ( MIDDLE )
+	    1- ( M N-1 )
+	    OVER OVER AT
+	    1 EMIT 2 EMIT 3 EMIT
+	    
+	    SWAP 1+ SWAP AT
+	    4 EMIT 5 EMIT 6 EMIT
+	THEN
+    THEN    
+;
+
+: CLEARSANTA ( M N -- )
+    DUP 0 = IF ( LEFT-HAND )
+	OVER OVER AT
+	2 SPACES
+	
+	SWAP 1+ SWAP AT
+	2 SPACES
+    ELSE
+	DUP 1F = IF ( RIGHT-HAND )
+	    1- ( M N-1 )
+	    OVER OVER AT
+	    2 SPACES
+	    
+	    SWAP 1+ SWAP AT
+	    2 SPACES
+	ELSE ( MIDDLE )
+	    1- ( M N-1 )
+	    OVER OVER AT
+	    3 SPACES
+	    
+	    SWAP 1+ SWAP AT
+	    3 SPACES
+	THEN
+    THEN    
+;
+
+10 CONSTANT NFLAKES
+
+CREATE SNOWFLAKES NFLAKES 2 * ALLOT
+
+: CREATEFLAKE ( -- )
+    40 RND
+
+    DUP 1F > IF
+	DROP 0
+    ELSE
+	2400 +
+    THEN
+;    
+
+: INITFLAKES ( -- )
+    NFLAKES 0 DO
+	40 RND
+
+	DUP 1F > IF
+	    DROP 0
+	ELSE
+	    2400 +
+	THEN
+	
+	I 2 * SNOWFLAKES +
+
+	!
+    LOOP
+;
+
+: MOVEFLAKE ( ADDR -- ADDR )
+    20 OVER C! ( BLANK PREVIOUS FLAKE )
+    20 + ( NEXT ROW )
+    3C2B C@ 3 AND 2- ( ADD SOME RANDOMNESS )
+    +
+    
+    DUP 26DF > IF DROP 26DF THEN
+    
+    ASCII * OVER C!
+;
+
+: CHECKFLAKES
+    NFLAKES 0 DO
+	I 2 * SNOWFLAKES +
+	DUP @ ( S: ADDR )
+
+	?DUP 0= IF 
+	    40 RND
+
+	    DUP 1F > IF
+		DROP 0
+	    ELSE
+		2400 +
+	    THEN
+
+	    SWAP !
+	ELSE 26BF > IF
+		0 SWAP !
+	    ELSE
+		DROP
+	    THEN
+	THEN
+    LOOP
+;
+		
+: MOVEFLAKES ( -- )
+    NFLAKES 0 DO
+	I 2 * SNOWFLAKES +
+
+	DUP @
+
+	?DUP IF
+	    MOVEFLAKE
+	    SWAP !
+	ELSE
+	    DROP
+	THEN
+    LOOP
+;
+
+-1 VARIABLE SANTAVIS
+
+: SNOW
+    SANTA
+    -1 SANTAVIS !
+    INITFLAKES
+    CLS
+
+    BEGIN
+	SANTAVIS @
+
+	DUP -1 = IF
+	    DROP
+	    400 RND
+
+	    DUP 10 < IF
+		100 * 1F +
+		SANTAVIS !
+	    ELSE
+		DROP
+	    THEN
+	ELSE
+	    100 /MOD SWAP
+	    OVER OVER CLEARSANTA
+	    1-
+
+	    ?DUP 0= IF
+		DROP -1
+	    ELSE
+		OVER OVER PRINTSANTA
+		SWAP 100 * + 
+	    THEN
+
+	    SANTAVIS !
+	THEN
+		
+	MOVEFLAKES
+	CHECKFLAKES
+    0 UNTIL
+;
+
+DECIMAL
