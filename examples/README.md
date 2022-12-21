@@ -1,4 +1,6 @@
-# Example Forth Code - Canonical Pile Calculator
+# Example Forth Codes
+
+## Canonical Pile Calculator
 
 The sightly dull-sounding Forth example Canonical Pile Calculator, from Leo Brodie's book [Starting Forth](https://forth.com/starting-forth/12-forth-code-example/) is well worth studying, if you want to learn Forth. 
 
@@ -15,3 +17,16 @@ CEMENT
 ```
 
 Alternatively, if you have a Minstrel 4th with a USB Keyboard Interface or a Minstrel 4D, you can transmit the source code (canonical_pile_calculator.fs) from your PC using a serial terminal.
+
+
+## AceSnow
+
+Inspired by Xsnow, which probably adorned the desktops of many Unix workstations in the 1990s, I have created Acesnow featuring realistic snowfall and a surprise visitor!
+
+To use, type in the source code, and then enter
+```
+INITSANTA
+SNOW
+```
+
+Alternatively, if you have a Minstrel 4th with a USB Keyboard Interface or a Minstrel 4D, you can transmit the source code (acesnow.fs) from your PC using a serial terminal.
