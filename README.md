@@ -1,6 +1,6 @@
-# Software for the Jupiter Ace and Minstrel 4th
+# Software for the Jupiter Ace, Minstrel 4D, and Minstrel 4th
 
-Some software I have developed for the [Jupiter Ace](http://www.jupiter-ace.co.uk/) / [Minstrel 4th](https://www.thefuturewas8bit.com/minstrel4th.html), which may be interesting or useful for others.
+Some software I have developed for the [Jupiter Ace](http://www.jupiter-ace.co.uk/), [Minstrel 4D](https://www.thefuturewas8bit.com/minstrel4d.html), and  [Minstrel 4th](https://www.thefuturewas8bit.com/minstrel4th.html), which may be interesting or useful for others.
 
 * `getting_started` - A quick introduction to using Forth on the Minstrel 4th (or Jupiter Ace).
 * `bubble_led` - Minstrel 4th version of Forth toolbox and example message scroller for the RC2014 Bubble Display module.
