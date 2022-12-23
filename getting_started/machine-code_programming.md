@@ -1,9 +1,13 @@
 # Programming in Machine Code on the Minstrel 4th/ 4D
 
+Ace Forth is both fast and memory efficient, so there is less need to resort to machine-code than in, say, BASIC. However, if you do need (or want) to add some machine-code to your latest project, here are a couple of ways to do it.
+
+Note that this document assumes a reasonable familiarity with Ace Forth.
+
 ## Storing machine code in the dictionary
 
 It is relatively easy to add small machine-code routines to an Ace Forth
-dictionary, and there are various ROM routines from which your code can
+dictionary, and there are various ROM routines using which your code can
 access the data stack.
 
 The [Jupiter Ace Forth Programming manual](http://www.jupiter-ace.co.uk/documents_index.html) includes a Forth defining word
@@ -16,14 +20,15 @@ DOES>
 ;
 ```
 
-You insert hand-assembled machine code into a newly created word using
-`C,` to add code one byte at a time. It may be easier to switch to hexidecimal
-numbers before starting -- e.g., `DECIMAL 16 BASE C!`.
+Having defined your word, you insert hand-assembled machine code into
+your newly created word one byte at a time, using `C,`. (It may be
+easier to switch to hexidecimal numbers before starting -- e.g.,
+`DECIMAL 16 BASE C!`.)
 
-The Forth Programming manual also highlights some important
+The Forth Programming manual highlights some important
 considerations for your code:
 
-- You return to Forth using `jp (iy)` rather than he usual `ret`.
+- You return to Forth using `jp (iy)` rather than the usual `ret`.
 
 - You should ensure the IX and IY registers' values are restored before
   returning.
@@ -63,19 +68,19 @@ speed of the Minstrel 4th/ 4D:
 DECIMAL 16 BASE C!
 
 CODE CLOCKCHECK ( -- N )
-    11 C, 00 C, 00 C, (        ld de, 0x0000 )
-    21 C, 2B C, 3C C, (        ld hl, FRAMES )
-    76 C,             (        halt )
-    7E C,             (        ld a, <hl> )
-    13 C,             ( LOOP : inc de )
-    BE C,             (        cp <hl> )
-    28 C, FC C,       (        jr z, LOOP )
-    D7 C,             (        rst 0x10 )
-    FD C, E9 C,       (        jp <iy> )
+    11 C, 00 C, 00 C, (        ld de, 0x0000 ; Init counter   )
+    21 C, 2B C, 3C C, (        ld hl, FRAMES ; Internal clock )
+    76 C,             (        halt          ; Wait for int   )
+    7E C,             (        ld a, <hl>    ; Initial value  )
+    13 C,             ( LOOP : inc de        ; Update counter )
+    BE C,             (        cp <hl>       ; See if changed )
+    28 C, FC C,       (        jr z, LOOP    ; Repeat, if not )
+    D7 C,             (        rst 0x10      ; Stack DE       )
+    FD C, E9 C,       (        jp <iy>       ; Exit to Forth  )
 ```
 
 Note, you will need to remove the comments before typing this into the
-computer (Ace Forth only permits comments in colon definitions).
+computer, as Ace Forth only permits comments in colon definitions.
 
 Then, to call `CLOCKCHECK`, you simply type:
 
@@ -84,10 +89,13 @@ CLOCKCHECK
 . ( VALUE ON TOP OF STACK )
 ```
 
+Values around 2,500 indicate computer is running at 3.25 MHz and values
+around 5,000 indicate computer is running at 6.5 MHz.
+
 For longer machine-code routines, hand assembly becomes tiring and
 error-prone (though people have written whole games in this way!). If
-you would prefer to use an assembler, then you can create space in the
-dictionary for your machine code using:
+you would prefer to use an assembler, then you can pre-allocate some
+space in the dictionary for your machine code using:
 
 ```
   CREATE MYCODE
@@ -141,7 +149,7 @@ machine code, using:
 QUIT
 ```
 
-You can then load machine code (or data) above 49,151 in any way you
+You can then load machine code (or data) at or above 49,152 in any way you
 wish. Once inserted, you can call your machine code with `<address>
 CALL`. The same restrictions apply as for dictionary-based machine code
 and, again, you return to the Ace Forth monitor using `jp (iy)`.
@@ -160,4 +168,4 @@ slowing down save and load times.
 Note, the Minstrel 4D's SD card interface can happily read multiple
 files from a TAP file, so you could create a multi-part loader on an
 emulator and then load it into the Minstrel 4D. It is only writing
-multi-part programs that is not supported.
+multi-part programs that is not supported on the 4D.
