@@ -79,8 +79,9 @@ CODE CLOCKCHECK ( -- N )
     FD C, E9 C,       (        jp <iy>       ; Exit to Forth  )
 ```
 
-Note, you will need to remove the comments before typing this into the
-computer, as Ace Forth only permits comments in colon definitions.
+Note, you will need to remove the (Forth) comments before typing this
+into the computer, as Ace Forth only permits comments in colon
+definitions.
 
 Then, to call `CLOCKCHECK`, you simply type:
 
@@ -99,7 +100,7 @@ space in the dictionary for your machine code using:
 
 ```
   CREATE MYCODE
-  <NO_BYTES> ALLOT
+  <NUM_BYTES> ALLOT
 ```
 
 You can then write your routine using an assembler, save as a code
@@ -127,10 +128,11 @@ otherwise, you will corrupt later dictionary definitions.
 ## Storing machine code in high memory
 
 You can also store machine code high up in memory, outside of the
-dictionary, to avoid the short-comings of that approach
-(relocatability). Before doing this, you need to reserve some space not
-to be managed by Ace Forth, by redefining the system variable RAM (at
-address 15,384). You do this, with the following code:
+dictionary, to avoid the short-comings of keeping machine code in the
+dictionary (relocatability). Before doing this, you need to reserve some
+space that will not be used by Ace Forth monitor, by redefining the
+system variable called RAM (stored at address 15,384). You do this, with the
+following code:
 
 ``
 <NEW_LIMIT> 15384 !
@@ -138,7 +140,7 @@ QUIT
 ``
 
 The `QUIT` performs a warm restart and moves the data stack to just below the
-new limit. (This is similar to `CLEAR <NEW_LIMIT>` in some versions of BASIC).
+new limit. (This is similar to `CLEAR <NEW_LIMIT>` in some versions of BASIC.)
 
 For example, on the Minstrel 4th/ 4D, you can reserve 16 kilobytes at
 the top of memory (between 49,152 and 65,535, inclusive), for your
