@@ -17,7 +17,8 @@ AY_WAIT_UNIT:	EQU 0x0042	; Unit of duration (calibrate to clock)
 
 	;; Set origin to 0xC000 unless building for inclusion in
 	;; dictionary. In which case, use address of holding word.
-	org 0x3D27		; Default = 0xC000
+	org 0xC000		; Default = 0xC000 (or address of
+				; parameter field of MCODE)
 	
 PLAY_INFO:
 	dw CHANNEL_0_INFO	; Address of Channel 0 info
