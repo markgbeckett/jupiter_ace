@@ -1,11 +1,3 @@
-	IFDEF ZXSPECTRUM
-AY_REG_PORT: EQU 0xFFFD		; Port addresses used on Spectrum 128k
-AY_DAT_PORT: EQU 0xBFFD		; models
-	ELSE
-AY_REG_PORT: EQU 216		; Default port settings for RC2014 
-AY_DAT_PORT: EQU 208		; sound card
-	ENDIF
-
 	;; Register mappings for AY-3-8910/ AY-3-8912 card
 AY_TONE_1:	EQU 0x00
 AY_TONE_2:	EQU 0x02
@@ -22,8 +14,10 @@ DEF_TEMPO:	EQU 7920/120	; 120 beats per minute @ 3.5 MHz
 DEF_ENV:	EQU 8000	; Default envelope period
 DEF_ENV_SH:	EQU 0		; Default envelope shape
 AY_WAIT_UNIT:	EQU 0x0042	; Unit of duration (calibrate to clock)
-	
-	org 0x3D27		; 0xC000
+
+	;; Set origin to 0xC000 unless building for inclusion in
+	;; dictionary. In which case, use address of holding word.
+	org 0x3D27		; Default = 0xC000
 	
 PLAY_INFO:
 	dw CHANNEL_0_INFO	; Address of Channel 0 info
@@ -923,7 +917,11 @@ WRITE_TO_AY:
 	;;   AF, BC - corrupted
 READ_FROM_AY:
 	ld a, d			; Retreive register
+	IFDEF BOLDFIELD
+	ld bc, AY_DAT_PORT
+	ELSE
 	ld bc, AY_REG_PORT	; and address of register port
+	ENDIF
 	out (c),a		; Write it
 
 	in e,(c)		; Retrieve value
