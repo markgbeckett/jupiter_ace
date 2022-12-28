@@ -71,7 +71,7 @@ The current version of the code only supports a subset of the ZX Specttum PLAY f
 
 ### Loading
 
-There are two versions of the PLAY utility, either of which can be loaded from tape/ WAV audio.
+There are two versions of the PLAY utility for the Minstrel 4th/ 4D, either of which can be loaded from tape/ WAV audio.
 
 The first version, called [play.tap](play.tap) loads in two parts (a dictionary file and a block of machine code), using the following commands:
 
@@ -89,7 +89,9 @@ LOAD PLAY
 
 --or via the Minstrel 4D's menu system.
 
-All going well, you should see some additional words in your dictionary: most importantly, you should see a PLAY command.
+There is also a third version, named [playj.tap](playj.tap), which is configured for the Jupiter Ace with Boldfield Soundbox (or a suitable emulator). This version loads in a single part, using `LOAD PLAY`.
+
+All going well and whichever version you choose, you should see some additional words in your dictionary: most importantly, you should see a PLAY command.
 
 N.B. The second version relies on non-relocatable machine code being at the correct location in the dictionary (in a word name `MCODE`). This version should be loaded first, before any other words are loaded or defined. You should also avoid editing the words `PLAY`, `COUNT` and `GETADDR`, since doing so may move the machine code (stored in `MCODE`) in memory.
 
