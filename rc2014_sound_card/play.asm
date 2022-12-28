@@ -23,7 +23,7 @@ DEF_ENV:	EQU 8000	; Default envelope period
 DEF_ENV_SH:	EQU 0		; Default envelope shape
 AY_WAIT_UNIT:	EQU 0x0042	; Unit of duration (calibrate to clock)
 	
-	org 0xC000
+	org 0x3D27		; 0xC000
 	
 PLAY_INFO:
 	dw CHANNEL_0_INFO	; Address of Channel 0 info
