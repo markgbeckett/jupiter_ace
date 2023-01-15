@@ -58,6 +58,7 @@ The above example is not exactly earth shattering, but it does explain how Forth
 
 If you are familiar with machine code, you may spot immediately what has happened. If not, I will explain. Numbers on the Minstrel 4th are, by default, held as 16-bit, signed integers, which can hold values between -32,768 and +32,767. If you happen to overflow this range (200 × 200 = 40,000, which is too big to fit in a 16-bit, signed integer), the answer will simply overflow and lose its most significant bit, leading to the wrong answer. However, the computer will not tell you this has happened: it will happily compute and report the wrong answer. This is a potential downside of a language like Forth. If you tried the same calculation in BASIC, it would have succeeded, though would have spent some time turning your inputs into its generic internal representation, consuming around five times as much memory and taking quite a bit longer to produce the answer. The trade-off for fast Forth arithmetic is that it relies on the programmer being aware of and checking for its limitations. By the way, Forth on the Minstrel 4th can deal with bigger numbers (and floating-point numbers, too) though this requires the use of different words, which are best kept until you know some more Forth.
 
+
 ## Writing Programs
 
 A key feature of Forth is the ability to define your own words, to supplement the standard dictionary. Forth programs are effectively words written by an end-user to encapsulate some function--anything from a platform arcade game through to a spreadsheet.
@@ -115,6 +116,64 @@ REDEFINE DOUBLE
 ```
 
 In this case, the error is not too costly. However, in longer programs, it could become a very expensive mistake to fix. Because of this, it is wise to save your work frequently, as we will explain below.
+
+
+## Working with the Stack
+
+The data stack is fundamental to Forth, and almost every word makes use of it to receive input arguments, hold temporary working, and provide results. Look back at the word DOUBLE that we defined in the previous section. DOUBLE takes one input (a number to be multiplied by two) via the stack and leaves the result on the stack. Notice also that DOUBLE removed the input from the stack: this is often described as DOUBLE is consuming its arguments. If you needed to keep the number passed into DOUBLE for use later in your program, you would need to keep a copy and we will look at how to do this and much more in this section.
+
+Because the stack is a last-in-first-out data structure and because the convention is for words to consume their arguments, Forth includes various ways to manipulate the data on the stack, including words that duplicate stack entries, reorder stack entries, and remove them.
+
+Here are some of the most common and useful words:
+
+- `DUP` makes a second copy of the number on top of the stack. So, for example `2 DUP` would leave 2 and 2 on the stack.
+
+- `DROP` discards the number on top of the stack.
+
+- `OVER` will copy the second number on the stack to the top of stack.
+
+- `SWAP` will swap over the top and second item on the stack.
+
+- `ROT` will reorder the top three items on the stack, so that the third item is top, the top item is second and the second item is third.
+
+Here is an example of these words in action. The lefthand column shows the command(s) entered and the righthand column shows you what numbers are on the stack after each command is entered.
+
+```
+  Command                       Stack (TOS first)
+  -------------------------------------------------------
+  1 2 3                         3
+                                2
+				1
+  -------------------------------------------------------
+  DUP                           3
+                                3
+				2
+				1
+  -------------------------------------------------------
+  DROP                          3
+                                2
+				1
+  -------------------------------------------------------
+  SWAP                          2
+                                3
+				1
+  -------------------------------------------------------
+  OVER                          3
+                                2
+				3
+				1
+  -------------------------------------------------------
+  DROP                          2
+                                3
+				1
+  -------------------------------------------------------
+  ROT                           1
+                                2
+				3
+  --------------------------------------------------------
+```
+
+As you learn to write Forth, you will find you use these words a lot and stack manipulations becomes very familiar.
 
 ## Saving Your Work
 
