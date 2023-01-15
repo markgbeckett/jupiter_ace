@@ -90,8 +90,8 @@ For this simple word, it is reasonably easy to work out what is going on, even i
 To update our word definition, for DOUBLE, we type `EDIT DOUBLE`. This will open the existing definition of DOUBLE in the input buffer and allow us to edit it, to something like:
 ```
 : DOUBLE ( N -- 2*N ) 
-  ( MULTIPLY VALUE ON STACK BY TWO )
-  2 *
+    ( MULTIPLY VALUE ON STACK BY TWO )
+    2 *
 ;
 ```
 For longer word definitions, `EDIT` will divide the definition into sections of around 12 lines long. Once you have finished editing the current section, press Enter to move on to the next one. Pressing Enter in the last section will end the editing session. Sadly, you cannot go back to the previous section in an editing session, so, if you need to backtrack, you will have to skip through the remaining sections and EDIT the word again (though you should read on before doing too much EDIT-ing).
@@ -174,6 +174,22 @@ Here is an example of these words in action. The lefthand column shows the comma
 ```
 
 As you learn to write Forth, you will find you use these words a lot and stack manipulations becomes very familiar.
+
+For example, suppose you wanted to write a word to compute the area and perimeter of a rectangle, given its length and width.
+You could do it as follows:
+
+```
+: RECT ( LENGTH WIDTH -- PERIMETER AREA )
+    OVER OVER         ( DUPLICATE LENGTH AND WIDTH )
+    *                 ( COMPUTE AREA )
+    ROLL ROLL         ( BRING LENGTH AND WIDTH TO TOP )
+    + 2 *             ( COMPUTE PERIMETER )
+    SWAP              ( TOS = AREA ; 2OS = PERIMETER )
+;
+```
+
+To test the new word, enter `3 4 RECT . .` and check you get the answers 12 and 14.
+
 
 ## Saving Your Work
 
