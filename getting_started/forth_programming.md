@@ -8,9 +8,9 @@ Forth has several big advantages that make it a good match to the Minstrel 4th. 
 
 Forth, however, has several idiosyncrasies that can deter those who are new to the language. First, Forth is a stack-based programming language. A stack is a relatively primitive data structure intended to provide temporary storage for a program. The programmer adds numbers to a stack in the same way a writer adds pages to a pile of paper. Numbers in a stack have to be accessed in a certain order; you can only access the entry on top of the stack, which is the most recent value added.  To get to numbers lower down the stack (a number you added earlier on), you first have to take the values above it off the stack (those added after the number you want).
 
-While a stack is primitive, it is much faster to access than program variables. In Forth, data is (usually) passed to and from routines via the stack rather than as parameters or variables, something that can be confusing to the uninitiated. Forth has a common notation for describing the state of the stack: the value on the top of the stack is called TOS and the next lower value on the stack is called 2OS.
+While a stack is primitive, it is much faster to access than program variables. In Forth, data is (usually) passed to and from routines via the stack rather than as parameters or variables, something that can be confusing to the uninitiated. Forth has a common notation for describing the state of the stack: the value on the top of the stack is called TOS, the next lower value on the stack is called 2OS, the third value is called 3OS, and so on.
 
-Because the stack is so important in Forth, the language relies heavily on Reverse Polish Notation, in which parameters precede the procedures that act upon them. For example, in BASIC, you can set the print location on the screen using something like `AT 12, 14`. The equivalent expression in Forth is `12 14 AT`. The parameters appear before the function (and there is no punctuation, other than spaces).
+Because the stack is so important in Forth, the language relies heavily on Reverse Polish Notation, in which parameters precede the procedures that act on them. For example, in BASIC, you can set the print location on the screen using something like `AT 12, 14`. The equivalent expression in Forth is `12 14 AT`. The parameters appear before the function (and there is no punctuation, other than spaces).
 
 If you can get past these idiosyncrasies, you will find that your Minstrel 4th gives you lots of scope to indulge your passion for micro-computing and to create useful and interesting programs.
 
@@ -172,6 +172,12 @@ Here is an example of these words in action. The lefthand column shows the comma
 				3
   --------------------------------------------------------
 ```
+
+Many Forth versions have a built in word, named `.S`, which will print the content of the stack without changing it. The Forth on the Minstrel 4th does not have a built-in `.S`, but there is one in [../debug/debug.fs](debug.fs) which you can type in or load. For now, do not worry about how it works: just type it in.
+
+Having typed or loaded `.S` , you can try the example above and see how the stack changes (not `.S` prints the top stack item (right-most)).
+
+![stack_example.png](Working with the Stack)
 
 As you learn to write Forth, you will find you use these words a lot and stack manipulations becomes very familiar.
 
