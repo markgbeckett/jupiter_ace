@@ -175,13 +175,13 @@ Here is an example of these words in action. The lefthand column shows the comma
 
 Many Forth versions have a built in word, named `.S`, which will print the content of the stack without changing it. The Forth on the Minstrel 4th does not have a built-in `.S`, but there is one in [debugging_tools.fs](https://github.com/markgbeckett/jupiter_ace/blob/master/utilities/debugging_tools.fs) which you can type in or load. For now, do not worry about how it works: just type it in.
 
-Having typed or loaded `.S` , you can try the example above and see how the stack changes (not `.S` prints the top stack item (right-most)).
+Having typed or loaded `.S` , you can try the example above and see how the stack changes (note that `.S` prints the top stack item (right-most)).
 
 ![](stack_example.png)
 
-As you learn to write Forth, you will find you use these words a lot and stack manipulations becomes very familiar.
+As you learn to write Forth, you will find you use stack-manipulation words a lot and stack manipulations becomes very familiar. You will also find `.S` very useful when debugging your programs.
 
-For example, suppose you wanted to write a word to compute the area and perimeter of a rectangle, given its length and width.
+As an example of stack manipulation in action, suppose you wanted to write a word to compute the area and perimeter of a rectangle, given its length and width.
 You could do it as follows:
 
 ```
