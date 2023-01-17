@@ -83,7 +83,7 @@ To test `DOUBLE`, you could enter something like:
 ```
 6 double . 
 ```
-For words that you define, you can display the definition using the word `LIST`. Why not try this now. Notice that the Minstrel 4th will make an attempt to format the listing in an easy-to-read way. Notice, also, that `LIST` does not work for internal words: they are defined in a different way.
+For words that you define, you can display the definition using the word `LIST <word>`. Why not try this now by entering `LIST DOUBLE`. Notice that the Minstrel 4th will make an attempt to format the listing in an easy-to-read way. Notice, also, that `LIST` does not work for internal words: they are defined in a different way.
 
 For this simple word, it is reasonably easy to work out what is going on, even if you come back to the word some weeks later. However, for more complicated words, it is useful to be able to add comments. To do this in Forth, you use two words `(` and `)`, which indicate the beginning and end of a comment (though remember, they are words so need to be separated by spaces). Comment words can only be used when in compile mode (that is, when creating new words).
 
@@ -94,7 +94,11 @@ To update our word definition, for DOUBLE, we type `EDIT DOUBLE`. This will open
     2 *
 ;
 ```
-For longer word definitions, `EDIT` will divide the definition into sections of around 12 lines long. Once you have finished editing the current section, press Enter to move on to the next one. Pressing Enter in the last section will end the editing session. Sadly, you cannot go back to the previous section in an editing session, so, if you need to backtrack, you will have to skip through the remaining sections and EDIT the word again (though you should read on before doing too much EDIT-ing).
+Notice the form of the comment that immediately follows the word name. This comment is sometimes referred to as a stack diagram and is commonly used by Forth programmers. Because Forth words generally use the stack for input and output values, it is often not obvious from the source what inputs and outputs they need. The stack-diagram comment helps overcome this issue. The terms to the left of the double dash represent the stack values that are consumed by the word (with TOS rightmost). The terms to the right of the double dash show the state of the stack at the end of the word: that is the outputs (again, TOS is right-most).
+
+Different programmers use different notation for these terms. Some use terms like 'n' and 'u' to refer to signed and unsigned integers, some use meaningful names such as 'name', 'addr', 'length', and so on. 
+
+Getting back to editing words, you will find that, for longer word definitions, `EDIT` divides the definition into sections of around 12 lines long. Once you have finished editing the current section, press Enter to move on to the next one. Pressing Enter in the last section will end the editing session. Sadly, you cannot go back to the previous section in an editing session, so, if you need to backtrack, you will have to skip through the remaining sections and EDIT the word again (though you should read on before doing too much EDIT-ing).
 
 You might naturally assume that the definition of DOUBLE has been updated, in the dictionary. However, this is not quite what happens. When the Minstrel 4th exits the editing session, it creates a new word at the top of the dictionary, which is effectively an edited version of the old word (which is also still in the dictionary). You can see this by entering `VLIST`, which will confirm you have two copies of the word `DOUBLE`.
 
@@ -120,7 +124,7 @@ In this case, the error is not too costly. However, in longer programs, it could
 
 ## Working with the Stack
 
-The data stack is fundamental to Forth, and almost every word makes use of it to receive input arguments, hold temporary working, and provide results. Look back at the word DOUBLE that we defined in the previous section. DOUBLE takes one input (a number to be multiplied by two) via the stack and leaves the result on the stack. Notice also that DOUBLE removed the input from the stack: this is often described as DOUBLE is consuming its arguments. If you needed to keep the number passed into DOUBLE for use later in your program, you would need to keep a copy and we will look at how to do this and much more in this section.
+The data stack is fundamental to Forth, and almost every word makes use of it to receive input arguments, hold temporary working, and provide results. Look back at the word DOUBLE that we defined in the previous section. DOUBLE takes one input (a number to be multiplied by two) via the stack and leaves the result on the stack. Notice that DOUBLE removed the input from the stack: this is often described as DOUBLE is consuming its arguments. If you needed to keep the number passed into DOUBLE for use later in your program, you need to keep a copy and we will look at how to do this and much more in this section.
 
 Because the stack is a last-in-first-out data structure and because the convention is for words to consume their arguments, Forth includes various ways to manipulate the data on the stack, including words that duplicate stack entries, reorder stack entries, and remove them.
 
@@ -139,41 +143,41 @@ Here are some of the most common and useful words:
 Here is an example of these words in action. The lefthand column shows the command(s) entered and the righthand column shows you what numbers are on the stack after each command is entered.
 
 ```
-  Command                       Stack (TOS first)
-  -------------------------------------------------------
-  1 2 3                         3
-                                2
-				1
-  -------------------------------------------------------
-  DUP                           3
-                                3
-				2
-				1
-  -------------------------------------------------------
-  DROP                          3
-                                2
-				1
-  -------------------------------------------------------
-  SWAP                          2
-                                3
-				1
-  -------------------------------------------------------
-  OVER                          3
-                                2
-				3
-				1
-  -------------------------------------------------------
-  DROP                          2
-                                3
-				1
-  -------------------------------------------------------
-  ROT                           1
-                                2
-				3
+  Command         Stack Diagram          Stack (TOS first)
+  --------------------------------------------------------
+  1 2 3                                  3
+                                         2
+                                         1
+  --------------------------------------------------------
+  DUP             ( n -- n n )           3
+                                         3
+                                         2
+                                         1
+  --------------------------------------------------------
+  DROP            ( n -- )               3
+                                         2
+                                         1
+  --------------------------------------------------------
+  SWAP            ( m n -- n m )         2
+                                         3
+                                         1
+  --------------------------------------------------------
+  OVER            ( m n -- m n m )       3
+                                         2
+                                         3
+                                         1
+  --------------------------------------------------------
+  DROP            ( n -- )               2
+                                         3
+                                         1
+  --------------------------------------------------------
+  ROT             ( m n p -- n p m )     1
+                                         2
+                                         3
   --------------------------------------------------------
 ```
 
-Many Forth versions have a built in word, named `.S`, which will print the content of the stack without changing it. The Forth on the Minstrel 4th does not have a built-in `.S`, but there is one in [debugging_tools.fs](https://github.com/markgbeckett/jupiter_ace/blob/master/utilities/debugging_tools.fs) which you can type in or load. For now, do not worry about how it works: just type it in.
+Many Forth versions have a built-in word, named `.S`, which displays the content of the stack without changing it. The Forth on the Minstrel 4th does not have a built-in `.S`, but there is one in [debugging_tools.fs](https://github.com/markgbeckett/jupiter_ace/blob/master/utilities/debugging_tools.fs) which you can type in or load. For now, do not worry about how it works: just type it in.
 
 Having typed or loaded `.S` , you can try the example above and see how the stack changes (note that `.S` prints the top stack item (right-most)).
 
@@ -188,7 +192,7 @@ You could do it as follows:
 : RECT ( LENGTH WIDTH -- PERIMETER AREA )
     OVER OVER         ( DUPLICATE LENGTH AND WIDTH )
     *                 ( COMPUTE AREA )
-    ROLL ROLL         ( BRING LENGTH AND WIDTH TO TOP )
+    ROT ROT           ( BRING LENGTH AND WIDTH TO TOP )
     + 2 *             ( COMPUTE PERIMETER )
     SWAP              ( TOS = AREA ; 2OS = PERIMETER )
 ;
@@ -196,6 +200,44 @@ You could do it as follows:
 
 To test the new word, enter `3 4 RECT . .` and check you get the answers 12 and 14.
 
+Occasionally you will need to get to words deeper in the stack without losing what is above them. For this, there are two words called `PICK` and `ROLL`. `PICK ( n -- m )` will copy the n'th value on the stack to the top so, for example:
+```
+  Command         Stack Diagram          Stack (TOS first)
+  --------------------------------------------------------
+  1 2 3 4 5                              5
+                                         4
+                                         3
+                                         2
+                                         1
+  --------------------------------------------------------
+  4 PICK          ( n -- m )             2
+                                         5
+					 4
+                                         3
+					 2
+                                         1
+  --------------------------------------------------------
+```
+
+Similarly, `ROLL ( n -- m )` will move the n'th value to the top of the stack, moving the values above it down by one. So, for example:
+```
+  Command         Stack Diagram          Stack (TOS first)
+  --------------------------------------------------------
+  1 2 3 4 5                              5
+                                         4
+                                         3
+                                         2
+                                         1
+  --------------------------------------------------------
+  4 ROLL          ( n -- m )             2
+                                         5
+					 4
+                                         3
+                                         1
+  --------------------------------------------------------
+```
+
+It is best to limit your use of `PICK` and `ROLL`, since it suggests your program is making challenging use of the stack (stack acrobatics), which can lead to difficult-to-resolve bugs.
 
 ## Saving Your Work
 
