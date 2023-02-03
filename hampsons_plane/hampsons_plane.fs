@@ -57,14 +57,12 @@ DECIMAL 16 BASE C!
     1C 0 DO 10 EMIT LOOP
     23 EMIT 23 EMIT
     
-    0B 1 DO
-	I A < IF ." 0" THEN
-	I .
+    0F 1 DO
+	I .2DIGIT
 
-	24 0 DO 10 EMIT LOOP
+	1C 0 DO 10 EMIT LOOP
 
-	I A < IF ." 0" THEN
-	I .
+	I .2DIGIT
     LOOP
     
     23 EMIT 23 EMIT
