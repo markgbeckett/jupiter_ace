@@ -186,3 +186,5 @@ DECIMAL 16 BASE C!
 
     KEY
 ;
+
+DECIMAL
