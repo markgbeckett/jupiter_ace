@@ -12,11 +12,11 @@ DECIMAL 16 BASE C!
     ?DUP UNTIL
 
     ( ECHO TO SCREEN )
-    DUP ECHO
+    DUP EMIT
 ;
 
 : .2DIGIT ( N -- )
-    ( PRINT 2-DIGIT NUMNER )
+    ( PRINT 2-DIGIT NUMBER )
     00 ( CONVERT TO DOUBLE-PRECISION )
     <# # # #>
     TYPE
@@ -35,7 +35,7 @@ DECIMAL 16 BASE C!
 ;
 	
 : RAND ( -- N )
-    ( CRUDE RANDOM-NUMBER GENERATOR )
+    ( SIMPLE RANDOM-NUMBER GENERATOR )
     3C2B @ ( FRAMES )
 
     BEGIN
@@ -88,7 +88,7 @@ DECIMAL 16 BASE C!
 
     ( COMBINE TO GIVE GAME-BOARD OFFSET )
     +
-    DISPLAY + 2 + ( 2400H )
+    2400 + 2 + ( 2400h = START OF DISPLAY )
 
     ( INVERT NINE-TILE FOOTPRINT AROUND SELECTED TILE )
     3 0 DO
@@ -133,6 +133,7 @@ DECIMAL 16 BASE C!
 ;
 
 : SKILL
+    SCREEN
     14 0 AT ." Skill level "
     KEY 30 -
 
@@ -175,6 +176,7 @@ DECIMAL 16 BASE C!
 
 : GAME ( -- )
     SETUP
+
     SKILL
 
     BEGIN
