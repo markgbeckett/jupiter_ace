@@ -2,11 +2,13 @@
 
 ## Introduction
 
-The ["YM2149 Sound Card for RC2014 Retro Computer"](https://www.tindie.com/products/semachthemonkey/ym2149-sound-card-for-rc2014-retro-computer/)--a 3-channel sound add-on for retrocomputers, designed by Ed Brindley--can be plugged into the Minstrel 4th, via the RC2014 edge connector, to boost the audio capabilities of the computer.
+The ["YM2149 Sound Card for RC2014 Retro Computer"](https://www.tindie.com/products/semachthemonkey/ym2149-sound-card-for-rc2014-retro-computer/)--a 3-channel sound add-on for retrocomputers, designed by Ed Brindley--can be plugged into the Minstrel 4th/ Minstrel 4D, via the RC2014 edge connector, to boost the audio capabilities of the computer.
 
 ![Minstrel 4th with YM2149 sound card](minstrel_4th_with_sound_card.jpg)
 
 The card supports the General Instruments AY-3-8910, the Yamaha 2149, and (with an adaptor) the General Instruments AY-3-8912. However, from the point of sound generation, the three chips are indistinguishable. Below I refer to the AY-3-8910 chip, only because that is the sound chip I have. Either of the others will work equally well.
+
+There are a few revisions of the sound card. At the time of writing, there Rev 5 board seems to be the most common, though there is also a Rev 6 board, which uses a different addressing mode. Most of the instructions below are based on the Rev 5 board. However, I am in the process of adding information/ code for the Rev 6 board.
 
 ## Building the Card
 
@@ -256,13 +258,29 @@ Boldfield provided some software to help the programmer to use the Soundbox, on 
 
 I have ported this software to work with the RC2014 YM2149 sound card. The dictionary source is available in [sounndbox.fs](soundbox.fs). You can either type this into your Minstrel 4th or, if you have a USB keyboard interface such as Shirley Knot's, you can transmit the source code over a serial connection from a PC.
 
-Before using the dictionary, you may need to set up some configuration parameters. First you need to set the port addresses for the registry and data ports by adjusting the values of the constants 'REGPORT' and 'DATPORT', respectively.
+Before using the dictionary, you may need to set up some configuration parameters. These can be configured for either the Rev 5 or the Rev 6 board, as follows.
 
-Second, you need to confirm the clock-divide setting you have configured on the sound card, by adjusting the value of the constant `RCCLOCKDIVIDE`. This should be set to either 2 or 4 accordingly.
+First you need to set the port addresses used to select a egister, write a value to a register, and read a value from a register. This is done via three constants, labelled 'REGPORT', 'READPORT', and 'WRITEPORT'. On the Rev 5 board, 'REGPORT' and 'READPORT' should be set to the same value. The default setting for the Rev 5 board are, as follows:
+
+```
+D8 CONSTANT REGPORT
+D8 CONSTANT READPORT
+D0 CONSTANT WRITEPORT
+```
+
+--and for the Rev 6 board (in MSX configuration):
+
+A0 CONSTANT REGPORT
+A2 CONSTANT READPORT
+A1 CONSTANT WRITEPORT
+
+Above all port addresses are in hexidecimal.
+
+Second, you need to confirm the clock-divide setting you have configured on the sound card, by adjusting the value of the constant `RCCLOCKDIVIDE`. This should be set to either 2 or 4 accordingly (note that, for the YM2149 chip, you may also set the chip-internal divide-by-2 option, though it is assume here you have not done this).
 
 Before using any Soundbox commands, you should enter `SINIT`. This will detect the clock speed of the Minstrel 4th -- either 3.25 MHz or 6.5 MHZ -- and set the variable TURBO to either 1 or 2, respectively.
 
-The original documentation for the Boldfield Soundbox utility seems to be lost. Here are some pointers to get you started, based on what I learned when porting the code:
+The original documentation for the Boldfield Soundbox utility is available on the [Jupiter Ace Archive](https://discord.com/channels/987669452793458728/987670903871639562/1050338113869856790). Also, here are some pointers to get you started, based on what I learned when porting the code:
 
 * `SOUNDOFF ( -- )` will disable all three sound channels and set the corresponding amplitudes to 0.
 
@@ -307,9 +325,3 @@ Finally, there are three words providing example sounds:
 * `SWEEP ( M N P Q -- )` -- used by WOLF to create a slowly changing tone effect.
 
 * `ALL ( -- )` -- cycle through all three sound effects.
-
-
-
-
-
-
