@@ -8,7 +8,7 @@ The ["YM2149 Sound Card for RC2014 Retro Computer"](https://www.tindie.com/produ
 
 The card supports the General Instruments AY-3-8910, the Yamaha 2149, and (with an adaptor) the General Instruments AY-3-8912. However, from the point of sound generation, the three chips are indistinguishable. Below I refer to the AY-3-8910 chip, only because that is the sound chip I have. Either of the others will work equally well.
 
-There are a few revisions of the sound card. At the time of writing, there Rev 5 board seems to be the most common, though there is also a Rev 6 board, which uses a different addressing mode. Most of the instructions below are based on the Rev 5 board. However, I am in the process of adding information/ code for the Rev 6 board.
+There are a few revisions of the sound card. At the time of writing, the Rev 5 board seems to be the most common, though there is also a Rev 6 board, which uses a different addressing mode. Most of the instructions below are based on the Rev 5 board. However, I am in the process of adding information/ code for the Rev 6 board.
 
 ## Building the Card
 
@@ -270,9 +270,11 @@ D0 CONSTANT WRITEPORT
 
 --and for the Rev 6 board (in MSX configuration):
 
+```
 A0 CONSTANT REGPORT
 A2 CONSTANT READPORT
 A1 CONSTANT WRITEPORT
+```
 
 Above all port addresses are in hexidecimal.
 
