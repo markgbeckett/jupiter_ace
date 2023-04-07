@@ -1,7 +1,13 @@
 	;; Register mappings for AY-3-8910/ AY-3-8912 card
+	IFDEF SWAPCHANS
+AY_TONE_1:	EQU 0x04
+AY_TONE_2:	EQU 0x00
+AY_TONE_3:	EQU 0x02
+	ELSE
 AY_TONE_1:	EQU 0x00
 AY_TONE_2:	EQU 0x02
 AY_TONE_3:	EQU 0x04
+	ENDIF	
 AY_NOISE_FREQ:	EQU 0x06
 AY_MIXER:	EQU 0x07
 AY_VOL_1:	EQU 0x08
@@ -17,7 +23,7 @@ AY_WAIT_UNIT:	EQU 0x0042	; Unit of duration (calibrate to clock)
 
 	;; Set origin to 0xC000 unless building for inclusion in
 	;; dictionary. In which case, use address of holding word.
-	org 0xC000		; Default = 0xC000 (or address of
+	org 0x3C5D		; Default = 0xC000 (or address of
 				; parameter field of MCODE)
 	
 PLAY_INFO:
@@ -904,7 +910,7 @@ WRITE_TO_AY:
 	out (c),a		; Write it
 
 	ld a,e			; Retrieve data
-	ld bc, AY_DAT_PORT	; and address of data port
+	ld bc, AY_WRITE_PORT	; and address of data port
 	out (c),a		; Write it
 
 	ret
@@ -917,18 +923,14 @@ WRITE_TO_AY:
 	;;   E - value read
 	;;   AF, BC - corrupted
 READ_FROM_AY:
-	ld a, d			; Retreive register
-	IFDEF BOLDFIELD
-	ld bc, AY_DAT_PORT
-	ELSE
+	ld a, d			; Retrieve register
 	ld bc, AY_REG_PORT	; and address of register port
-	ENDIF
 	out (c),a		; Write it
 
+	ld bc, AY_READ_PORT	; Select port for reading value
 	in e,(c)		; Retrieve value
 
 	ret
-	
 	
 	;; Divide 16-bit number in AC by 16-bin number in DE. 
 DIV16:	ld hl, 0x0000
@@ -1073,4 +1075,5 @@ MK2:	dm "O5V6N3b#C#DE#F#D5#FN3G#D5G3#F#D5#FN3b#C#DE#F#D5#FN3G#D5G7#F"
 MK2E:
 MK3:	dm "O5V6N3Dbgb7DN5&E7&N5&E7&N3e#fgabgbE"
 MK3E:	
-	
+
+END:	

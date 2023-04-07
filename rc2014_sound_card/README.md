@@ -8,11 +8,11 @@ The ["YM2149 Sound Card for RC2014 Retro Computer"](https://www.tindie.com/produ
 
 The card supports the General Instruments AY-3-8910, the Yamaha 2149, and (with an adaptor) the General Instruments AY-3-8912. However, from the point of sound generation, the three chips are indistinguishable. Below I refer to the AY-3-8910 chip, only because that is the sound chip I have. Either of the others will work equally well.
 
-There are a few revisions of the sound card. At the time of writing, the Rev 5 board seems to be the most common, though there is also a Rev 6 board, which uses a different addressing mode. Most of the instructions below are based on the Rev 5 board. However, I am in the process of adding information/ code for the Rev 6 board.
+There are a few revisions of the sound card. At the time of writing, the Rev 5 board seems to be the most common, though there is also a Rev 6 board, which uses a different addressing mode. The software on this site generally works with either version of the card, though you may need to do some customisation. Also, much of the software will work with the [Boldfield Soundbox](https://www.jupiter-ace.co.uk/hardware_EMESoundCard.html) -- an interface developed in the 1980s for the Jupiter Ace, which also uses the AY-3-8910 sound chip.
 
 ## Building the Card
 
-Build the card following the instructions for the RC2014 computer, using the same jumper settings. The only jumper, on the sound card, that may need adjusting is the clock-divide setting (JP5). If you run your Minstrel 4th at 6.5 MHz, then you should select divide-by-4 option. Whereas, if you run your Minstrel 4th at 3.25 MHz, you should select divide-by-2.
+Build the card following the instructions for the RC2014 computer. I recommend you use the default jumper settings, though you may need adjusting is the clock-divide setting (JP5 on Rev 5 card and JP9 on Rev 6 card). If you run your Minstrel 4th at 6.5 MHz, then you should select divide-by-4 option. Whereas, if you run your Minstrel 4th at 3.25 MHz, you should select divide-by-2.
 
 You also need to configure the Z80 Clock jumper on the Minstrel 4th board to pass through the clock signal to the RC2014 bus. Do this by bridging pins 5 and 6 (labelled RC2014/1). This is in addition to bridging either pins 1 and 2 (for 3.25 MHz clock) or pins 3 and 4 (for 6.5 MHz clock).
 
@@ -20,7 +20,7 @@ You also need to configure the Z80 Clock jumper on the Minstrel 4th board to pas
 
 ## Testing the Card
 
-Ed Brindley has created a repository of useful information and tools for the sound card on [GitHub](https://github.com/electrified/rc2014-ym2149), including a simple BASIC test script. A Forth version of the script, suitable for the Minstrel 4th, is as follows:
+Ed Brindley has created a repository of useful information and tools for the sound card on [GitHub](https://github.com/electrified/rc2014-ym2149), including a simple BASIC test script. A Forth version of the script, suitable for the Minstrel 4th, is included below. This is configured for the Rev 5 board with default addressing mode. If you have a Rev 6 board, you need to adjust the constants defined at the beginning of the program (see PLAY command below for more details):
 
 ```
 216 CONSTANT REGPORT
@@ -73,31 +73,32 @@ The current version of the code only supports a subset of the ZX Specttum PLAY f
 
 ### Loading
 
-There are two versions of the PLAY utility for the Minstrel 4th/ 4D, either of which can be loaded from tape/ WAV audio.
-
-The first version, called [play.tap](play.tap) loads in two parts (a dictionary file and a block of machine code), using the following commands:
-
-```
-49152 15384 ! QUIT ( LOWER RAMTOP TO MAKE ROOM FOR MCODE )
-LOAD PLAY ( LOAD DICTIONARY )
-49152 0 BLOAD PLAYC ( LOAD MACHINE CODE )
-```
-
-The second version, named [playd.tap](playd.tap), is more suitable for use on the Minstrel 4D as it loads in just one part, using the following command:
+The PLAY utility can be loaded from tape/ WAV audio, using the command:
 
 ```
 LOAD PLAY
 ```
 
---or via the Minstrel 4D's menu system.
+--or via the Minstrel 4D's menu system. The file includes non-relocatable machine code so the words should be loaded first, before any other words are loaded or defined. 
 
-There is also a third version, named [playj.tap](playj.tap), which is configured for the Jupiter Ace with Boldfield Soundbox (or a suitable emulator). This version loads in a single part, using `LOAD PLAY`.
+### Configuring For Your Sound Card
 
-All going well and whichever version you choose, you should see some additional words in your dictionary: most importantly, you should see a PLAY command.
+The program ships pre-configured for the RC2014 Rev 5 sound card with the default addressing mode -- that is, the register port configured to 0xD8 and the data port configured to 0xD0. If you have a different version of the card, or have configured a different addressing mode, you should reconfigure the program before using.
 
-N.B. The second version relies on non-relocatable machine code being at the correct location in the dictionary (in a word name `MCODE`). This version should be loaded first, before any other words are loaded or defined. You should also avoid editing the words `PLAY`, `COUNT` and `GETADDR`, since doing so may move the machine code (stored in `MCODE`) in memory.
+To do this, enter `SCONFIG`. The current configuration will be displayed and then you will have the chance to change each port setting in turn. For maximum portability, the program assumes there are three ports: a port to write to to select a register; a port to write to to update the value held on the selected register; and a port to read from to retrieve the current value from the selected register. Most configurations assume only two ports, in which case you may use the same port value for two different settings.
 
-Once loaded, both versions behave the same.
+I recommend switching to hexadecimal before running `SCONFIG` -- e.g, with `DECIMAL 16 BASE C!`. Here are some common configurations (ports written in hexadecimal):
+
+| Port | RC2014 Rev 5 | RC2014 Rev 6 (MSX mode) | Boldfield Soundbox | ZX Spectrum |
+| ----------- | ----------- | ----------- | ----------- | ----------- | 
+| REGISTER_PORT | D8 | A0 | FD | FFFD |
+| READ_PORT | D8 | A2 | FF | FFFD |
+| WRITE_PORT | D0 | A1 | FF | BFFD |
+| ----------- | ----------- | ----------- | ----------- | ----------- | 
+
+There is a demo tune for testing configuration available by entering `HOTMK`. Once you are happy with your configuration, you can resave the dictionary to avoid needing to reconfigure again (unless you change your sound card configuration, of course). 
+
+### PLAY Syntax
 
 The syntax for PLAY is very similar to that of the ZX Spectrum version (for example, see the [ZX Spectrum +3 User Guide, Chapter 8, Part 19](https://worldofspectrum.org/ZXSpectrum128+3Manual/chapter8pt19.html)), though the arguments to PLAY do not need to be enclosed in double quotes. As with many FORTH word that accept string arguments, the strings are placed after the word, not before.
 
@@ -237,6 +238,7 @@ Timing is important in two places. First, the clock signal that is passed to the
 The clock speed of the Minstrel 4th is also important. The PLAY Utility beat timing is calibrated to a Minstrel 4th running at 3.25 MHz. If, instead, you run your Minstrel 4th at 6.5 MHz, then you will find that your tunes play at double-tempo (though the pitch of notes will not be affected). The easiest way to correct this discrepancy is using the T command, halving the usual value. So, for example, to achieve a timing of 120 beats per minutes use the command `T60` rather than `T120`.
 
 If you use S.V. Bulba's PT2/PT3 player, you do not have a chance to adjust either of these timing parameters (or, at least, I have not worked out how to adjust them), so you may find tunes do not play quite as they are intended. The sound card timing seems reasonable, so the pitch of notes should be okay. However, if you run at 3.25 MHz, the tempo will be slow: running the Minstrel 4th at 6.5 MHz give a better result.
+
 
 ### Building from Source
 
