@@ -2,7 +2,7 @@
 
 ## Introduction
 
-The ["YM2149 Sound Card for RC2014 Retro Computer"](https://www.tindie.com/products/semachthemonkey/ym2149-sound-card-for-rc2014-retro-computer/)--a 3-channel sound add-on for retrocomputers, designed by Ed Brindley--can be plugged into the Minstrel 4th/ Minstrel 4D, via the RC2014 edge connector, to boost the audio capabilities of the computer.
+The ["YM2149 Sound Card for RC2014 Retro Computer"](https://www.tindie.com/products/semachthemonkey/ym2149-sound-card-for-rc2014-retro-computer/)--a 3-channel sound add-on for retrocomputers, designed by Ed Brindley--can be plugged into the Minstrel 4th/ Minstrel 4D (from hereon I use Minstrel 4th to refer to both 4th and 4D), via the RC2014 edge connector, to boost the audio capabilities of the computer.
 
 ![Minstrel 4th with YM2149 sound card](minstrel_4th_with_sound_card.jpg)
 
@@ -12,7 +12,7 @@ There are a few revisions of the sound card. At the time of writing, the Rev 5 b
 
 ## Building the Card
 
-Build the card following the instructions for the RC2014 computer. I recommend you use the default jumper settings, though you may need adjusting is the clock-divide setting (JP5 on Rev 5 card and JP9 on Rev 6 card). If you run your Minstrel 4th at 6.5 MHz, then you should select divide-by-4 option. Whereas, if you run your Minstrel 4th at 3.25 MHz, you should select divide-by-2.
+Build the card following the instructions for the RC2014 computer. I recommend you use the default jumper settings, though you may need to adjust the clock-divide setting (JP5 on Rev 5 card and JP9 on Rev 6 card). If you run your Minstrel 4th at 6.5 MHz, then you should select divide-by-4 option. Whereas, if you run your Minstrel 4th at 3.25 MHz, you should select divide-by-2.
 
 You also need to configure the Z80 Clock jumper on the Minstrel 4th board to pass through the clock signal to the RC2014 bus. Do this by bridging pins 5 and 6 (labelled RC2014/1). This is in addition to bridging either pins 1 and 2 (for 3.25 MHz clock) or pins 3 and 4 (for 6.5 MHz clock).
 
@@ -20,11 +20,12 @@ You also need to configure the Z80 Clock jumper on the Minstrel 4th board to pas
 
 ## Testing the Card
 
-Ed Brindley has created a repository of useful information and tools for the sound card on [GitHub](https://github.com/electrified/rc2014-ym2149), including a simple BASIC test script. A Forth version of the script, suitable for the Minstrel 4th, is included below. This is configured for the Rev 5 board with default addressing mode. If you have a Rev 6 board, you need to adjust the constants defined at the beginning of the program (see PLAY command below for more details):
+Ed Brindley has created a repository of useful information and tools for the sound card on [GitHub](https://github.com/electrified/rc2014-ym2149), including a simple BASIC test script. A Forth version of the script [test.fs](test.fs), suitable for the Minstrel 4th, is included below. This is configured for the Rev 5 board with default addressing mode. If you have a Rev 6 board, you need to adjust the constants defined at the beginning of the program (see PLAY command below for more details):
 
 ```
 216 CONSTANT REGPORT
-208 CONSTANT DATPORT
+216 CONSTANT READPORT
+208 CONSTANT WRITEPORT
 
 DEFINER CODE DOES> CALL ;
 
@@ -32,17 +33,17 @@ CODE HALT 118 C, 253 C, 233 C,
 
 : TEST
  7 REGPORT OUT
- 62 DATPORT OUT
+ 62 WRITEPORT OUT
 
  8 REGPORT OUT
- 15 DATPORT OUT
+ 15 WRITEPORT OUT
 
  0 REGPORT OUT
 
  BEGIN
   255 1
   DO
-   I DATPORT OUT
+   I WRITEPORT OUT
    HALT
   LOOP
   0
@@ -54,7 +55,7 @@ You can also use S.V. Bulba's PT2/PT3 player, which is available from Ed Brindle
 
 ## PLAY Utility
 
-Once you have built and tested your card, you will want to start getting creative. To help you do this, I have created a PLAY utility, written in FORTH and machine code, to make it easier to make your own music on your Minstrel. It processes up to three strings (one per sound channel), which should contain instructions in the same format as for the ZX Spectrum `PLAY` command.
+Once you have built and tested your card, you will want to start getting creative. To help you do this, I have created a PLAY utility, written in FORTH and machine code, to make it easier to make your own music on your Minstrel 4th. It processes up to three strings (one per sound channel), which should contain instructions in the same format as for the ZX Spectrum `PLAY` command.
 
 The FORTH word, PLAY, is a defining word. That is, it creates a new word encapsulating the note sequence you want to play, which is then invoked whenever you enter the defined word. For example,
 
@@ -79,7 +80,7 @@ The PLAY utility can be loaded from tape/ WAV audio, using the command:
 LOAD PLAY
 ```
 
---or via the Minstrel 4D's menu system. The file includes non-relocatable machine code so the words should be loaded first, before any other words are loaded or defined. 
+--or via the Minstrel 4D's menu system. The file includes non-relocatable machine code so the words should be loaded first, before any other words are loaded or defined. (If you wish to relocate the program, refer to 'Building From Source' below.)
 
 ### Configuring For Your Sound Card
 
@@ -89,14 +90,13 @@ To do this, enter `SCONFIG`. The current configuration will be displayed and the
 
 I recommend switching to hexadecimal before running `SCONFIG` -- e.g, with `DECIMAL 16 BASE C!`. Here are some common configurations (ports written in hexadecimal):
 
-| Port | RC2014 Rev 5 | RC2014 Rev 6 (MSX mode) | Boldfield Soundbox | ZX Spectrum |
+| Port | RC2014 Rev 5 | RC2014 Rev 6 (MSX mode) | Boldfield Soundbox | ZX Spectrum (avail. on RC2014 Rev 6) |
 | ----------- | ----------- | ----------- | ----------- | ----------- | 
 | REGISTER_PORT | D8 | A0 | FD | FFFD |
 | READ_PORT | D8 | A2 | FF | FFFD |
 | WRITE_PORT | D0 | A1 | FF | BFFD |
-| ----------- | ----------- | ----------- | ----------- | ----------- | 
 
-There is a demo tune for testing configuration available by entering `HOTMK`. Once you are happy with your configuration, you can resave the dictionary to avoid needing to reconfigure again (unless you change your sound card configuration, of course). 
+There is a demo tune for testing your configuration, accessed by entering `HOTMK`. Once you are happy with your configuration, you can resave the dictionary to avoid needing to reconfigure it again (unless you change your sound card configuration, of course). 
 
 ### PLAY Syntax
 
@@ -242,15 +242,15 @@ If you use S.V. Bulba's PT2/PT3 player, you do not have a chance to adjust eithe
 
 ### Building from Source
 
-I have provided assembler source code and a Makefile to make it easy for you to modify and re-build the machine-code driver. If you are comfortable with Z80 machine code, and writing assembly language, this should be straightforward.
+I have provided a (Z80 assembly language) source code and a Makefile to make it easy for you to modify and re-build the machine-code driver. If you are comfortable with Z80 machine code, and writing assembly language, this should be straightforward.
 
 Some notes to get you started:
 
 - I have used the [SJASMPLUS](https://github.com/z00m128/sjasmplus) assembler, though the source should work with most assemblers. The one point of portability problems may be the IFDEF / ENDIF directives, which could be removed, if you only want to support a single platform.
-- By default, the code is assembled to address 0xC000 in memory and run from address 0xC006. Before executing the code, you need to populate the three channel information areas, the address of which are stored at 0xC000, 0xC002, and 0xC004, respectively. See the source-code comments for information on these structures.
+- By default, the code is assembled to address 0x3C5D in memory, which should be the parameter field for a CREATE-ed word at the beginning of your dictionary. The PLAY routine is run from address 0x3C63. Before executing the code, you need to populate the three channel information areas, the address of which are stored at 0x3C5D, 0x3C5F, and 0x3C61, respectively. See the source-code comments for information on these structures.
 - The driver should be reasonably portable to other Z80-based computers. The key areas of difference are likely to be: the address used to reference the sound-card ports, plus the exit and error-handling routines. At the time of writing, the source code has been tested with a Minstrel 4th/ 4D, a Jupiter Ace (with Boldfield Soundbox) and a ZX Spectrum+ 128k. You can easily find the sections of code that you will need to change by searching for IFDEF directives and looking at the DEFINEs in the Makefile.
 - The pitch values used for the supported octave range are read from a separate source file, which is included towards the end of `play.asm`. I have provided pitch files for a 1.625 MHz clock (e.g., default configuration of the Minstrel 4th) and a 1.77 MHz clock (e.g., as for the ZX Spectrum 128k). If you create additional pitch-value tables, update the `include` command accordingly.
-- When developing the driver, I did lots of early testing using a ZX Spectrum+  128k machine. The reason was that I could test the code in an emulator (there is no emulator of a Jupiter Ace/ Minstrel 4th, with an RC2014 sound card). The ZX Spectrum has full PLAY support built in to the BASIC. However, if you want to use the driver, here, on a ZX Spectrum, uncomment the appropriate `AFLAGS` line of the Makefile and set the origin address in the source file.
+- When developing the driver, I did lots of early testing using a ZX Spectrum+  128k machine. The reason was that I could test the code in an emulator (there is no emulator of a Jupiter Ace/ Minstrel 4th, with an RC2014 sound card, though I later discovered EightyOne can emulate the Boldfield Soundbox, which would have been good enough). The ZX Spectrum has full PLAY support built in to the BASIC. However, if you want to use the driver, here, on a ZX Spectrum, uncomment the appropriate `AFLAGS` line of the Makefile and set the origin address in the source file.
 
 ## Soundbox Utility
 
