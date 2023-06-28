@@ -7,7 +7,7 @@ ifeq ($(OS),Windows_NT)
 	ERASE = rm
 endif
 
-SRC = mpf1_u6_monitor_new.asm
+SRC = mpf1_monitor.asm
 HEADERS = 
 
 OBJS = $(SRC:.asm=.bin)
