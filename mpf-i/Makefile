@@ -1,5 +1,5 @@
 ASM = z80asm
-AFLAGS = -L
+AFLAGS = -L > mpf.sym 2>&1
 
 ifeq ($(OS),Windows_NT)
 	ERASE = erase
@@ -7,7 +7,7 @@ ifeq ($(OS),Windows_NT)
 	ERASE = rm
 endif
 
-SRC = mpf.asm
+SRC = mpf1_u6_monitor_new.asm
 HEADERS = 
 
 OBJS = $(SRC:.asm=.bin)
@@ -18,4 +18,4 @@ all: $(OBJS)
 	$(ASM) $(AFLAGS) $<
 
 clean:
-	$(ERASE) $(OBJS)
+	$(ERASE) a.bin
