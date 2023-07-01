@@ -14,11 +14,10 @@
 ; Reconstructed version v0.4
 
 	include "..\3d_monster_maze\jupiter_chars.asm"
-
-P8255:		equ		003h	;8255 I control port
-DIGIT:		equ		005h    ;Was 002h 8255 I port C
-SEG7:		equ		001h	;8255 I port B
-KIN:		equ		007h	;Was 000h 8255 I port A
+P8255:		equ		0FFh	;8255 I control port
+DIGIT:		equ		0FFh	;8255 I port C
+SEG7:		equ		0FFh	;8255 I port B
+KIN:		equ		0FFh	;8255 I port A
 PWCODE:		equ		0A5h	;Power-up code
 ZSUM:		equ		71h		;This will make the sum of all
 							;monitor codes to be zero.
@@ -27,9 +26,9 @@ ZSUM:		equ		71h		;This will make the sum of all
 
 COLDEL:		equ		201		;
 							;
-F1KHZ:		equ		255 ; 65		;
+F1KHZ:		equ		255		;
 							;
-F2KHZ:		equ		124 ; 31		;
+F2KHZ:		equ		124		;
 							;
 MPERIOD:	equ		42		;
 							;
@@ -65,7 +64,7 @@ l0002h:
 	ld hl,09000h
 	call RAMCHK
 	jr z,PREPC
-	ld h,018h
+	ld h,098h
 	
 PREPC:
 	ld (USERPC),hl
@@ -74,7 +73,7 @@ PREPC:
 	jr RESET1
 	;
 RST28:	
-	;; 	org 28h
+	;; org 28h
 	;
 	ex (sp),hl	
 	dec hl	
@@ -83,7 +82,7 @@ RST28:
 	jr CONT28
 	;
 RST30:	
-	;; 	org	30h
+	;; org	30h
 	jr NMI
 ;                                       p 3
 
@@ -94,10 +93,10 @@ RESET1:
 	;
 	
 RST38:	
-	;; 	org 38h
+	;; org 38h
 ;
 	push hl	
-	ld hl,(01feeh)
+	ld hl,(09feeh)
 	ex (sp),hl	
 	;
 	ret	
@@ -125,8 +124,8 @@ RESET2:
 	ld ix,MPF_I
 	jp SETSTO
 ;
-	ds 0x01				; Pad so NMI is aligned correctly
 	;; 	org	66h
+	ds 0x01
 NMI:
 	ld (ATEMP),a
 	ld a,10010000B ; 090h
@@ -186,7 +185,7 @@ SETIF:
 	ld ix,SYS_SP
 	nop	
 	nop	
-	ld de, -USERSTK+1
+	ld de,-USERSTK+1
 	add hl,de	
 	jr c,SETSTO
 	ld ix,DISPBF
@@ -712,7 +711,7 @@ INI:
 	ld ix,BLANK
 	ld c,007h
 INI1:
-	ld b,038h 		; 010h
+	ld b,038h
 INI2:
 	call SCAN1
 	djnz INI2
@@ -790,7 +789,7 @@ BRTEST:
 SETPT1:
 	exx	
 SETPT:
-	set 7,(hl) ;; set 6,(hl)
+	set 7,(hl)
 	inc hl	
 	djnz SETPT
 	ret	
@@ -867,9 +866,9 @@ RGSTIN:
 	inc hl	
 	inc hl	
 LOCPT:
-	set 7,(hl) ;; set 6,(hl)
+	set 7,(hl)
 	inc hl	
-	set 7,(hl) ;; set 6,(hl)
+	set 7,(hl)
 	call FCONV
 	ret	
 	;
@@ -886,7 +885,7 @@ RGNADP:
 LOCRGBF:
 	ld a,(STMINOR)
 LOCRG:
-	ld hl,09fbch ; 01fbch
+	ld hl,09fbch
 ;                                       p 29
 
 	add a,l	
@@ -1123,14 +1122,14 @@ TONE2K:
 	ld c,F2KHZ
 TONE:
 	add hl,hl	
-	ld de, 0x0001; l0000h+1
+	ld de,0001h
 	ld a,0ffh
 SQWAVE:
-	in a, (0xFE) ; out (001h),a ; out (002h),a
+	in a, (0xFE)
 	ld b,c	
 l05edh:
 	djnz l05edh
-	out (0xFE),a ;	xor 080h
+	out (0xFE),a
 	sbc hl,de
 	jr nz,SQWAVE
 	ret	
@@ -1157,14 +1156,14 @@ SCPRE:
 	ld b,004h
 SCNX:
 	call SCAN1
-	jr c,SCPRE
+	jr nc,SCPRE
 	djnz SCNX
 	res 7,(hl)
 	pop ix
 	;
 SCLOOP:
 	call SCAN1
-	jr nc,SCLOOP
+	jr c,SCLOOP
 	;
 KEYMAP:
 	;; ld hl,KEYTAB
@@ -1172,61 +1171,8 @@ KEYMAP:
 	;; ld l,a	
 	;; ld a,(hl)	
 	ret	
-
-	ds 0x06		; Ensure location of next routine not changed
-	
-;; SCAN1:
-;; 	scf	
-;; 	ex af,af'	
-;; 	exx	
-;; ;                                       p 38
-
-;; ;
-;; 	ld c,000h
-;; 	ld e,11000001B ; 0c1h
-;; 	ld h,006h
-;; KCOL:
-;; 	ld a,e	
-;; 	out (DIGIT),a
-;; 	ld a,(ix+000h)
-;; 	out (SEG7),a
-;; 	ld b,COLDEL
-;; l0637h:
-;; 	djnz l0637h
-;; 	xor a	
-;; 	out (SEG7),a
-;; 	ld a,e	
-;; 	cpl	
-;; 	or 0c0h
-;; 	out (DIGIT),a
-;; 	ld b,006h
-;; 	in a,(KIN)
-;; 	ld d,a	
-;; KROW:
-;; 	rr d
-;; 	jr c,NOKEY
-;; 	ld a,c	
-;; 	ex af,af'	
-;; NOKEY:
-;; 	inc c	
-;; 	djnz KROW
-;; 	inc ix
-;; 	ld a,e	
-;; 	and 03fh
-;; 	rlc a
-;; 	or 0c0h
-;; ;                                       p 39
-
-;; 	ld e,a	
-;; 	dec h	
-;; 	jr nz,KCOL
-;; 	ld de,0fffah
-;; 	add ix,de
-;; 	exx	
-;; 	ex af,af'	
-;; 	ret	
 	;
-SCAN1:	exx			; Save main registers
+SCAN1:	exx	; Save main registers
 
 	;; Update display
 	push ix
@@ -1257,6 +1203,7 @@ S1PR2:	ld a,(hl)
 	;; Retrieve any key values
 	call GETKEY
 	cp 0xFF			; Carry will be reset for no/ invalid key
+	ccf			; Complement to match original version
 KEYPRESSED:
 	exx			; Restore main registers
 
@@ -1295,22 +1242,13 @@ HEX7SG:
 	ret	
 	;
 HEX7:
-	and 0x0F		; Isolate lower nibble
-	cp 0x0A			; Check if 0...9 or A...F
-	jr c, H7D		; Skip forward if 0...9
-	add a, _A - _0 - 0x0A	; Modifiy for A...F
+ 	and 0x0F		; Isolate lower nibble
+ 	cp 0x0A			; Check if 0...9 or A...F
+ 	jr c, H7D		; Skip forward if 0...9
+ 	add a, _A - _0 - 0x0A	; Modifiy for A...F
 H7D:	add a, _0		; Convert to ASCII rep
-
-	ret
-	
-	;; push hl	
-	;; ld hl,SEGTAB
-	;; and 00fh
-	;; add a,l	
-	;; ld l,a	
-	;; ld a,(hl)	
-	;; pop hl	
-	;; ret
+ 
+ 	ret
 	;
 RAMTEST:
 	ld hl,01800h
@@ -1359,9 +1297,8 @@ BEEP:
 NOTONE:
 	pop af	
 	jp KEYEXEC
-
+	
 	ds 0x8737-$
-	;; 	org		0737h
 KSUBFUN:
 		defw	KINC
 		defb	-KINC+KINC
@@ -1522,7 +1459,7 @@ STEPTAB: defb	_S ; 0aeh	;'S'
 		defb	_SPACE ; 0		;
 
 REG_:	defb	0
-		defb	0
+		defb	_SPACE 	; 0
 		defb	_MINUS ; 02h		;'-'
 		defb	_G ; 0beh	;'G'
 		defb	_E ; 08fh	;'E'
@@ -1545,22 +1482,6 @@ RGTAB:	db _F, _A ; defw	 3f0fh	;'AF'
 		db _H+80h, _F+80h ; defw	0f77h	;'FH.'
 		db _L+80h, _F+80h ; defw	0fc5h	;'FL.'
 																			
-SEGTAB:	defb	0bdh	;'0'
-		defb	30h		;'1'
-		defb	09bh	;'2'
-		defb	0bah	;'3'
-		defb	36h		;'4'
-		defb	0aeh	;'5'
-		defb	0afh	;'6'
-		defb	38h		;'7'
-		defb	0bfh	;'8'
-		defb	0beh	;'9'
-		defb	3fh		;'A'
-		defb	0a7h	;'B'
-		defb	08dh	;'C'
-		defb	0b3h	;'D'
-		defb	08fh	;'E'
-
 ;                                       p 45
 
 			defb	0fh		; 'F'
@@ -1786,10 +1707,8 @@ L0376:  db    $00 ; $76                     ; V - v
 ;SYSTEM RAM AREA:
 USERSTK:	equ			9f9fh		; USERSTK:	org		1f9fh	
 	ds USERSTK-$			      ; Pad binary 
-	;; 			org			USERSTK
 			defs		16
 SYSSTK:		equ			9fafh		; SYSSTK:	org		1fafh
-	;; 			org 		SYSSTK
 STEPBF:		defs		7
 DISPBF:		defs		6
 REGBF:		
