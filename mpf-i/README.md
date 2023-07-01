@@ -62,3 +62,26 @@ The easiest way to get familiar with the MPF-1 is to read the [user manual](http
 - Most examples in the user manual end with a `HALT` command. However, this will cause the Minstrel 4th to hang. Instead, you should use `CALL 0x8066` (that is, CD, 66, 80) to return to the Monitor (simulating the use of `MONI` key).
 
 - The Monitor subroutines noted in Section 5 of the User Manual mostly work, though their entry points are all offset by 0x8000 -- e.g., the entry point for SCAN1 is 0x8624 (not 0x0624, as noted in the manual).
+
+
+## Implementation
+
+The port is based on a commented disassembly by fjkraan@electrickery.nl, which is available from [https://electrickery.nl/comp/mpf1](https://electrickery.nl/comp/mpf1). I have made the following changes to the source code so that the Monitor will run in the upper memory of the Minstrel 4th:
+
+- I set all of the port address for to 8255 chip to 0xFF, as this version does not use that chip and I wanted to avoid interfering with peripherals.
+
+- I quadrupled the frequencies of the parameters F1KHZ and F2KHZ to accommodate both doubling of the clock speed and the fact that the Minstrel 4th version will oscillate the speaker twice as often as the MPF-1 did.
+
+- Set origin address to 0x8000, so code is built to run in upper memory (plus removed other origin directives later in the source, replacing them by 'ds' commands to ensure same code layout in memory.
+
+- Set user-RAM to start at 0x9000.
+
+- Update any references to user RAM (e.g., RESET1 routine and RST38) to point to 0x90?? rather than 0x18??.
+
+- Changed the scroll rate for power-on message (in INI1).
+
+- Replace speaker oscilator code with Minstrel 4th equivalent (issuing IN and OUT to port 0xFE).
+
+- Updated the code in SETPT and LOCPT to set bit 7 (inverted characters) instead of printing decimal point.
+
+- Reimplemented SCAN1 to use Minstrel 4th display and keyboard.
