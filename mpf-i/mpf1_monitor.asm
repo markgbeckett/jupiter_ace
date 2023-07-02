@@ -1705,49 +1705,43 @@ L0376:  db    $00 ; $76                     ; V - v
 ; end of key tables
 
 ;SYSTEM RAM AREA:
-USERSTK:	equ			9f9fh		; USERSTK:	org		1f9fh	
-	ds USERSTK-$			      ; Pad binary 
-			defs		16
-SYSSTK:		equ			9fafh		; SYSSTK:	org		1fafh
-STEPBF:		defs		7
-DISPBF:		defs		6
-REGBF:		
-USERAF:		defs		2
-USERBC:		defs		2
-USERDE:		defs		2
-USERHL:		defs		2
-UAFP:		defs		2
-UBCP:		defs		2
-UDEP:		defs		2
-UHLP:		defs		2
-USERIX:		defs		2
-USERIY:		defs		2
-USERSP:		defs		2
-USERIF:		defs		2
-FLAGH:		defs		2
-FLAGL:		defs		2
-FLAGHP:		defs		2
-FLAGLP:		defs		2
-USERPC:		defs		2
-;
-ADSAVE:		defs		2	;Contains the address being
-							;displayed now.
-BRAD:		defs		2	;
-BRDA:		defs		1	;
-STMINOR:	defs		1	;
-STATE:		defs		1	;
-POWERUP: 	defs		1	;
-TEST:		defs		1	;
-							;
-ATEMP:		defs		1	;
-HLTEMP:		defs		2	;
-TEMP:		defs		4	;
-IM1AD:		defs		2	;
-							;
-BEEPSET:	defs		1	;
-FBEEP:		defs		1	;
-TBEEP:		defs		2	;
+USERSTK:	equ			9f9fh
+SYSSTK:		equ			9fafh
 
-			end
 
-;                                       p 46
+STEPBF:	equ $9faf
+DISPBF:	equ $9fb6
+REGBF:	equ $9fbc
+USERAF:	equ $9fbc
+USERBC:	equ $9fbe
+USERDE:	equ $9fc0
+USERHL:	equ $9fc2
+UAFP: 	equ $9fc4
+UBCP:	equ $9fc6
+UDEP:	equ $9fc8
+UHLP:	equ $9fca
+USERIX:	equ $9fcc
+USERIY:	equ $9fce
+USERSP:	equ $9fd0
+USERIF:	equ $9fd2
+FLAGH:	equ $9fd4
+FLAGL:	equ $9fd6
+FLAGHP:	equ $9fd8
+FLAGLP:	equ $9fda
+USERPC:	equ $9fdc
+ADSAVE:	equ $9fde
+BRAD:	equ $9fe0
+BRDA:	equ $9fe2
+STMINOR:	equ $9fe3
+STATE:	equ $9fe4
+POWERUP:	equ $9fe5
+TEST:	equ $9fe6
+ATEMP:	equ $9fe7
+HLTEMP:	equ $9fe8
+TEMP:	equ $9fea
+IM1AD:	equ $9fee
+BEEPSET:	equ $9ff0
+FBEEP:	equ $9ff1
+TBEEP:	equ $9ff2
+
+	
