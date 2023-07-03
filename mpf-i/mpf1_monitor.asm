@@ -42,7 +42,7 @@ ZERO_2K:	equ		8
 ; 
 ;                                       p 1
 
-	org	08000h
+	org	0x0000
 
 l0000h:
 	ld b,000h
@@ -59,7 +59,7 @@ l0002h:
 
 	ld a,(POWERUP)
 	cp 0a5h
-	call nz,INI
+	call nz,INIM		; Minstrel ROM initialisation
 	;
 	ld hl,09000h
 	call RAMCHK
@@ -1209,7 +1209,7 @@ KEYPRESSED:
 
 	ret
 
-	ds 0x8665-$		; Ensure location of next routine not changed
+	ds 0x0665-$		; Ensure location of next routine not changed
 	
 ADDRDP:
 	ld hl,DISPBF+2
@@ -1298,7 +1298,7 @@ NOTONE:
 	pop af	
 	jp KEYEXEC
 	
-	ds 0x8737-$
+	ds 0x0737-$
 KSUBFUN:
 		defw	KINC
 		defb	-KINC+KINC
@@ -1704,6 +1704,1045 @@ L0376:  db    $00 ; $76                     ; V - v
 
 ; end of key tables
 
+	;; 
+	;; Extra initialisation required for Minstrel 4th/ 4D
+	;; 
+INIM:	
+	;;  Initialise character set in RAM
+; There are 128 bit-mapped 8x8 characters.
+; Define the 8 Battenberg graphics ($10 to $17) from low byte of address.
+; This routine also sets the other characters $00 to $0F and $18 to $1F
+; to copies of this range. The inverse form of character $17 is used as the
+; normal cursor - character $97.
+
+L0052:  LD      HL,$2C00                ; point to the start of the 1K write-
+                                        ; only Character Set RAM.
+L0055:  LD      A,L                     ; set A to low byte of address
+        AND     $BF                     ; AND %10111111
+        RRCA                            ; rotate
+        RRCA                            ; three times
+        RRCA                            ; to test bit 2
+        JR      NC,L005F                ; forward if not set.
+
+        RRCA                            ; else rotate
+        RRCA                            ; twice more.
+
+L005F:  RRCA                            ; set carry from bit (3) or (6)
+
+        LD      B,A
+
+        SBC     A,A                     ; $00 or $FF
+        RR      B
+        LD      B,A
+        SBC     A,A
+        XOR     B
+        AND     $F0
+        XOR     B
+        LD      (HL),A                  ; insert the byte.
+        INC     L                       ; increment low byte of address
+        JR      NZ,L0055                ; loop back until the first 256 bytes
+                                        ; have been filled with 32 repeating
+                                        ; characters.
+
+; Now copy the bit patterns at the end of this ROM to the last 768 bytes of
+; the Character RAM, filling in some blank bytes omitted to save ROM space.
+; This process starts at high memory and works downwards.
+
+L006E:  LD      DE,$2FFF                ; top of destination.
+        LD      HL,L1FFB                ; end of copyright character.
+        LD      BC,$0008                ; 8 characters
+
+        LDDR                            ; copy the  ©  character
+
+        EX      DE,HL                   ; switch pointers.
+
+        LD      A,$5F                   ; set character counter to ninety five.
+                                        ; i.e. %0101 1111
+                                        ; bit 5 shows which 32-character sector
+                                        ; we are in.
+
+; enter a loop for the remaining characters supplying zero bytes as required.
+
+L007C:  LD      C,$07                   ; set byte counter to seven.
+
+        BIT     5,A                     ; test bit 5 of the counter.
+        JR      Z,L0085                 ; forward if not in middle section
+                                        ; which includes "[A-Z]"
+
+        LD      (HL),B                  ; else insert a zero byte.
+        DEC     HL                      ; decrement the destination address.
+        DEC     C                       ; and the byte counter.
+
+L0085:  EX      DE,HL                   ; switch pointers.
+
+        LDDR                            ; copy the 5 or 6 characters.
+
+        EX      DE,HL                   ; switch pointers.
+
+        LD      (HL),B                  ; always insert the blank top byte.
+        DEC     HL                      ; decrement the address.
+
+        DEC     A                       ; decrement the character counter.
+
+        JR      NZ,L007C                ; back for all 95 characters.
+
+	;; Clear the screen
+        xor a		; clear accumulator.
+        ld ($2700),a	; make location after screen zero.
+
+	ld hl, 0x2400		; Start of video RAM
+	ld (hl), _SPACE		; Space
+	ld de, 0x2401
+	ld bc, 0x2FF
+	ldir
+	
+	;; Return to the MPF-1 initialisation routine
+	jp INI
+
+
+; -------------------
+; THE 'CHARACTER SET'
+; -------------------
+; The 96 ASCII character bitmaps are copied to RAM during initialization and
+; the 8x8 characters can afterwards be redefined by the user.
+; Some ROM space is saved by supplying the blank top line of most characters
+; and in case of the middle range (capitals with no descenders) the bottom
+; line as well. Only the final copyright symbol is held in ROM as an 8x8
+; character.
+
+
+; $20 - Character: ' '          CHR$(32)
+
+L1D7B:  DEFB    %00000000
+        DEFB    %00000000
+        DEFB    %00000000
+        DEFB    %00000000
+        DEFB    %00000000
+        DEFB    %00000000
+        DEFB    %00000000
+
+; $21 - Character: '!'          CHR$(33)
+
+        DEFB    %00010000
+        DEFB    %00010000
+        DEFB    %00010000
+        DEFB    %00010000
+        DEFB    %00000000
+        DEFB    %00010000
+        DEFB    %00000000
+
+; $22 - Character: '"'          CHR$(34)
+
+        DEFB    %00100100
+        DEFB    %00100100
+        DEFB    %00000000
+        DEFB    %00000000
+        DEFB    %00000000
+        DEFB    %00000000
+        DEFB    %00000000
+
+; $23 - Character: '#'          CHR$(35)
+
+        DEFB    %00100100
+        DEFB    %01111110
+        DEFB    %00100100
+        DEFB    %00100100
+        DEFB    %01111110
+        DEFB    %00100100
+        DEFB    %00000000
+
+; $24 - Character: '$'          CHR$(36)
+
+        DEFB    %00001000
+        DEFB    %00111110
+        DEFB    %00101000
+        DEFB    %00111110
+        DEFB    %00001010
+        DEFB    %00111110
+        DEFB    %00001000
+
+; $25 - Character: '%'          CHR$(37)
+
+        DEFB    %01100010
+        DEFB    %01100100
+        DEFB    %00001000
+        DEFB    %00010000
+        DEFB    %00100110
+        DEFB    %01000110
+        DEFB    %00000000
+
+; $26 - Character: '&'          CHR$(38)
+
+        DEFB    %00010000
+        DEFB    %00101000
+        DEFB    %00010000
+        DEFB    %00101010
+        DEFB    %01000100
+        DEFB    %00111010
+        DEFB    %00000000
+
+; $27 - Character: '''          CHR$(39)
+
+        DEFB    %00001000
+        DEFB    %00010000
+        DEFB    %00000000
+        DEFB    %00000000
+        DEFB    %00000000
+        DEFB    %00000000
+        DEFB    %00000000
+
+; $28 - Character: '('          CHR$(40)
+
+        DEFB    %00000100
+        DEFB    %00001000
+        DEFB    %00001000
+        DEFB    %00001000
+        DEFB    %00001000
+        DEFB    %00000100
+        DEFB    %00000000
+
+; $29 - Character: ')'          CHR$(42)
+
+        DEFB    %00100000
+        DEFB    %00010000
+        DEFB    %00010000
+        DEFB    %00010000
+        DEFB    %00010000
+        DEFB    %00100000
+        DEFB    %00000000
+
+; $2A - Character: '*'          CHR$(42)
+
+        DEFB    %00000000
+        DEFB    %00010100
+        DEFB    %00001000
+        DEFB    %00111110
+        DEFB    %00001000
+        DEFB    %00010100
+        DEFB    %00000000
+
+; $2B - Character: '+'          CHR$(43)
+
+        DEFB    %00000000
+        DEFB    %00001000
+        DEFB    %00001000
+        DEFB    %00111110
+        DEFB    %00001000
+        DEFB    %00001000
+        DEFB    %00000000
+
+; $2C - Character: ','          CHR$(44)
+
+        DEFB    %00000000
+        DEFB    %00000000
+        DEFB    %00000000
+        DEFB    %00000000
+        DEFB    %00001000
+        DEFB    %00001000
+        DEFB    %00010000
+
+; $2D - Character: '-'          CHR$(45)
+
+        DEFB    %00000000
+        DEFB    %00000000
+        DEFB    %00000000
+        DEFB    %00111110
+        DEFB    %00000000
+        DEFB    %00000000
+        DEFB    %00000000
+
+; $2E - Character: '.'          CHR$(46)
+
+        DEFB    %00000000
+        DEFB    %00000000
+        DEFB    %00000000
+        DEFB    %00000000
+        DEFB    %00011000
+        DEFB    %00011000
+        DEFB    %00000000
+
+; $2F - Character: '/'          CHR$(47)
+
+        DEFB    %00000000
+        DEFB    %00000010
+        DEFB    %00000100
+        DEFB    %00001000
+        DEFB    %00010000
+        DEFB    %00100000
+        DEFB    %00000000
+
+; $30 - Character: '0'          CHR$(48)
+
+        DEFB    %00111100
+        DEFB    %01000110
+        DEFB    %01001010
+        DEFB    %01010010
+        DEFB    %01100010
+        DEFB    %00111100
+        DEFB    %00000000
+
+; $31 - Character: '1'          CHR$(49)
+
+        DEFB    %00011000
+        DEFB    %00101000
+        DEFB    %00001000
+        DEFB    %00001000
+        DEFB    %00001000
+        DEFB    %00111110
+        DEFB    %00000000
+
+; $32 - Character: '2'          CHR$(50)
+
+        DEFB    %00111100
+        DEFB    %01000010
+        DEFB    %00000010
+        DEFB    %00111100
+        DEFB    %01000000
+        DEFB    %01111110
+        DEFB    %00000000
+
+; $33 - Character: '3'          CHR$(51)
+
+        DEFB    %00111100
+        DEFB    %01000010
+        DEFB    %00001100
+        DEFB    %00000010
+        DEFB    %01000010
+        DEFB    %00111100
+        DEFB    %00000000
+
+; $34 - Character: '4'          CHR$(52)
+
+        DEFB    %00001000
+        DEFB    %00011000
+        DEFB    %00101000
+        DEFB    %01001000
+        DEFB    %01111110
+        DEFB    %00001000
+        DEFB    %00000000
+
+; $35 - Character: '5'          CHR$(53)
+
+        DEFB    %01111110
+        DEFB    %01000000
+        DEFB    %01111100
+        DEFB    %00000010
+        DEFB    %01000010
+        DEFB    %00111100
+        DEFB    %00000000
+
+; $36 - Character: '6'          CHR$(54)
+
+        DEFB    %00111100
+        DEFB    %01000000
+        DEFB    %01111100
+        DEFB    %01000010
+        DEFB    %01000010
+        DEFB    %00111100
+        DEFB    %00000000
+
+; $37 - Character: '7'          CHR$(55)
+
+        DEFB    %01111110
+        DEFB    %00000010
+        DEFB    %00000100
+        DEFB    %00001000
+        DEFB    %00010000
+        DEFB    %00010000
+        DEFB    %00000000
+
+; $38 - Character: '8'          CHR$(56)
+
+        DEFB    %00111100
+        DEFB    %01000010
+        DEFB    %00111100
+        DEFB    %01000010
+        DEFB    %01000010
+        DEFB    %00111100
+        DEFB    %00000000
+
+; $39 - Character: '9'          CHR$(57)
+
+        DEFB    %00111100
+        DEFB    %01000010
+        DEFB    %01000010
+        DEFB    %00111110
+        DEFB    %00000010
+        DEFB    %00111100
+        DEFB    %00000000
+
+; $3A - Character: ':'          CHR$(58)
+
+        DEFB    %00000000
+        DEFB    %00000000
+        DEFB    %00010000
+        DEFB    %00000000
+        DEFB    %00000000
+        DEFB    %00010000
+        DEFB    %00000000
+
+; $3B - Character: ';'          CHR$(59)
+
+        DEFB    %00000000
+        DEFB    %00010000
+        DEFB    %00000000
+        DEFB    %00000000
+        DEFB    %00010000
+        DEFB    %00010000
+        DEFB    %00100000
+
+; $3C - Character: '<'          CHR$(60)
+
+        DEFB    %00000000
+        DEFB    %00000100
+        DEFB    %00001000
+        DEFB    %00010000
+        DEFB    %00001000
+        DEFB    %00000100
+        DEFB    %00000000
+
+; $3D - Character: '='          CHR$(61)
+
+        DEFB    %00000000
+        DEFB    %00000000
+        DEFB    %00111110
+        DEFB    %00000000
+        DEFB    %00111110
+        DEFB    %00000000
+        DEFB    %00000000
+
+; $3E - Character: '>'          CHR$(62)
+
+        DEFB    %00000000
+        DEFB    %00010000
+        DEFB    %00001000
+        DEFB    %00000100
+        DEFB    %00001000
+        DEFB    %00010000
+        DEFB    %00000000
+
+; $3F - Character: '?'          CHR$(63)
+
+        DEFB    %00111100
+        DEFB    %01000010
+        DEFB    %00000100
+        DEFB    %00001000
+        DEFB    %00000000
+        DEFB    %00001000
+
+; $40 - Character: '@'          CHR$(64)
+
+        DEFB    %00111100
+        DEFB    %01001010
+        DEFB    %01010110
+        DEFB    %01011110
+        DEFB    %01000000
+        DEFB    %00111100
+
+; $41 - Character: 'A'          CHR$(65)
+
+        DEFB    %00111100
+        DEFB    %01000010
+        DEFB    %01000010
+        DEFB    %01111110
+        DEFB    %01000010
+        DEFB    %01000010
+
+; $42 - Character: 'B'          CHR$(66)
+
+        DEFB    %01111100
+        DEFB    %01000010
+        DEFB    %01111100
+        DEFB    %01000010
+        DEFB    %01000010
+        DEFB    %01111100
+
+; $43 - Character: 'C'          CHR$(67)
+
+        DEFB    %00111100
+        DEFB    %01000010
+        DEFB    %01000000
+        DEFB    %01000000
+        DEFB    %01000010
+        DEFB    %00111100
+
+; $44 - Character: 'D'          CHR$(68)
+
+        DEFB    %01111000
+        DEFB    %01000100
+        DEFB    %01000010
+        DEFB    %01000010
+        DEFB    %01000100
+        DEFB    %01111000
+
+; $45 - Character: 'E'          CHR$(69)
+
+        DEFB    %01111110
+        DEFB    %01000000
+        DEFB    %01111100
+        DEFB    %01000000
+        DEFB    %01000000
+        DEFB    %01111110
+
+; $46 - Character: 'F'          CHR$(70)
+
+        DEFB    %01111110
+        DEFB    %01000000
+        DEFB    %01111100
+        DEFB    %01000000
+        DEFB    %01000000
+        DEFB    %01000000
+
+; $47 - Character: 'G'          CHR$(71)
+
+        DEFB    %00111100
+        DEFB    %01000010
+        DEFB    %01000000
+        DEFB    %01001110
+        DEFB    %01000010
+        DEFB    %00111100
+
+; $48 - Character: 'H'          CHR$(72)
+
+        DEFB    %01000010
+        DEFB    %01000010
+        DEFB    %01111110
+        DEFB    %01000010
+        DEFB    %01000010
+        DEFB    %01000010
+
+; $49 - Character: 'I'          CHR$(73)
+
+        DEFB    %00111110
+        DEFB    %00001000
+        DEFB    %00001000
+        DEFB    %00001000
+        DEFB    %00001000
+        DEFB    %00111110
+
+; $4A - Character: 'J'          CHR$(74)
+
+        DEFB    %00000010
+        DEFB    %00000010
+        DEFB    %00000010
+        DEFB    %01000010
+        DEFB    %01000010
+        DEFB    %00111100
+
+; $4B - Character: 'K'          CHR$(75)
+
+        DEFB    %01000100
+        DEFB    %01001000
+        DEFB    %01110000
+        DEFB    %01001000
+        DEFB    %01000100
+        DEFB    %01000010
+
+; $4C - Character: 'L'          CHR$(76)
+
+        DEFB    %01000000
+        DEFB    %01000000
+        DEFB    %01000000
+        DEFB    %01000000
+        DEFB    %01000000
+        DEFB    %01111110
+
+; $4D - Character: 'M'          CHR$(77)
+
+        DEFB    %01000010
+        DEFB    %01100110
+        DEFB    %01011010
+        DEFB    %01000010
+        DEFB    %01000010
+        DEFB    %01000010
+
+; $4E - Character: 'N'          CHR$(78)
+
+        DEFB    %01000010
+        DEFB    %01100010
+        DEFB    %01010010
+        DEFB    %01001010
+        DEFB    %01000110
+        DEFB    %01000010
+
+; $4F - Character: 'O'          CHR$(79)
+
+        DEFB    %00111100
+        DEFB    %01000010
+        DEFB    %01000010
+        DEFB    %01000010
+        DEFB    %01000010
+        DEFB    %00111100
+
+; $50 - Character: 'P'          CHR$(80)
+
+        DEFB    %01111100
+        DEFB    %01000010
+        DEFB    %01000010
+        DEFB    %01111100
+        DEFB    %01000000
+        DEFB    %01000000
+
+; $51 - Character: 'Q'          CHR$(81)
+
+        DEFB    %00111100
+        DEFB    %01000010
+        DEFB    %01000010
+        DEFB    %01010010
+        DEFB    %01001010
+        DEFB    %00111100
+
+; $52 - Character: 'R'          CHR$(82)
+
+        DEFB    %01111100
+        DEFB    %01000010
+        DEFB    %01000010
+        DEFB    %01111100
+        DEFB    %01000100
+        DEFB    %01000010
+
+; $53 - Character: 'S'          CHR$(83)
+
+        DEFB    %00111100
+        DEFB    %01000000
+        DEFB    %00111100
+        DEFB    %00000010
+        DEFB    %01000010
+        DEFB    %00111100
+
+; $54 - Character: 'T'          CHR$(84)
+
+        DEFB    %11111110
+        DEFB    %00010000
+        DEFB    %00010000
+        DEFB    %00010000
+        DEFB    %00010000
+        DEFB    %00010000
+
+; $55 - Character: 'U'          CHR$(85)
+
+        DEFB    %01000010
+        DEFB    %01000010
+        DEFB    %01000010
+        DEFB    %01000010
+        DEFB    %01000010
+        DEFB    %00111110
+
+; $56 - Character: 'V'          CHR$(86)
+
+        DEFB    %01000010
+        DEFB    %01000010
+        DEFB    %01000010
+        DEFB    %01000010
+        DEFB    %00100100
+        DEFB    %00011000
+
+; $57 - Character: 'W'          CHR$(87)
+
+        DEFB    %01000010
+        DEFB    %01000010
+        DEFB    %01000010
+        DEFB    %01000010
+        DEFB    %01011010
+        DEFB    %00100100
+
+; $58 - Character: 'X'          CHR$(88)
+
+        DEFB    %01000010
+        DEFB    %00100100
+        DEFB    %00011000
+        DEFB    %00011000
+        DEFB    %00100100
+        DEFB    %01000010
+
+; $59 - Character: 'Y'          CHR$(89)
+
+        DEFB    %10000010
+        DEFB    %01000100
+        DEFB    %00101000
+        DEFB    %00010000
+        DEFB    %00010000
+        DEFB    %00010000
+
+; $5A - Character: 'Z'          CHR$(90)
+
+        DEFB    %01111110
+        DEFB    %00000100
+        DEFB    %00001000
+        DEFB    %00010000
+        DEFB    %00100000
+        DEFB    %01111110
+
+; $5B - Character: '['          CHR$(91)
+
+        DEFB    %00001110
+        DEFB    %00001000
+        DEFB    %00001000
+        DEFB    %00001000
+        DEFB    %00001000
+        DEFB    %00001110
+
+; $5C - Character: '\'          CHR$(92)
+
+        DEFB    %00000000
+        DEFB    %01000000
+        DEFB    %00100000
+        DEFB    %00010000
+        DEFB    %00001000
+        DEFB    %00000100
+
+; $5D - Character: ']'          CHR$(93)
+
+        DEFB    %01110000
+        DEFB    %00010000
+        DEFB    %00010000
+        DEFB    %00010000
+        DEFB    %00010000
+        DEFB    %01110000
+
+; $5E - Character: '^'          CHR$(94)
+
+        DEFB    %00010000
+        DEFB    %00111000
+        DEFB    %01010100
+        DEFB    %00010000
+        DEFB    %00010000
+        DEFB    %00010000
+
+; $5F - Character: '_'          CHR$(95)
+
+        DEFB    %00000000
+        DEFB    %00000000
+        DEFB    %00000000
+        DEFB    %00000000
+        DEFB    %00000000
+        DEFB    %00000000
+        DEFB    %11111111
+
+; $60 - Character:  £           CHR$(96)
+
+        DEFB    %00011100
+        DEFB    %00100010
+        DEFB    %01111000
+        DEFB    %00100000
+        DEFB    %00100000
+        DEFB    %01111110
+        DEFB    %00000000
+
+; $61 - Character: 'a'          CHR$(97)
+
+        DEFB    %00000000
+        DEFB    %00111000
+        DEFB    %00000100
+        DEFB    %00111100
+        DEFB    %01000100
+        DEFB    %00111110
+        DEFB    %00000000
+
+; $62 - Character: 'b'          CHR$(98)
+
+        DEFB    %00100000
+        DEFB    %00100000
+        DEFB    %00111100
+        DEFB    %00100010
+        DEFB    %00100010
+        DEFB    %00111100
+        DEFB    %00000000
+
+; $63 - Character: 'c'          CHR$(99)
+
+        DEFB    %00000000
+        DEFB    %00011100
+        DEFB    %00100000
+        DEFB    %00100000
+        DEFB    %00100000
+        DEFB    %00011100
+        DEFB    %00000000
+
+; $64 - Character: 'd'          CHR$(100)
+
+        DEFB    %00000100
+        DEFB    %00000100
+        DEFB    %00111100
+        DEFB    %01000100
+        DEFB    %01000100
+        DEFB    %00111110
+        DEFB    %00000000
+
+; $65 - Character: 'e'          CHR$(101)
+
+        DEFB    %00000000
+        DEFB    %00111000
+        DEFB    %01000100
+        DEFB    %01111000
+        DEFB    %01000000
+        DEFB    %00111100
+        DEFB    %00000000
+
+; $66 - Character: 'f'          CHR$(102)
+
+        DEFB    %00001100
+        DEFB    %00010000
+        DEFB    %00011000
+        DEFB    %00010000
+        DEFB    %00010000
+        DEFB    %00010000
+        DEFB    %00000000
+
+; $67 - Character: 'g'          CHR$(103)
+
+        DEFB    %00000000
+        DEFB    %00111100
+        DEFB    %01000100
+        DEFB    %01000100
+        DEFB    %00111100
+        DEFB    %00000100
+        DEFB    %00111000
+
+; $68 - Character: 'h'          CHR$(104)
+
+        DEFB    %01000000
+        DEFB    %01000000
+        DEFB    %01111000
+        DEFB    %01000100
+        DEFB    %01000100
+        DEFB    %01000100
+        DEFB    %00000000
+
+; $69 - Character: 'i'          CHR$(105)
+
+        DEFB    %00010000
+        DEFB    %00000000
+        DEFB    %00110000
+        DEFB    %00010000
+        DEFB    %00010000
+        DEFB    %00111000
+        DEFB    %00000000
+
+; $6A - Character: 'j'          CHR$(106)
+
+        DEFB    %00000100
+        DEFB    %00000000
+        DEFB    %00000100
+        DEFB    %00000100
+        DEFB    %00000100
+        DEFB    %00100100
+        DEFB    %00011000
+
+; $6B - Character: 'k'          CHR$(107)
+
+        DEFB    %00100000
+        DEFB    %00101000
+        DEFB    %00110000
+        DEFB    %00110000
+        DEFB    %00101000
+        DEFB    %00100100
+        DEFB    %00000000
+
+; $6C - Character: 'l'          CHR$(108)
+
+        DEFB    %00010000
+        DEFB    %00010000
+        DEFB    %00010000
+        DEFB    %00010000
+        DEFB    %00010000
+        DEFB    %00001100
+        DEFB    %00000000
+
+; $6D - Character: 'm'          CHR$(109)
+
+        DEFB    %00000000
+        DEFB    %01101000
+        DEFB    %01010100
+        DEFB    %01010100
+        DEFB    %01010100
+        DEFB    %01010100
+        DEFB    %00000000
+
+; $6E - Character: 'n'          CHR$(110)
+
+        DEFB    %00000000
+        DEFB    %01111000
+        DEFB    %01000100
+        DEFB    %01000100
+        DEFB    %01000100
+        DEFB    %01000100
+        DEFB    %00000000
+
+; $6F - Character: 'o'          CHR$(111)
+
+        DEFB    %00000000
+        DEFB    %00111000
+        DEFB    %01000100
+        DEFB    %01000100
+        DEFB    %01000100
+        DEFB    %00111000
+        DEFB    %00000000
+
+; $70 - Character: 'p'          CHR$(112)
+
+        DEFB    %00000000
+        DEFB    %01111000
+        DEFB    %01000100
+        DEFB    %01000100
+        DEFB    %01111000
+        DEFB    %01000000
+        DEFB    %01000000
+
+; $71 - Character: 'q'          CHR$(113)
+
+        DEFB    %00000000
+        DEFB    %00111100
+        DEFB    %01000100
+        DEFB    %01000100
+        DEFB    %00111100
+        DEFB    %00000100
+        DEFB    %00000110
+
+; $72 - Character: 'r'          CHR$(114)
+
+        DEFB    %00000000
+        DEFB    %00011100
+        DEFB    %00100000
+        DEFB    %00100000
+        DEFB    %00100000
+        DEFB    %00100000
+        DEFB    %00000000
+
+; $73 - Character: 's'          CHR$(115)
+
+        DEFB    %00000000
+        DEFB    %00111000
+        DEFB    %01000000
+        DEFB    %00111000
+        DEFB    %00000100
+        DEFB    %01111000
+        DEFB    %00000000
+
+; $74 - Character: 't'          CHR$(116)
+
+        DEFB    %00010000
+        DEFB    %00111000
+        DEFB    %00010000
+        DEFB    %00010000
+        DEFB    %00010000
+        DEFB    %00001100
+        DEFB    %00000000
+
+; $75 - Character: 'u'          CHR$(117)
+
+        DEFB    %00000000
+        DEFB    %01000100
+        DEFB    %01000100
+        DEFB    %01000100
+        DEFB    %01000100
+        DEFB    %00111100
+        DEFB    %00000000
+
+; $76 - Character: 'v'          CHR$(118)
+
+        DEFB    %00000000
+        DEFB    %01000100
+        DEFB    %01000100
+        DEFB    %00101000
+        DEFB    %00101000
+        DEFB    %00010000
+        DEFB    %00000000
+
+; $77 - Character: 'w'          CHR$(119)
+
+        DEFB    %00000000
+        DEFB    %01000100
+        DEFB    %01010100
+        DEFB    %01010100
+        DEFB    %01010100
+        DEFB    %00101000
+        DEFB    %00000000
+
+; $78 - Character: 'x'          CHR$(120)
+
+        DEFB    %00000000
+        DEFB    %01000100
+        DEFB    %00101000
+        DEFB    %00010000
+        DEFB    %00101000
+        DEFB    %01000100
+        DEFB    %00000000
+
+; $79 - Character: 'y'          CHR$(121)
+
+        DEFB    %00000000
+        DEFB    %01000100
+        DEFB    %01000100
+        DEFB    %01000100
+        DEFB    %00111100
+        DEFB    %00000100
+        DEFB    %00111000
+
+; $7A - Character: 'z'          CHR$(122)
+
+        DEFB    %00000000
+        DEFB    %01111100
+        DEFB    %00001000
+        DEFB    %00010000
+        DEFB    %00100000
+        DEFB    %01111100
+        DEFB    %00000000
+
+; $7B - Character: '{'          CHR$(123)
+
+        DEFB    %00001110
+        DEFB    %00001000
+        DEFB    %00110000
+        DEFB    %00110000
+        DEFB    %00001000
+        DEFB    %00001110
+        DEFB    %00000000
+
+; $7C - Character: '|'          CHR$(124)
+
+        DEFB    %00001000
+        DEFB    %00001000
+        DEFB    %00001000
+        DEFB    %00001000
+        DEFB    %00001000
+        DEFB    %00001000
+        DEFB    %00000000
+
+; $7D - Character: '}'          CHR$(125)
+
+        DEFB    %01110000
+        DEFB    %00010000
+        DEFB    %00001100
+        DEFB    %00001100
+        DEFB    %00010000
+        DEFB    %01110000
+        DEFB    %00000000
+
+; $7E - Character: '~'          CHR$(126)
+
+        DEFB    %00110010
+        DEFB    %01001100
+        DEFB    %00000000
+        DEFB    %00000000
+        DEFB    %00000000
+        DEFB    %00000000
+        DEFB    %00000000
+
+; $7F - Character:  ©           CHR$(127)
+
+        DEFB    %00111100
+        DEFB    %01000010
+        DEFB    %10011001
+        DEFB    %10100001
+        DEFB    %10100001
+        DEFB    %10011001
+        DEFB    %01000010
+L1FFB:  DEFB    %00111100
+
+	;; Populate rest of ROM with $FF
+	ds 0x2000-$
+	
 ;SYSTEM RAM AREA:
 USERSTK:	equ			9f9fh
 SYSSTK:		equ			9fafh
