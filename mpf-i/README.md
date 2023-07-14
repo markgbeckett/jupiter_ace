@@ -85,3 +85,8 @@ The port is based on a commented disassembly by fjkraan@electrickery.nl, which i
 - Updated the code in SETPT and LOCPT to set bit 7 (inverted characters) instead of printing decimal point.
 
 - Reimplemented SCAN1 to use Minstrel 4th display and keyboard.
+
+
+## Further reading
+
+- (Tynemouth Software's Blog article about repairing a Micro-Professor 1)[http://blog.tynemouthsoftware.co.uk/2023/05/multitech-micro-professor-mpf-i-repair.html]. 
