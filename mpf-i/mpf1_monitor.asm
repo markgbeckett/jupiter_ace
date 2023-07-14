@@ -19,8 +19,8 @@ DIGIT:		equ		0FFh	;8255 I port C
 SEG7:		equ		0FFh	;8255 I port B
 KIN:		equ		0FFh	;8255 I port A
 PWCODE:		equ		0A5h	;Power-up code
-ZSUM:		equ		71h		;This will make the sum of all
-							;monitor codes to be zero.
+ZSUM:		equ		71h	;This will make the sum of all
+					;monitor codes to be zero.
 
 ;
 
@@ -61,10 +61,10 @@ l0002h:
 	cp 0a5h
 	call nz,INIM		; Minstrel ROM initialisation
 	;
-	ld hl,09000h
+	ld hl,04000h
 	call RAMCHK
 	jr z,PREPC
-	ld h,098h
+	ld h,080h
 	
 PREPC:
 	ld (USERPC),hl
@@ -1172,6 +1172,8 @@ KEYMAP:
 	;; ld a,(hl)	
 	ret	
 	;
+	ds 0x0624-$
+	
 SCAN1:	exx	; Save main registers
 
 	;; Update display
@@ -1489,6 +1491,12 @@ RGTAB:	db _F, _A ; defw	 3f0fh	;'AF'
 	;;
 	;; Extra code for Jupiter Ace
 	;; 
+HALT:	call GETKEY
+	cp 0xFF
+	jr z, HALT
+
+	jp 0x0066
+
 GETKEY:	ld      bc,$FEFE                ; port address - B is also an 8 counter
 
         in      d,(c)                   ; read from port to D.
@@ -1554,7 +1562,7 @@ L0362:  dec     l                       ; decrement the key value for next row.
 ; ---
 ; ABORTKEY
 
-L036B:  ld      E,$FF                   ; signal invalid key.
+L036B:  ld      e,$FF                   ; signal invalid key.
 
 ; the normal exit checks if E holds a key and not $FF.
 
@@ -1795,9 +1803,80 @@ L0085:  EX      DE,HL                   ; switch pointers.
 	ld de, 0x2401
 	ld bc, 0x2FF
 	ldir
+
+	;; Print instructions
+	ld de, MPF1_HELP	; Start of instructions
+
+NEW_LINE:
+	ld hl, 0x2400		; Start of display
+
+	ld a,(de)		; Retrieve command
+	inc de			; Advance pointer
+	
+	;; Check if done
+	cp 0xFF
+	jr z, DONE
+
+	push de			; Save pointer
+	ld b,a			; Move row number into B (must be >0)
+	ld de, 0x0020		; Length of a row
+
+ADD_ROW:
+	add hl,de		; Advance one row
+	djnz ADD_ROW
+
+	pop de			; Retrieve pointers
+	
+	ld a,(de)		; Retrieve column number
+	inc de			; Advance pointer
+
+	add a,l			; Add to current display pointer
+	ld l,a			; Should be no overflow
+
+	;; HL points to next location in display file
+PR_CHR: ld a,(de)		; Retrieve character
+	inc de			; Advance pointer
+	cp 0x0D			; Check for CR
+	jr z, NEW_LINE		; Jump if so
+
+	ld (hl),a		; Print character
+	inc hl			; Advance display-file pointer
+
+	jr PR_CHR		; Next character
 	
 	;; Return to the MPF-1 initialisation routine
-	jp INI
+DONE:	jp INI
+
+MPF1_HELP:	
+	;; 	db  8, 7, _MINUS, _MINUS, _MINUS, _SPACE, _C, _O, _M, _M, _A, _N, _D, _S, _SPACE, _MINUS, _MINUS, _MINUS,  0x0D
+	db  9, 2, _P, _SPACE, _SPACE, _SPACE, _MINUS, _SPACE, _P, _C, 0x0D
+	db 10, 2, _Y, _SPACE, _SPACE, _SPACE, _MINUS, _SPACE, _A, _D, _D, _R, 0x0D
+	db 11, 2, _U, _SPACE, _SPACE, _SPACE, _MINUS, _SPACE, _D, _A, _T, _A, 0x0D
+	db 12,  2, _I, _SPACE, _SPACE, _SPACE, _MINUS, _SPACE, _R, _E, _G, 0x0D
+	db 13,  2, _G, _SPACE, _SPACE, _SPACE, _MINUS, _SPACE, _G, _O, 0x0D
+	db 14, 2, _S, _MINUS, _K, _SPACE, _MINUS, _SPACE, _PLUS, 0x0D
+	db 15, 2, _S, _MINUS, _J, _SPACE, _MINUS, _SPACE, _MINUS, 0x0D
+	db 16, 2, _R, _E, _S, _SPACE, _MINUS, _SPACE, _R, _E, _S, _E, _T, 0x0D
+	db  9, 17, _N, _SPACE, _SPACE, _SPACE, _MINUS, _SPACE, _R, _E, _L, _A, 0x0D
+	db 10, 17, _J, _SPACE, _SPACE, _SPACE, _MINUS, _SPACE, _S, _B, _R, 0x0D
+	db 11, 17, _K, _SPACE, _SPACE, _SPACE, _MINUS, _SPACE, _C, _B, _R, 0x0D
+	db 12, 17, _M, _SPACE, _SPACE, _SPACE, _MINUS, _SPACE, _M, _O, _V, _E, 0x0D
+	db 13, 17, _Z, _SPACE, _SPACE, _SPACE, _MINUS, _SPACE, _I, _N, _S, 0x0D
+	db 14, 17, _X, _SPACE, _SPACE, _SPACE, _MINUS, _SPACE, _D, _E, _L, 0x0D
+	db 15, 17, _R, _SPACE, _SPACE, _SPACE, _MINUS, _SPACE, _T, _A, _P, _E, _R, 0x0D
+	db 16, 17, _T, _SPACE, _SPACE, _SPACE, _MINUS, _SPACE, _T, _A, _P, _E, _W, 0x0D
+	;; 	db 18, 7, _MINUS, _MINUS, _MINUS, _SPACE, _R, _E, _G, _I, _S, _T, _E, _R, _SPACE, _MINUS, _MINUS, _MINUS, 0x0D
+	db 19, 4, _0, _MINUS, _A, _F, _SPACE, _SPACE, _1, _MINUS, _B, _C, _SPACE, _SPACE
+	db _2, _MINUS, _D, _E, _SPACE, _SPACE, _3, _MINUS, _H, _L, 0x0D
+	db 20, 4, _4, _MINUS, _A+0x80, _F+0x80, _SPACE, _SPACE, _5, _MINUS, _B+0x80, _C+0x80, _SPACE, _SPACE
+	db _6, _MINUS, _D+0x80, _E+0x80, _SPACE, _SPACE, _7, _MINUS, _H+0x80, _L+0x80, 0x0D
+	db 21, 4, _8, _MINUS, _I, _X, _SPACE, _SPACE, _9, _MINUS, _I, _Y, _SPACE, _SPACE
+	db _A, _MINUS, _S, _P, _SPACE, _SPACE, _B, _MINUS, _I, _F
+	db 0x0D
+	db 22, 4, _C, _MINUS, _F, _H, _SPACE, _SPACE, _D, _MINUS, _F, _L, _SPACE, _SPACE
+	db _E, _MINUS, _F+0x80, _H+0x80, _SPACE, _SPACE, _F, _MINUS, _F+0x80, _L+0x80
+	db 0x0D
+	db 0xFF
 
 
 ; -------------------
@@ -2747,40 +2826,40 @@ L1FFB:  DEFB    %00111100
 USERSTK:	equ			9f9fh
 SYSSTK:		equ			9fafh
 
-
-STEPBF:	equ $9faf
-DISPBF:	equ $9fb6
-REGBF:	equ $9fbc
-USERAF:	equ $9fbc
-USERBC:	equ $9fbe
-USERDE:	equ $9fc0
-USERHL:	equ $9fc2
-UAFP: 	equ $9fc4
-UBCP:	equ $9fc6
-UDEP:	equ $9fc8
-UHLP:	equ $9fca
-USERIX:	equ $9fcc
-USERIY:	equ $9fce
-USERSP:	equ $9fd0
-USERIF:	equ $9fd2
-FLAGH:	equ $9fd4
-FLAGL:	equ $9fd6
-FLAGHP:	equ $9fd8
-FLAGLP:	equ $9fda
-USERPC:	equ $9fdc
-ADSAVE:	equ $9fde
-BRAD:	equ $9fe0
-BRDA:	equ $9fe2
-STMINOR:	equ $9fe3
-STATE:	equ $9fe4
-POWERUP:	equ $9fe5
-TEST:	equ $9fe6
-ATEMP:	equ $9fe7
-HLTEMP:	equ $9fe8
-TEMP:	equ $9fea
-IM1AD:	equ $9fee
-BEEPSET:	equ $9ff0
-FBEEP:	equ $9ff1
-TBEEP:	equ $9ff2
+SYSVARS:	equ $3C00	; Originally $9faf
+STEPBF:		equ SYSVARS + $00
+DISPBF:		equ SYSVARS + $07
+REGBF:		equ SYSVARS + $0d
+USERAF:		equ SYSVARS + $0d
+USERBC:		equ SYSVARS + $0f
+USERDE:		equ SYSVARS + $11
+USERHL:		equ SYSVARS + $13
+UAFP: 		equ SYSVARS + $15
+UBCP:		equ SYSVARS + $17
+UDEP:		equ SYSVARS + $19
+UHLP:		equ SYSVARS + $1b
+USERIX:		equ SYSVARS + $1d
+USERIY:		equ SYSVARS + $1f
+USERSP:		equ SYSVARS + $21
+USERIF:		equ SYSVARS + $23
+FLAGH:		equ SYSVARS + $25
+FLAGL:		equ SYSVARS + $27
+FLAGHP:		equ SYSVARS + $29
+FLAGLP:		equ SYSVARS + $2b
+USERPC:		equ SYSVARS + $2d
+ADSAVE:		equ SYSVARS + $2f
+BRAD:		equ SYSVARS + $31
+BRDA:		equ SYSVARS + $33
+STMINOR:	equ SYSVARS + $34
+STATE:		equ SYSVARS + $35
+POWERUP:	equ SYSVARS + $36
+TEST:		equ SYSVARS + $37
+ATEMP:		equ SYSVARS + $38
+HLTEMP:		equ SYSVARS + $39
+TEMP:		equ SYSVARS + $3b
+IM1AD:		equ SYSVARS + $3f
+BEEPSET:	equ SYSVARS + $41
+FBEEP:		equ SYSVARS + $42
+TBEEP:		equ SYSVARS + $43
 
 	
