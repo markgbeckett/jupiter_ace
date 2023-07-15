@@ -296,15 +296,16 @@ KINS:
 	ld (STEPBF+4),hl
 	call RAMCHK
 	jp nz,IGNORE
-	ld de,01dfeh
+
+	ld de,0fffeh		; (End of user RAM)-1
 	
 ;                                       p 11
 	ld a,h	
-	cp 01eh
-	jr c,SKIPH1
-	cp 020h
+	cp 040h
+	;; jr c,SKIPH1
+	;; cp 020h
 	jp c,IGNORE
-	ld d,027h
+	;; ld d,027h
 SKIPH1:
 	ld (STEPBF+2),de
 	;
@@ -329,13 +330,13 @@ KDEL:
 	ld (STEPBF+4),hl
 	call RAMCHK
 	jp nz,IGNORE
-	ld de,01e00h
+	ld de,0ffffh
 	ld a,h	
-	cp 01eh
-	jr c,SKIPH2
-	cp 020h
+	;; cp 01eh
+	;; jr c,SKIPH2
+	cp 040h
 	jp c,IGNORE
-	ld d,028h
+	;; ld d,028h
 SKIPH2:
 	ld (STEPBF+2),de
 	inc hl	
@@ -730,7 +731,7 @@ CLRBR:
 	ld (BRAD),hl
 	ret	
 	;
-TESTM:
+TESTM:	; Check for states 1 or 2 (i.e., with address-data display)
 ;                                       p 24
 
 	ld a,(STATE)
@@ -1174,9 +1175,11 @@ KEYMAP:
 	;
 	ds 0x0624-$
 	
-SCAN1:	exx	; Save main registers
+SCAN1:	exx	; Save primary registers
 
 	;; Update display
+	push hl 		; Save HL'
+	
 	push ix
 	pop hl
 	ld de, 0x2407 ; DISPLAY_LINE
@@ -1207,6 +1210,9 @@ S1PR2:	ld a,(hl)
 	cp 0xFF			; Carry will be reset for no/ invalid key
 	ccf			; Complement to match original version
 KEYPRESSED:
+	;; Restore HL'
+	pop hl
+	
 	exx			; Restore main registers
 
 	ret
