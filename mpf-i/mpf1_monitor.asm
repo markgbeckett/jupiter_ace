@@ -13,6 +13,9 @@
 ; Assembled with z80pack/z80asm/z80asm -fh -v -l mpf1_u6_monitor.asm
 ; Reconstructed version v0.4
 
+BASE:	equ 0x0000
+UMEM:	equ 0x4000
+
 	include "..\3d_monster_maze\jupiter_chars.asm"
 P8255:		equ		0FFh	;8255 I control port
 DIGIT:		equ		0FFh	;8255 I port C
@@ -21,7 +24,6 @@ KIN:		equ		0FFh	;8255 I port A
 PWCODE:		equ		0A5h	;Power-up code
 ZSUM:		equ		71h	;This will make the sum of all
 					;monitor codes to be zero.
-
 ;
 
 COLDEL:		equ		201		;
@@ -42,7 +44,7 @@ ZERO_2K:	equ		8
 ; 
 ;                                       p 1
 
-	org	0x0000
+	org	BASE
 
 l0000h:
 	ld b,000h
@@ -61,7 +63,7 @@ l0002h:
 	cp 0a5h
 	call nz,INIM		; Minstrel ROM initialisation
 	;
-	ld hl,04000h
+	ld hl,UMEM
 	call RAMCHK
 	jr z,PREPC
 	ld h,080h
@@ -87,9 +89,10 @@ RST30:
 ;                                       p 3
 
 RESET1:
-	ld (09fd2h),hl
+	ld (USERIF),hl
 	jr RESET2
-	ld (hl),c	
+
+	ld (hl),c		; ROM checksum
 	;
 	
 RST38:	
@@ -125,7 +128,7 @@ RESET2:
 	jp SETSTO
 ;
 	;; 	org	66h
-	ds 0x01
+	ds BASE+0x66-$
 NMI:
 	ld (ATEMP),a
 	ld a,10010000B ; 090h
@@ -202,7 +205,7 @@ BRRSTO:
 	ld (hl),a	
 	call c,MEMDP2
 MAIN:
-	ld sp,STEPBF
+	ld sp,SYSSTK
 	call SCAN
 	call BEEP
 	jr MAIN
@@ -1173,7 +1176,7 @@ KEYMAP:
 	;; ld a,(hl)	
 	ret	
 	;
-	ds 0x0624-$
+	ds BASE+0x0624-$
 	
 SCAN1:	exx	; Save primary registers
 
@@ -1217,7 +1220,7 @@ KEYPRESSED:
 
 	ret
 
-	ds 0x0665-$		; Ensure location of next routine not changed
+	ds BASE+0x0665-$		; Ensure location of next routine not changed
 	
 ADDRDP:
 	ld hl,DISPBF+2
@@ -1306,7 +1309,7 @@ NOTONE:
 	pop af	
 	jp KEYEXEC
 	
-	ds 0x0737-$
+	ds BASE+0x0737-$
 KSUBFUN:
 		defw	KINC
 		defb	-KINC+KINC
@@ -2826,13 +2829,13 @@ L1D7B:  DEFB    %00000000
 L1FFB:  DEFB    %00111100
 
 	;; Populate rest of ROM with $FF
-	ds 0x2000-$
+	ds BASE+0x4000-$
 	
 ;SYSTEM RAM AREA:
-USERSTK:	equ			9f9fh
-SYSSTK:		equ			9fafh
+USERSTK:	equ			UMEM-$80
+SYSSTK:		equ			UMEM
 
-SYSVARS:	equ $3C00	; Originally $9faf
+SYSVARS:	equ UMEM-$0200	; Originally $9faf
 STEPBF:		equ SYSVARS + $00
 DISPBF:		equ SYSVARS + $07
 REGBF:		equ SYSVARS + $0d
