@@ -27,9 +27,12 @@ The procedure for accessing the MPF-1 Monitor depends on which version of the mo
 
 ### ROM image
 
-The MPF-1 ROM image 'mpf_monitor.rom' can be burned onto a suitable EPROM and installed into the Minstrel 4th or Minstrel 4D. Jumpers/ switches on the main board allow you to select between multiple ROMs, so you could set up the standard AceForth ROM in the first ROM bank and the MPF-1 Monitor in the second, for example (see Minstrel 4th User Guide for more information).
+The MPF-1 ROM image 'mpf_1.rom' can be burned onto a suitable EPROM and installed into the Minstrel 4th or Minstrel 4D. Jumpers/ switches on the main board allow you to select between multiple ROMs, so you could set up the standard AceForth ROM in the first ROM bank and the MPF-1 Monitor in the second, for example (see Minstrel 4th User Guide for more information).
 
 Once installed, check the jumpers/ switches are configured to select the correct ROM bank and power on. The MPF-1 should boot as shown in the screenshot.
+
+The ROM image 'mpf-1.rom' has been padded out to 16 kilobytes to fill the ROM bank, even though the Minstrel 4th only addresses the first 8 kilobytes. This means the ROM will probably not work on an emulator (which will expect an 8-kilobyte ROM). To this end, I have also provided 'mpf-1_8k.rom', which is confirmed to work on the EightyOne emulator, at least.
+
 
 ### RAM-based
 
@@ -42,7 +45,7 @@ Power on your Minstrel 4th and load the mmonitor from 'mpf.tap' (or 'mpf.wav') u
 Then, start the monitor by typing:
 
 ```
-  INVIS CLS 16384 CALL
+  16384 CALL
 ```
 
 All going well, you should be greeted with the MPF-1 startup message "UPF--1".
