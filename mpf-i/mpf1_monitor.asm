@@ -1117,6 +1117,9 @@ BITEND:
 	exx	
 	ret	
 	;
+
+	ds 0x05DE-$
+
 TONE1K:
 	ld c,F1KHZ
 	jr TONE
@@ -1138,6 +1141,8 @@ l05edh:
 	jr nz,SQWAVE
 	ret	
 	;
+	ds 0x05F6-$
+	
 RAMCHK:
 	ld a,(hl)	
 	cpl	
@@ -1148,6 +1153,7 @@ RAMCHK:
 	cp (hl)	
 	ret	
 	;
+	ds 0x05FE-$		; Pad, so SCAN is properly aligned
 SCAN:
 	push ix
 	ld hl,TEST
