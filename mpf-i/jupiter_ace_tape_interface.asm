@@ -76,77 +76,94 @@ L1847:  DJNZ    L1847                   ;
 L184F:  DJNZ    L184F           
 
 	;; Output to tape port
-        LD      A,C
+        LD      A,C		; Output to tape port (bit 3 on)
         OUT     ($FE),A
 
 	;;  *** GOT THIS FAR ***
-        LD      B,$38
-        JP      L188A                   ;
+        LD      B,$38		; Wait time for a '1'
+        JP      L188A           ;
 
-L1859:  LD      A,C
-        BIT     7,B
+	;; Entry point for second half of waveform for bit transmit
+L1859:  LD      A,C		; Set tape output to high
+        BIT     7,B		; Set zero flag (for second half of wave)
 
-L185C:  DJNZ    L185C                   ;
+	;; Entry point for first half of waveform for bit transmit
+L185C:  DJNZ    L185C           ; Wait for B=38h loops
 
-        JR      NC,L1864                ;
+        JR      NC,L1864	; Jump forward if '0' bit
 
-        LD      B,$3D
-L1862:  DJNZ    L1862                   ;
+        LD      B,$3D		; Extend wait for '1' bit
+L1862:  DJNZ    L1862           ;
 
-L1864:  OUT     ($FE),A
-        LD      B,$3A
-        JP      NZ,L1859                ;
-        DEC     B
-        XOR     A
-L186D:  RL      L
-        JP      NZ,L185C                ;
-        DEC     DE
-        INC     IY
+L1864:  OUT     ($FE),A		; Set tape output to low/high
+        LD      B,$3A		; New wait time (+1)?
+
+        JP      NZ,L1859	; Jump back if half-way through bit
+				; transmit
+        DEC     B		; Reduce first-half wait for new bit
+        XOR     A		; Set tape output low
+L186D:  RL      L		; Move next bit into carry (and reset zero)
+        JP      NZ,L185C        ; Jump if more data to send?
+
+	;; Next byte
+        DEC     DE		; Reduce length of block 
+        INC     IY		; Move to next address to send
         LD      B,$2E
 
+	;; Check if Break pressed
         LD      A,$7F
         IN      A,($FE)
         RRA
-        RET     NC
+        RET     NC		; Return, Carry reset
 
+	;; Check if done (including sending the End Mark)
         LD      A,D
         CP      $FF
-        RET     NC
+        RET     NC		; Return, Carry reset
 
-        OR      E
-        JR      Z,L188F                 ;
+	;; Check if all data sent
+        OR      E		; Check if DE=0000h (A = D)
+        JR      Z,L188F         ; Move to send End Mark
 
+	;; Retrieve next byte to send and prepare to send first bit
         LD      L,(IY+$00)
-L1887:  LD      A,H
-        XOR     L
-        LD      H,A
-L188A:  XOR     A
-        SCF
-        JP      L186D                   ; JUMP back
+
+L1887:  LD      A,H 		; ??? 
+        XOR     L		; ???
+        LD      H,A		; ???
+	
+L188A:  XOR     A		; Set tape output low and set zero
+        SCF			; Set marker for end of byte
+        JP      L186D           ; JUMP back
 
 ; ---
 
+	;; ??? Prepare End Mark?
 L188F:  LD      L,H
         JR      L1887                   ;
 
-L1892:  POP     IY                      ; restore the original IY value so that
-                                        ; words can be used gain.
-
+	;; Exit routine (accessed by pushing L1892 onto stack, so return
+	;; is via this routine)
+L1892:  POP     IY              ; restore the original IY value
+                                ; so that words can be used
+                                ; gain.
         EX      AF,AF'                  ;;
-        LD      B,$3B                   ;
 
+        LD      B,$3B                   ;
 L1897:  DJNZ    L1897                   ; self-loop for delay.
 
+	;; Set tape output low
         XOR     A
         OUT     ($FE),A
 
+	;; Check for break
         LD      A,$7F                   ; read the port $7FFE
         IN      A,($FE)                 ; keyrows SPACE to V.
         RRA
         EI                              ; Enable Interrupts.
 
         JP      NC,L04F0                ; jump if SPACE pressed to Error 3
-                                        ; 'BREAK pressed'.
+                                	; 'BREAK pressed'.
 
         EX      AF,AF'                  ;;
         RET                             ; return.
