@@ -14,7 +14,14 @@
 	;;
 	;; On exit:
 	;;
-	
+	;; (Usually) in routine:
+	;;   A - used to hold bit pattern for tape port
+	;;   IY - address of next byte to save
+	;;   DE - length of data left to save
+	;;   B - counter for timing routines
+	;;   C - bit pattern to alternate tape outout
+	;;   H - current checksum 
+	;;   L - current byte to save
 L1820:  PUSH    IY		; Save IY
 
         PUSH    HL		; Move start address for block
@@ -26,60 +33,62 @@ L1820:  PUSH    IY		; Save IY
 	;; Set HL for header (FC00h) or code block (E000h) to length
 	;; of leader tone. Length is based on 10000h - HL
         LD      HL,$E000	; E000 is for code block
-        BIT     7,C		; Check if header or code block ?
+        BIT     7,C		; Check if header or code block
         JR      Z,L1832		; Skip forward if header
-        LD      H,$FC
+        LD      H,$FC		; Adjust length, if code block
 
 	;; Save one more byte than block length
 L1832:  INC     DE		
         DEC     IY
 
-	;; Interrupts off for timing
+	;; Interrupts off to ensure precise timing
         DI
 
 	;; 
 	;; Send tape leader tone
 	;; 
-        XOR     A		; Bit pattern for 0xFE (bit 3)
+        XOR     A		; Bit pattern for tape poirt (0xFE, bit
+				; 3)
 
-L1837:  LD      B,$97
-L1839:  DJNZ    L1839                   ;
+	;; Pause for 1,965 T states
+L1837:  LD      B,$97		; (7) 97h = 151d
+L1839:  DJNZ    L1839           ; ( 150*13+8 )
 
 	;;  
 	OUT     ($FE),A		; Update tape port
         XOR     $08		; Alternate bit 3 of Port 0xFE bit pattern
 	                        ; i.e., off-to-on or on-to-off
 	;; Inc HL but setting Z flag
-        INC     L
-        JR      NZ,L1843                ;
-        INC     H
-L1843:  JR      NZ,L1837                ; Repeat if non-zero
+        INC     L		; (4)
+        JR      NZ,L1843        ; (12/7)
+        INC     H		; (4)
+L1843:  JR      NZ,L1837        ; (12/7) Repeat if non-zero
+
 	;;  At end of this code, A = 0 and HL=0
 
 	;;
-	;; Now move on to data
+	;; Send sync signal
 	;;
 
-	;; Pause for ??? T states
-	LD      B,$2B
-L1847:  DJNZ    L1847                   ;
+	;; Tape output is high at this point
+	;; Pause for 561 T states
+	LD      B,$2B		; (7) $2B = 43
+L1847:  DJNZ    L1847           ; (13*42+8)
 
-	;; Write to tape output
-        OUT     ($FE),A		; Bit 3 = 0 
-	
-        LD      L,C		; Move header/ block indicator to L
-
-        LD      BC,$3B08	; Set counter in B, and bit pattern
+	;; Set tape output low
+        OUT     ($FE),A		; (11) Bit 3 = 0 
+        LD      L,C		; (4) Move header/ block indicator to L
+        LD      BC,$3B08	; (10) Set counter in B, and bit pattern
 				; for 0xFE (bit 3 on)
 
-	;; Pause for ??? T states
-L184F:  DJNZ    L184F           
+	;; Pause for 762 T states
+L184F:  DJNZ    L184F           ; (13*58 + 8)
 
 	;; Output to tape port
-        LD      A,C		; Output to tape port (bit 3 on)
-        OUT     ($FE),A
+        LD      A,C		; (4) Set tape output high
+        OUT     ($FE),A         ; (11) bit 3 on
 
-	;;  *** GOT THIS FAR ***
+	;; Set timing for next signal
         LD      B,$38		; Wait time for a '1'
         JP      L188A           ;
 
@@ -114,23 +123,25 @@ L186D:  RL      L		; Move next bit into carry (and reset zero)
         LD      A,$7F
         IN      A,($FE)
         RRA
-        RET     NC		; Return, Carry reset
+        RET     NC		; Return if Carry reset, via cleanup
+				; routine
 
-	;; Check if done (including sending the End Mark)
+	;; Check if done (including sending the checksum); DE = FFFFh
         LD      A,D
         CP      $FF
         RET     NC		; Return, Carry reset
 
 	;; Check if all data sent
         OR      E		; Check if DE=0000h (A = D)
-        JR      Z,L188F         ; Move to send End Mark
+        JR      Z,L188F         ; Move to send checksum
 
 	;; Retrieve next byte to send and prepare to send first bit
         LD      L,(IY+$00)
 
-L1887:  LD      A,H 		; ??? 
-        XOR     L		; ???
-        LD      H,A		; ???
+	;; Update checksum
+L1887:  LD      A,H 	
+        XOR     L	
+        LD      H,A	
 	
 L188A:  XOR     A		; Set tape output low and set zero
         SCF			; Set marker for end of byte
@@ -138,19 +149,26 @@ L188A:  XOR     A		; Set tape output low and set zero
 
 ; ---
 
-	;; ??? Prepare End Mark?
+	;; Save checksum, at end of block
 L188F:  LD      L,H
         JR      L1887                   ;
 
+	;; 
 	;; Exit routine (accessed by pushing L1892 onto stack, so return
 	;; is via this routine)
+	;; 
 L1892:  POP     IY              ; restore the original IY value
                                 ; so that words can be used
                                 ; gain.
-        EX      AF,AF'                  ;;
+        EX      AF,AF'          ; Save flag
 
-        LD      B,$3B                   ;
-L1897:  DJNZ    L1897                   ; self-loop for delay.
+	;;
+	;; Send end marker
+	;;
+	
+	;; Tape output is high. Wait for 13*58+8 = 762 T states 
+        LD      B,$3B                   ; (7)
+L1897:  DJNZ    L1897                   ; (13/8) self-loop for delay.
 
 	;; Set tape output low
         XOR     A
@@ -165,8 +183,8 @@ L1897:  DJNZ    L1897                   ; self-loop for delay.
         JP      NC,L04F0                ; jump if SPACE pressed to Error 3
                                 	; 'BREAK pressed'.
 
-        EX      AF,AF'                  ;;
-        RET                             ; return.
+        EX      AF,AF'                  ; Restore flags
+        RET                             ; Done
 
 ; ---
 ; READ BYTES FROM TAPE
