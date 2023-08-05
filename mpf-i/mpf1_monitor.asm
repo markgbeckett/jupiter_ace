@@ -16,6 +16,7 @@
 BASE:	equ 0x0000
 UMEM:	equ 0x4000
 
+	;; Load in Jupiter Ace character set encoding
 	include "..\3d_monster_maze\jupiter_chars.asm"
 P8255:		equ		0FFh	;8255 I control port
 DIGIT:		equ		0FFh	;8255 I port C
@@ -624,20 +625,58 @@ ENDFUN:
 	ret	
 	;
 GWT:
-	call SUM1
-	jr c,ERROR
-	ld (STEPBF+6),a
-	ld hl,4000
-	call TONE1K
-	ld hl,STEPBF
-	ld bc,00007h
-	call TAPEOUT
-	ld hl,4000
-	call TONE2K
-	call GETPTR
-	call TAPEOUT
-	ld hl,4000
-	call TONE2K
+	;; Reset header
+	call CLEARHEADER	; Prep user header
+
+	;; Check and retrieve user-specified parameters
+	call GETPTR		; Retrieve start (HL) and length (BC) of block
+	jr c, ERROR
+
+	;; Prepare header
+	ld (U_FILE_HDR + 0x0B),bc
+	ld (U_FILE_HDR + 0x0D),hl
+
+	;; Save block dimensions
+	push hl
+	push bc
+
+	;; Write file id to header
+	ld hl,U_FILE_HDR + 0x01
+	ld de,(STEPBF)		; Location of file id
+	call WORD2ASCII
+
+	;; Write header
+	ld hl, U_FILE_HDR
+	ld de, 0x19		; Length of Ace header
+	ld c,d			; C=0 indicates header
+	call WRITE_TO_TAPE
+
+	call PAUSE
+	
+	;; Retrieve block dimensions
+	pop de
+	pop hl
+
+	;; Write code block
+	ld c,0xFF		; Indicates code block
+	call WRITE_TO_TAPE
+
+	;; Write code block
+	
+	;; call SUM1
+	;; jr c,ERROR
+	;; ld (STEPBF+6),a
+	;; ld hl,4000
+	;; call TONE1K
+	;; ld hl,STEPBF
+	;; ld bc,00007h
+	;; call TAPEOUT
+	;; ld hl,4000
+	;; call TONE2K
+	;; call GETPTR
+	;; call TAPEOUT
+	;; ld hl,4000
+	;; call TONE2K
 ENDTAPE:
 	ld de,(STEPBF+4)
 ;                                       p 21
@@ -793,7 +832,7 @@ BRTEST:
 SETPT1:
 	exx	
 SETPT:
-	set 7,(hl)
+	set 6,(hl)
 	inc hl	
 	djnz SETPT
 	ret	
@@ -870,9 +909,9 @@ RGSTIN:
 	inc hl	
 	inc hl	
 LOCPT:
-	set 7,(hl)
+	set 6,(hl)
 	inc hl	
-	set 7,(hl)
+	set 6,(hl)
 	call FCONV
 	ret	
 	;
@@ -1058,20 +1097,26 @@ TERR:
 PERIOD:
 	ld de,l0000h
 LOOPH:
-	in a,(KIN)
+	in a,(0xFE)
 	inc de	
-	rla	
+	rla
+	rla
+	rla
+	rla
 	jr c,LOOPH
 	ld a,11111111B ; 0ffh
-	out (002h),a
+	out (0xFE),a
 LOOPL:
-	in a,(KIN)
+	in a,(0xFE)
 	inc de	
-	rla	
+	rla
+	rla
+	rla
+	rla
 	jr nc,LOOPL
 	ld a,01111111B ; 07fh
 	
-	out (002h),a
+	out (0xFE),a
 	ld a,e	
 	
 	cp MPERIOD
@@ -1197,6 +1242,7 @@ SCAN1:	exx	; Save primary registers
 	;; Display data
 	ld b, 0x02
 S1PR:	ld a,(hl)
+	call MPF2ACE
 	ld (de),a
 	inc hl
 	dec de
@@ -1209,6 +1255,7 @@ S1PR:	ld a,(hl)
 	;; Display address
 	ld b, 0x04
 S1PR2:	ld a,(hl)
+	call MPF2ACE
 	ld (de),a
 	inc hl
 	dec de
@@ -1259,14 +1306,15 @@ HEX7SG:
 	ret	
 	;
 HEX7:
- 	and 0x0F		; Isolate lower nibble
- 	cp 0x0A			; Check if 0...9 or A...F
- 	jr c, H7D		; Skip forward if 0...9
- 	add a, _A - _0 - 0x0A	; Modifiy for A...F
-H7D:	add a, _0		; Convert to ASCII rep
- 
- 	ret
-	;
+	push hl	
+	ld hl,SEGTAB
+	and 0x0F
+	add a,l	
+	ld l,a	
+	ld a,(hl)	
+	pop hl	
+	ret	
+
 RAMTEST:
 	ld hl,01800h
 	ld bc,00800h
@@ -1428,80 +1476,94 @@ K22:	defb	16h		;INS
 K23:	defb	1ch		;MOVE
 
 ;	org	079fh
-MPF_I:	defb	_1 ; 030h	;'1'
-		defb	_MINUS ; 002h	;'-'
-		defb	_MINUS ; 002h	;'-'
-		defb	_F ; 0fh		;'F'
-		defb	_P ; 1Fh		;'P'
-		defb	_U ; 0A1h	;'u'
-BLANK:	defb	_SPACE ; 0
-		defb	_SPACE ; 0
-		defb	_SPACE ; 0
-		defb	_SPACE ; 0
-ERR_:	defb	_SPACE ; 0
-		defb	_SPACE ; 0
-		defb	_R ; 3		;'R'
-		defb	_R ; 3		;'R'
-		defb	_E ; 8fh		;'E'
-		defb	_MINUS ; 2		;'-'
-SYS_SP:	defb	_P ; 1fh		;'P'
-		defb	_S ; 0aeh	;'S'
-		defb	_MINUS ; 02h		;'-'
-		defb	_S ; 0aeh	;'S'
-		defb	_Y ; 0b6h	;'Y'
-		defb	_S ; 0aeh	;'S'	
+;	org	079fh
+MPF_I:	defb	030h	;'1'
+		defb	002h	;'-'
+		defb	002h	;'-'
+		defb	0fh		;'F'
+		defb	1Fh		;'P'
+		defb	0B5h	;'u'
+BLANK:	defb	0
+		defb	0
+		defb	0
+		defb	0
+ERR_:	defb	0
+		defb	0
+		defb	3		;'R'
+		defb	3		;'R'
+		defb	8fh		;'E'
+		defb	2		;'-'
+SYS_SP:	defb	1fh		;'P'
+		defb	0aeh	;'S'
+		defb	02h		;'-'
+		defb	0aeh	;'S'
+		defb	0b6h	;'Y'
+		defb	0aeh	;'S'	
 ;                                       p 44
 
-ERR_SP: defb	_P ; 1fh		;'P'
-		defb	_S ; 0aeh	;'S'
-		defb	_MINUS ; 02		;'-'
-		defb	_R ; 03		;'R'
-		defb	_R ; 03		;'R'
-		defb	_E ; 8fh		;'E'
-		defb	_SPACE ; 0
+ERR_SP: defb	1fh		;'P'
+		defb	0aeh	;'S'
+		defb	02		;'-'
+		defb	03		;'R'
+		defb	03		;'R'
+		defb	8fh		;'E'
+		defb	0
 
-STEPTAB: defb	_S ; 0aeh	;'S'
-		defb	_E ; 08fh	;'E'
-		defb	_D ; 0b3h	;'D'
-		defb	_SPACE ; 0		;
-		defb	_S ; 0aeh	;'S'
-		defb	_D ; 0b3h	;'D'
-		defb	_SPACE ; 0		;
-		defb	_SPACE ; 0		;
-		defb	_F ; 0fh		;'F'
-		defb	_S ; 0aeh	;'S'
-		defb	_E ; 08fh	;'E'
-		defb	_SPACE ; 0		;
-		defb	_F ; 0fh		;'F'
-		defb	_SPACE ; 0		;
+STEPTAB: defb	0aeh	;'S'
+		defb	08fh	;'E'
+		defb	0b3h	;'D'
+		defb	0		;
+		defb	0aeh	;'S'
+		defb	0b3h	;'D'
+		defb	0		;
+		defb	0		;
+		defb	0fh		;'F'
+		defb	0aeh	;'S'
+		defb	08fh	;'E'
+		defb	0		;
+		defb	0fh		;'F'
+		defb	0		;
 
 REG_:	defb	0
-		defb	_SPACE 	; 0
-		defb	_MINUS ; 02h		;'-'
-		defb	_G ; 0beh	;'G'
-		defb	_E ; 08fh	;'E'
-		defb	_R ; 03h		;'R'
+		defb	0
+		defb	02h		;'-'
+		defb	0adh	;'G'
+		defb	08fh	;'E'
+		defb	03h		;'R'
 
-RGTAB:	db _F, _A ; defw	 3f0fh	;'AF'
-		db _C, _B ; defw	0a78dh	;'BC'
-		db _E, _D ; defw	0b38fh	;'DE'
-		db _L, _H ; defw	3785h	;'HL'
-		db _F+80h, _A+80h ; defw	3f4fh	;'AF.'
-		db _C+80h, _B+80h ; defw	0a7cdh	;'BC.'
-		db _D+80h, _E+80h ; defw	0b3cfh	;'DE.'
-		db _L+80h, _H+80h ; defw	37c5h	;'HL.'
-		db _X, _I ; defw	3007h	;'IX'
-		db _Y, _I ; defw	30b6h	;'IY'
-		db _P, _S ; defw	0ae1fh	;'SP'
-		db _F, _I ; defw	300fh	;'IF'
-		db _H, _F ; defw	0f37h	;'FH'
-		db _L ,_F ; defw	0f85h	;'FL'
-		db _H+80h, _F+80h ; defw	0f77h	;'FH.'
-		db _L+80h, _F+80h ; defw	0fc5h	;'FL.'
-																			
-;                                       p 45
+RGTAB:	defw	3f0fh	;'AF'
+		defw	0a78dh	;'BC'
+		defw	0b38fh	;'DE'
+		defw	3785h	;'HL'
+		defw	3f4fh	;'AF.'
+		defw	0a7cdh	;'BC.'
+		defw	0b3cfh	;'DE.'
+		defw	37c5h	;'HL.'
+		defw	3007h	;'IX'
+		defw	30b6h	;'IY'
+		defw	0ae1fh	;'SP'
+		defw	300fh	;'IF'
+		defw	0f37h	;'FH'
+		defw	0f85h	;'FL'
+		defw	0f77h	;'FH.'
+		defw	0fc5h	;'FL.'
 
-			defb	0fh		; 'F'
+SEGTAB:	db	0bdh	;'0'
+	db	30h		;'1'
+	db	09bh	;'2'
+	db	0bah	;'3'
+	db	36h		;'4'
+	db	0aeh	;'5'
+	db	0afh	;'6'
+	db	38h		;'7'
+	db	0bfh	;'8'
+	db	0beh	;'9'
+	db	3fh		;'A'
+	db	0a7h	;'B'
+	db	08dh	;'C'
+	db	0b3h	;'D'
+	db	08fh	;'E'
+	db	0fh		; 'F'
 
 	;;
 	;; Extra code for Jupiter Ace
@@ -1599,7 +1661,7 @@ L0376:  db    $00 ; $76                     ; V - v
         db    $19 ; $79                     ; Y - y
         db    $06 ; $36                     ; 6 - 6
         db    $05 ; $35                     ; 5 - 5
-        db    $1F ; $74                     ; T - t
+        db    $1E ; $74                     ; T - t
         db    $12 ; $67                     ; G - g
         db    $0C ; $63                     ; C - c
         db    $0B ; $62                     ; B - b
@@ -1607,7 +1669,7 @@ L0376:  db    $00 ; $76                     ; V - v
         db    $14 ; $75                     ; U - u
         db    $07 ; $37                     ; 7 - 7
         db    $04 ; $34                     ; 4 - 4
-        db    $1E ; $72                     ; R - r
+        db    $1F ; $72                     ; R - r
         db    $0F ; $66                     ; F - f
         db    $17 ; $78                     ; X - x
         db    $1D ; $6E                     ; N - n
@@ -2834,6 +2896,568 @@ L1D7B:  DEFB    %00000000
         DEFB    %01000010
 L1FFB:  DEFB    %00111100
 
+	;; Convert an MPF-1 character code to Ace character code
+	;; 
+	;; On entry:
+	;;   A - MPF-1 character code
+	;;
+	;; On exit:
+	;;   A - Ace character code
+	;;
+MPF2ACE:
+	;; Save registers
+	push bc
+	push de
+	push hl
+	
+	ld b,a			; Save code
+
+	and %01000000		; Isolate and rotate
+	sla a			; decimal point
+	
+	ld c,a			; Store for decimal point
+	ld a,b			; Recover char
+	and %10111111		; Remove decimal point
+	ld hl, MPF2ACEMAP	; Start of lookup table
+	ld d,0			; Offset to DE
+	ld e,a
+	add hl,de		
+	ld a,(hl)		; Retrieve value
+	
+	or c			; Restore decimal point
+
+	;; Restore registers
+	pop hl
+	pop de
+	pop bc
+	
+	ret
+
+	;; Reset user header to all spaces ready to be part-populated
+	;; with data for real header
+CLEARHEADER:
+	ld hl, U_FILE_HDR	; Start of header
+	ld de, U_FILE_HDR+1	; First destination
+	ld bc, 0x0019-1		; Length of header-1
+	ld a, _SPACE		;
+	ld (hl),a		; Fill in first byte
+	ldir			; Replicate across header
+
+	ret
+	
+	;; Convert (16-bit) word into ASCII format and write to memory
+	;; (high nibble first)
+	;;
+	;; On entry:
+	;;   DE - byte to be converted
+	;;   HL - address in which to store ASCII format (4 bytes)
+	;;
+	;; On exit:
+	;;   HL - address immediately after the stored ASCII format
+	;;   A, B - corrupted
+WORD2ASCII:
+	ld a,d
+	call BYTE2ASCII
+	ld a,e
+	call BYTE2ASCII
+
+	ret
+
+	;; Convert byte into ASCII format and write to memory (high
+	;; nibble first)
+	;;
+	;; On entry:
+	;;   A - byte to be converted
+	;;   HL - address in which to store ASCII format (2 bytes)
+	;;
+	;; On exit:
+	;;   HL - address immediately after the stored ASCII format
+	;;   A, B - corrupted
+BYTE2ASCII:
+	ld b,a			; Store copy for later
+
+	srl a			; Isolate high nibble
+	srl a
+	srl a
+	srl a
+	call NIBBLE2ASCII	; Convert it
+	ld (hl),a		; Store in B
+	inc hl
+	
+	ld a,b			; Retrieve original number
+	and 0x0F		; Isolate low nibble
+	call NIBBLE2ASCII	; Convert it
+	ld (hl),a		; Store in C
+	inc hl
+	
+	ret			; Done
+
+	;; Optimised conversion noted at
+	;; https://forum.vcfed.org/index.php?threads/binary-to-ascii-hex-conversion-rehash-of-an-old-idea.26636/
+NIBBLE2ASCII:
+	cp 0x0A
+	sbc a,0x69
+	daa
+
+	ret
+	
+	;; -------------------------------------------------------------
+	;; JUPITER ACE 'CASSETTE INTERFACE' ROUTINES
+	;;
+	;; Disassembled by George Beckett, July 2023.
+	;; -------------------------------------------------------------
+
+	;; -------------------------------------------------------------
+	;; Save bytes to tape
+	;;
+	;; On entry:
+	;;   HL - address of start of block to save (header at 2301h)
+	;;   DE - length of block (header length is 19h)
+	;;   C  - 00h = header; FFh = code block
+	;;
+	;; On exit:
+	;;   HL - corrupted
+	;; 
+	;; (Usually) in routine:
+	;;   A - used to hold bit pattern for tape port
+	;;   IY - address of next byte to save
+	;;   DE - length of data left to save
+	;;   B - counter for timing routines
+	;;   C - bit pattern to alternate tape outout
+	;;   H - current checksum 
+	;;   L - current byte to save
+	;; -------------------------------------------------------------
+WRITE_TO_TAPE:	
+L1820:  PUSH    IY		; Save IY
+
+        PUSH    HL		; Move start address for block
+        POP     IY		; into IY
+
+        LD      HL,L1892	; Set return address to 
+        PUSH    HL		; clean-up routine
+
+	;; Set HL for header (FC00h) or code block (E000h) to length
+	;; of leader tone. Length is based on 10000h - HL
+        LD      HL,$E000	; E000h is for code block
+        BIT     7,C		; Check if header or code block
+        JR      Z,L1832		; Skip forward if header
+        LD      H,$FC		; Adjust length, if code block
+
+	;; Save one more byte than block length (for block type)
+L1832:  INC     DE		
+        DEC     IY
+
+	;; Interrupts off to ensure precise timing
+        NOP 			; DI
+
+	;; 
+	;; Send tape pilot tone (typical half wavelength is 2017 T
+	;; states)
+	;; 
+        XOR     A	; (4) Bit pattern for tape port (0xFE, bit 3)
+
+	;; Pause for 1,965 T states
+L1837:  LD      B,$97		; (7) 97h = 151d
+L1839:  DJNZ    L1839           ; (13/8)
+
+	OUT     ($FE),A		; (11) Output to tape port
+        XOR     %00001000	; (7) Alternate bit 3 of Port 0xFE bit pattern
+	                        ; i.e., off-to-on or on-to-off
+
+	;; INC HL, setting Z flag as appropriate
+        INC     L		; (4)
+        JR      NZ,L1843        ; (12/7) Assume do not jump direct to
+				; L1837 to maintain timing
+        INC     H		; (4)
+L1843:  JR      NZ,L1837        ; (12/7) Repeat if non-zero
+
+	;;  At this point, A=0 and HL=0, and tape output is high
+
+	;;
+	;; Send sync signal (high part is 601 T states and low part is
+	;; 791 T states)
+	;;
+
+	;; Pause for 561 T states
+	LD      B,$2B		; (7)
+L1847:  DJNZ    L1847           ; (13/8)
+
+	;; Set tape output low
+        OUT     ($FE),A		; (11) Bit 3 = 0 
+        LD      L,C		; (4) Move header/ block indicator to L
+        LD      BC,$3B08	; (10) Set counter in B, and bit pattern
+				; for 0xFE (bit 3 on)
+
+	;; Pause for 762 T states
+L184F:  DJNZ    L184F           ; (13/8)
+
+	;; Output to tape port
+        LD      A,C		; (4) Set tape output high
+        OUT     ($FE),A         ; (11) bit 3 on
+
+	;; Set timing for next signal
+        LD      B,$38		; (7) Wait time for a '1'
+        JP      L188A           ; (10)
+
+	;; Entry point for second half of waveform for bit transmit
+L1859:  LD      A,C		; (4) Set tape output to high
+        BIT     7,B		; (7) Set zero flag (for second half of wave)
+
+	;; Entry point for first half of waveform for bit transmit
+L185C:  DJNZ    L185C           ; (13/8) Wait for B=38h loops
+
+        JR      NC,L1864	; (12/7) Jump forward if '0' bit
+
+        LD      B,$3D		; (7) Extend wait for '1' bit
+L1862:  DJNZ    L1862           ; (13/8) Note: does not affect Z flag
+
+L1864:  OUT     ($FE),A		; (11) Set tape output to low/high
+        LD      B,$3A		; (7) New wait time (+1)?
+
+        JP      NZ,L1859	; (10) Jump back if half-way through bit
+				; transmit
+        DEC     B		; (4) Reduce first-half wait for new bit
+        XOR     A		; (4) Set tape output low
+L186D:  RL      L		; (4) Move next bit into carry (and reset zero)
+        JP      NZ,L185C        ; (11) Jump if more data to send?
+
+	;; Next byte
+        DEC     DE		; (6) Reduce length of block 
+        INC     IY		; (10) Move to next address to send
+        LD      B,$2E		; (7)
+
+	;; Check if Break pressed
+        LD      A,$7F		; (7)
+        IN      A,($FE)		; (11)
+        RRA			; (4)
+        RET     NC		; (11/5) Return if Carry reset, via cleanup
+				; routine
+
+	;; Check if done (including sending the checksum); DE = FFFFh
+        LD      A,D		; (4)
+        CP      $FF		; (7)
+        RET     NC		; (11/5) Return, Carry reset
+
+	;; Check if all data sent
+        OR      E		; (4) Check if DE=0000h (A = D)
+        JR      Z,L188F         ; (12/7) Move to send checksum
+
+	;; Retrieve next byte to send and prepare to send first bit
+        LD      L,(IY+$00)	; (19)
+
+	;; Update checksum
+L1887:  LD      A,H 		; (4)
+        XOR     L		; (4)
+        LD      H,A		; (4)
+	
+L188A:  XOR     A		; (4) Set tape output low and set zero
+        SCF			; (4) Set marker for end of byte
+        JP      L186D           ; (10) Jump back
+
+; ---
+
+	;; Save checksum, at end of block
+L188F:  LD      L,H		; (4)
+        JR      L1887           ; (12)
+
+	;; 
+	;; Exit routine (accessed by pushing L1892 onto stack, so return
+	;; is via this routine)
+	;; 
+L1892:  POP     IY              ; (14) restore the original IY value
+                                ; so that words can be used
+                                ; gain.
+        EX      AF,AF'          ; (4) Save flag
+
+	;;
+	;; Send end marker
+	;;
+	
+	;; Tape output is high. Wait for 13*58+8 = 762 T states 
+        LD      B,$3B          	; (7)
+L1897:  DJNZ    L1897           ; (13/8) self-loop for delay.
+
+	;; Set tape output low
+        XOR     A		; (4)
+        OUT     ($FE),A		; (11)
+
+	;; Check for break
+        LD      A,$7F           ; (7) read the port $7FFE
+        IN      A,($FE)         ; (11) keyrows SPACE to V.
+        RRA			; (4)
+        nop                     ; EI (4) Enable Interrupts.
+
+        RET NC        ; (10) jump if SPACE pressed to Error 3
+                               	; 'BREAK pressed'.
+
+        EX      AF,AF'          ; (4) Restore flags
+        RET                     ; (10) Done
+
+	;; -------------------------------------------------------------
+	;; Read bytes from tape
+	;;
+	;; On entry:
+	;;   HL - destination address to write data to (header = 231Ah)
+	;;   DE - number of bytes to read (header = 19h)
+	;;   C - 00h = header; FFh = code block
+	;;   Carry Flag - Set = Load; Reset = Verify
+	;; 
+	;; On exit:
+	;;   Carry - Set = Success; Reset = Error
+	;;   AF, AF', BC, DE, HL - corrupted
+	;; -------------------------------------------------------------
+
+L18A7:  NOP			; DI Disable interrupts for accurate timing
+
+        PUSH    IY		; Save IY and move destination address
+        PUSH    HL 		; into IY
+        POP     IY
+
+        LD      HL,L1892	; Set return address to be clean-up
+        PUSH    HL 		; routine
+
+        LD      H,C		; H indicates header or code block
+        EX      AF,AF'          ; save user-supplied carry
+        XOR     A
+        LD      C,A		; Target signal indicator
+
+L18B5:  RET     NZ
+
+L18B6:  LD      L,$00		; Reset Counter for reading pilot tone
+
+	;; Attempt to read in pilot tone (following loop is repeated 256
+	;; times)
+L18B8:  LD      B,$B8		; (7) Timer 
+        CALL    L1911           ; (17) Read one wave length (high/ low)
+        JR      NC,L18B5        ; (12/7) Try again, if fails
+
+	;; Check length of pilot tone wavelength, which should be
+	;; approximately 4022 T states. Wavelength accepted if more than
+	;; ($DF-B8-1)*59 + 776 + 65 = 3,083 T-states.
+        LD      A,$DF		; (7)
+        CP      B		; (4) Is B > $DF?
+        JR      NC,L18B6        ; (12/7) Waveform too short, so start
+				; again
+
+        INC     L		; (4) Increase counter
+        JR      NZ,L18B8        ; (12/7) Check for 256 successive
+				; confirmed pilot tones, in which case
+				; move on to look for sync tone.
+
+	;; Attempt to read half of sync tone
+L18C7:  LD      B,$CF		; Reset timer
+        CALL    L1915           ; Read half waveform
+        JR      NC,L18B5        ; Start again if fails
+
+	;; Check length of half of sync tone < ($D8-$CF-1)*59 + 344 = 816 T
+	;; states)
+        LD      A,B
+        CP      $D8
+        JR      NC,L18C7        ; Wait for next waveform if too long
+				; (assume still receiving pilot tone)
+
+	;; Read second half of sync tone (do not worry about length)
+        CALL    L1915		; Read second half of waveform
+        RET     NC		; Throw error, if fails at this point
+
+	;; Read block-type byte into L (Z will be set if block type is
+	;; correct. H previously contains required block type, which is
+	;; zeroed by checksum update, if is correct)
+L18D7:	CALL    L18FC           ; Read byte from tape port
+        RET     NC		; Indicates failure
+        CCF			; Reset carry flag
+        RET     NZ		; Return if not right block-type
+
+        JR      L18F0		; Jump forward to load header/ code
+				; block
+
+	;; Check user-supplied Carry Flag and either load or verify byte
+	;; read
+L18DF:  EX      AF,AF'		; Retrieve user-supplied flags
+        JR      NC,L18E7        ; Jump forward, if verify
+        LD      (IY+$00),L	; Write byte to memory
+        JR      L18EC           ; Continue to next byte
+
+	;; Check byte read against value in memory
+L18E7:  LD      A,(IY+$00)
+        XOR     L
+        RET     NZ		; Return if not equal
+
+L18EC:  INC     IY		; Increment address
+        DEC     DE		; and decrement byte count
+        EX      AF,AF'		; Save user-supplied flag
+
+L18F0:  CALL    L18FC           ; Read byte from tape port
+
+        RET     NC		; Exit, if error (NC = fail)
+
+	;; Check if done (DE = 0)
+        LD      A,D
+        OR      E
+        JR      NZ,L18DF        ; Loop back to next byte
+
+        LD      A,H		; Checksum should be 00h, so carry will
+        CP      $01		; be set if so
+	
+L18FB:  RET
+
+	;; -------------------------------------------------------------
+	;; Read eight bits from tape port into L (bit 7 read first,
+	;; followed by bit 6, and so on, reading bit 0 last).
+	;; 
+	;; On entry:
+	;;   C - expected waveform -- %0001000 = high/ low ; %00000000 =
+	;;       low/ high
+	;;   H - current checksum 
+	;;
+	;; On exit:
+	;;   Carry Set - Success; Carry Reset - Failed
+	;;   L - byte read
+	;;   H - updated checksum
+	;;   A, B - corrupted
+	;; -------------------------------------------------------------
+
+L18FC:  LD      L,$01		; (7) Set marker bit to confirm when done
+L18FE:  LD      B,$C7		; (7) Set initial timing/ timeout
+
+        CALL    L1911           ; (17) Measure wavelength of next waveform
+        RET     NC		; (11/5) Return if failed
+
+	;; Timing is based on 776 + (E2h-C7h-1)*59 = 2,310 T states
+	;; (plus 54 T states for cost of processing each bit). Wavelegth
+	;; for '0' should be approx 1,596 T states and wavelength for
+	;; '1' should be approx 3,176 T states. Midpoint between two is
+	;; 2,366 T states. B value of E3h means wavelength no less than
+	;; 2,365 T states and B value of E2h means wavelength no more
+	;; than 2,384 T states.
+        LD      A,$E2		; (7) If B>$E2, then interpret as '1',
+        CP      B		; (4) otherwise '0': this is
+				; automatically reflected in Carry
+
+	;; Rotate bits read and check for end marker
+        RL      L		; (4) Rotate carry into next bit
+        JP      NC,L18FE	; (10) Loop back if not done. Assume
+				; using JP for consistent timing?
+
+	;; Update checksum
+        LD      A,H		; (4)
+        XOR     L		; (4)
+        LD      H,A		; (4)
+
+	;; Confirm success
+        SCF			; (4)
+	
+        RET			; (10)
+
+	;; -------------------------------------------------------------
+	;; Measure length of one period / half period of a tonal wave
+	;; from tape port. Entry point is L1911 for full wave or L1915
+	;; for half wave.
+	;;
+	;; On entry:
+	;;   B - initial value of timer (also specifies timeout)
+	;;   C (bit 4) - first output level to check (0=low; 1=high)
+	;; 
+	;; On exit
+	;;   B - length of whole/ half waveform read (relative to
+	;;       initial value)
+	;;   C - next output level (0=low; 1=high)
+	;;   Carry - True = success; False = fail
+	;;   A - corrupted
+	;;
+	;; Timing:
+	;;   Half wave - approx 344 + 59*(B_out - B_in - 1) T states,
+	;;               plus any time in the calling routine since last
+	;;               time tape port was read.
+	;;   Full wave - approx 776 + 59*(B_out - B_in - 1) T states,
+	;;               plus any time in the calling routine since last
+	;;               time tape port was read.
+	;; -------------------------------------------------------------
+L1911:  CALL    L1915		; (17) Routine is executed twice for
+				; full waveform
+        RET     NC		; (11/5) Return if measure of first half
+				; of waveform failed
+
+	;; 
+	;; Measure length of half of waveform
+	;;
+
+	;; Pause of 7 + (20-1)*16 + 11 = 322 T states
+L1915:  LD      A,$14		; (7)
+L1917:  DEC     A		; (4)
+        JR      NZ,L1917	; (12/7) Timing loop
+
+        AND     A		; (4) Reset carry flag
+
+	;; Iteration of following loop has runtime of 59/ 54 T states,
+	;; ignoring failure modes
+L191B:  INC     B		; (4) Increase counter
+        RET     Z		; (11/5) Exit, if timed out
+
+	;; Read tape signal (and check for break)
+        LD      A,$7F		; (7) Port 0x7FFE is bottom right row of
+				; keyboard
+        IN      A,($FE)		; (11) Read (keyboard and) tape port
+        RRA			; (4) Rotate status of Space into
+				; Carry. Also moves tape port from bit 5
+				; to bit 4
+        RET     NC		; (11/5) Exit if Space pressed
+
+        XOR     C		; (4) C contains expected input level
+				; (bit 4), so bit 4 will be reset if
+				; level continues
+        AND     %00010000	; (7) Check if signal has changed (NZ = yes)
+        JR      Z,L191B		; (12/7) Loop again, if not
+
+        LD      A,C		; (4) Flip expected input level
+        CPL			; (4)
+        LD      C,A		; (4)
+	
+        SCF			; (4) Indicates success/ good to proceed
+				; with measuring second half of waveform
+	RET			; (10)
+
+
+PAUSE:	ld bc, 0x000
+P_LOOP:	djnz P_LOOP
+	dec c
+	jr nz,P_LOOP
+	ret
+	
+MPF2ACEMAP:
+	db 0x20, 0x00, 0x2D, 0x52, 0x00, 0x00, 0x00, 0x58 ; 00-07
+	db 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x46 ; 08-0F
+	db 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 ; 10-17
+	db 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x50 ; 18-1F
+	db 0x00, 0x00, 0x00, 0x4E, 0x00, 0x00, 0x00, 0x00 ; 20-27
+	db 0x00, 0x00, 0x00, 0x4D, 0x00, 0x00, 0x00, 0x00 ; 28-2F
+	db 0x31, 0x00, 0x2B, 0x00, 0x00, 0x00, 0x34, 0x48 ; 30-37
+	db 0x37, 0x00, 0x00, 0x00, 0x00, 0x00, 0x51, 0x41 ; 38-3F
+	db 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 ; 40-47
+	db 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 ; 48-4F
+	db 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 ; 50-57
+	db 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 ; 58-5F
+	db 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 ; 60-67
+	db 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 ; 68-6F
+	db 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 ; 70-77
+	db 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 ; 78-7F
+	db 0x00, 0x00, 0x00, 0x28, 0x00, 0x4C, 0x00, 0x54 ; 80-87
+	db 0x00, 0x00, 0x5A, 0x00, 0x00, 0x43, 0x00, 0x45 ; 88-8F
+	db 0x49, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x4B ; 90-97
+	db 0x00, 0x00, 0x00, 0x32, 0x00, 0x00, 0x00, 0x00 ; 98-9F
+	db 0x00, 0x00, 0x29, 0x4F, 0x00, 0x00, 0x53, 0x42 ; A0-A7
+	db 0x00, 0x57, 0x00, 0x00, 0x00, 0x47, 0x35, 0x36 ; A8-AF
+	db 0x00, 0x4A, 0x00, 0x44, 0x00, 0x55, 0x58, 0x56 ; B0-B7
+	db 0x00, 0x00, 0x33, 0x00, 0x00, 0x30, 0x39, 0x38 ; B8-BF
+	db 0x2C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 ; C0-C7
+	db 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 ; C8-CF
+	db 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 ; D0-D7
+	db 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 ; D8-DF
+	db 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 ; E0-E7
+	db 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 ; E8-EF
+	db 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 ; F0-F7
+	db 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 ; F8-FF
+
 	;; Populate rest of ROM with $FF
 	ds BASE+0x4000-$
 	
@@ -2876,5 +3500,5 @@ IM1AD:		equ SYSVARS + $3f
 BEEPSET:	equ SYSVARS + $41
 FBEEP:		equ SYSVARS + $42
 TBEEP:		equ SYSVARS + $43
-
-	
+U_FILE_HDR:	equ SYSVARS + $45 ; User-specified file header
+S_FILE_HDR:	equ SYSVARS + $5E ; System-read file-header
