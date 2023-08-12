@@ -928,7 +928,7 @@ RGNADP:
 LOCRGBF:
 	ld a,(STMINOR)
 LOCRG:
-	ld hl,09fbch
+	ld hl,REGBF
 ;                                       p 29
 
 	add a,l	
@@ -1570,14 +1570,20 @@ SEGTAB:	db	0bdh	;'0'
 	;;
 
 	;; Mimic HALT plus MON key
-HALT:	ex (sp),hl		; Remove return address and replace with HL
+HALT:	push hl		; Remove return address and replace with HL
 	push de
 	push bc
 	push af
 
-call GETKEY
+CHECKKEY1:	
+	call GETKEY
 	cp 0xFF
-	jr z, HALT
+	jr nz, CHECKKEY1
+
+CHECKKEY2:	
+	call GETKEY
+	cp 0xFF
+	jr z, CHECKKEY2
 
 	;; Restore registers
 	pop af
