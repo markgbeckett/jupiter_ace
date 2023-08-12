@@ -1567,11 +1567,24 @@ SEGTAB:	db	0bdh	;'0'
 
 	;;
 	;; Extra code for Jupiter Ace
-	;; 
-HALT:	call GETKEY
+	;;
+
+	;; Mimic HALT plus MON key
+HALT:	ex (sp),hl		; Remove return address and replace with HL
+	push de
+	push bc
+	push af
+
+call GETKEY
 	cp 0xFF
 	jr z, HALT
 
+	;; Restore registers
+	pop af
+	pop bc
+	pop de
+	pop hl
+	
 	jp 0x0066
 
 GETKEY:	ld      bc,$FEFE                ; port address - B is also an 8 counter
