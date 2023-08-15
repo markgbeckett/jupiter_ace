@@ -1569,21 +1569,50 @@ SEGTAB:	db	0bdh	;'0'
 	;; Extra code for Jupiter Ace
 	;;
 
-	;; Mimic HALT plus MON key
-HALT:	push hl		; Remove return address and replace with HL
-	push de
+	;; Mimic HALT plus MON key. Wait for key press and then jump to
+	;; NMI so user can inspect the status of registers/ memory/
+	;; stack at point program was halted.
+	;;
+	;; 
+HALT:	push hl		; Save current register set (as will be
+	push de		; corrupted by GETKEY)
 	push bc
 	push af
 
+	;; Display HALT message
+	ld hl, HALT_MSG
+	ld de, 0x241C
+	ld b,4
+HALT_LP1:
+	ld a,(hl)
+	ld (de),a
+	inc hl
+	inc de
+	djnz HALT_LP1
+	
+	;; Wait for no key to be pressed (to prevent pre-existing key
+	;; press tripping the call to NMI early)
 CHECKKEY1:	
 	call GETKEY
-	cp 0xFF
+	inc a
 	jr nz, CHECKKEY1
 
+	;;  Now wait for keypress
 CHECKKEY2:	
 	call GETKEY
-	cp 0xFF
+	inc a
 	jr z, CHECKKEY2
+
+	;; Display HALT message
+	ld hl, HALT_CLR
+	ld de, 0x241C
+	ld b,4
+HALT_LP2:
+	ld a,(hl)
+	ld (de),a
+	inc hl
+	inc de
+	djnz HALT_LP2
 
 	;; Restore registers
 	pop af
@@ -1591,8 +1620,20 @@ CHECKKEY2:
 	pop de
 	pop hl
 	
-	jp 0x0066
+	jp NMI
 
+HALT_MSG:	db _H+0x80, _A+0x80, _L+0x80, _T+0x80
+HALT_CLR:	db _SPACE, _SPACE, _SPACE, _SPACE
+
+	
+	;; Read keypress
+	;;
+	;; On entry:
+	;;
+	;; On exit:
+	;;   A - character code of key pressed, or #FF if none/ invalid
+	;;       key press
+	;;   F, BC, DE, HL - corrupted
 GETKEY:	ld      bc,$FEFE                ; port address - B is also an 8 counter
 
         in      d,(c)                   ; read from port to D.
@@ -1611,27 +1652,33 @@ GETKEY:	ld      bc,$FEFE                ; port address - B is also an 8 counter
 
         ld      a,$28                   ; load A with 40 decimal.
 
-L0347:  add     a,$57                   ; gives $7F SYM, $57 SHIFT, or $2F
+L0347:  add     a,$57                   ; A = $2F (47d) - no modifier
+					;     $57 (87d) - Caps shift
+					;     $7F (127d) - Symbol shift 
 
 ; Since 8 will be subtracted from the initial key value there are three
 ; distinct ranges 0 - 39, 40 - 79, 80 - 119.
 
         ld      l,a                     ; save key range value in L
-        ld      a,e                     ; fetch the original port reading.
-        or      $03                     ; cancel the two shift bits.
+        ld      a,e                     ; fetch the original port reading
+        or      $03                     ; cancel the two shift bits (key
+					; press corresponds to bit being
+					; reset)
 
-        ld      e,$FF                   ; set a flag to detect multiple keys.
+        ld      e,$FF                   ; used as flag to detect
+					; multiple keys
 
 ; KEY_LINE the half-row loop.
-
-L034F:  cpl                             ; complement bits
+L034F:  cpl                             ; complement bits (key press
+					; now corresponds to a bit being
+					; set)
 
         and     $1F                     ; mask off the rightmost five key bits.
         ld      d,a                     ; save a copy in D.
         jr      z,L0362                 ; forward if no keys pressed to do the
                                         ; next row.
 
-        ld      a,l                     ; else fetch the key value
+        ld      a,l                     ; else fetch the key modifier
         inc     e                       ; test E for $FF
         jr      nz,L036B                ; forward if not now zero to quit
 
@@ -1663,7 +1710,7 @@ L036B:  ld      e,$FF                   ; signal invalid key.
 ; the normal exit checks if E holds a key and not $FF.
 
 L036D:  ld      a,e                     ; fetch possible key value.
-        cp     0xFF                     ; increment
+        cp     0xFF                     ; check for no key
         ret     z                       ; return if was $FF as original.
 
         ld      hl,L0376                ; else address KEY TABLE
@@ -2981,6 +3028,40 @@ WORD2ASCII:
 	call BYTE2ASCII
 
 	ret
+
+	;; Convert ASCII representation of a hexadecimal byte into
+	;; number. No error checking: requires a valid hexadecimal
+	;; number to be provided
+	;;
+	;; On entry:
+	;;   DE - ASCII number to convert (D - high nibble; E - low
+	;;        nibble)
+	;;
+	;; On exit:
+	;;   A - number interpretted
+	;;   D, E - corrupted
+ASCII2BYTE:
+	ld a,d			; Retrieve high nibble
+	call ASCII2NIBBLE	; Convert to hex
+	add a,a			; Multiple by 16
+	add a,a
+	add a,a
+	add a,a
+	ld d,a			; Save to D
+	
+	ld a,e			; Retrieve low nibble
+	call ASCII2NIBBLE	; Convert to hex
+	or d			; Combine with high nibble, leaving
+				; answer in A
+	ret
+
+ASCII2NIBBLE:
+	sub a,'0'		; Normalise based on ASCII code of '0'
+	cp 0x10			; Check if larger than 9 -- i.e., A...F
+	ret c			; Return if not
+	sub a,'A'-'0'-10	; Adjust for A...F
+	ret
+	
 
 	;; Convert byte into ASCII format and write to memory (high
 	;; nibble first)
