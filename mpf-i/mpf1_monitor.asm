@@ -685,52 +685,105 @@ ENDTAPE:
 ERROR:
 	ld ix,ERR_
 	jp SETSTO
-	;
-GRT:
-	ld hl,(STEPBF)
-	ld (TEMP),hl
-LEAD:
-	ld a,01000000B ; 040h
-	out (SEG7),a
-	ld hl,1000	
-LEAD1:
-	call PERIOD
-	jr c,LEAD
-	dec hl	
-	ld a,h	
-	or l	
-	jr nz,LEAD1
-LEAD2:
-	call PERIOD
-	jr nc,LEAD2
-	;
-	ld hl,STEPBF
-	ld bc,00007h
-	call TAPEIN
-	jr c,LEAD
-	ld de,(STEPBF)
-	call ADDRDP
-	ld b,096h
-FILEDP:
-	call SCAN1
-	djnz FILEDP
-	ld hl,(TEMP)
-	or a	
-	sbc hl,de
-	jr nz,LEAD
-	ld a,002h
-;                                       p 22
 
-	out (001h),a
-	call GETPTR
-	jr c,ERROR
-	call TAPEIN
-	jr c,ERROR
-	call SUM1
-	ld hl,STEPBF+6
-	cp (hl)	
-	jr nz,ERROR
-	jr ENDTAPE
+	;; Load file from tape
+GRT:
+	ld hl,(STEPBF)		; Retrieve file id
+	ld (TEMP),hl		; and store temporarily
+LEAD:
+	;; Init display
+	call INIT_DISP
+
+	;; Load header
+	ld hl,U_FILE_HDR	; Destination for file header
+	ld de, 0x0019		; Length of header
+	ld c,0x00		; Indicates header
+	scf			; Indicates load
+	call READ_FROM_TAPE
+
+	;; Try again, if not successful
+	jr nc, LEAD
+
+	;; Display name of file found
+	ld hl,U_FILE_HDR+1
+	ld de, 0x2401
+	ld bc,0x0004
+	ldir
+
+	call PAUSE
+	
+	;; Check if right file
+	ld hl, U_FILE_HDR+1
+	call GETNUM
+
+	ld hl,(TEMP)
+	and a
+	sbc hl,bc
+
+	ld a,h
+	or l
+	jr nz, LEAD
+	
+	;; Load code block
+	ld de, (U_FILE_HDR + 0x0B)
+	ld hl, (U_FILE_HDR + 0x0D)
+	ld c, 0xFF
+	scf
+	call READ_FROM_TAPE
+
+	jr nc, ERROR
+
+	ld de, (U_FILE_HDR + 0x0B)
+	ld hl, (U_FILE_HDR + 0x0D)
+	add hl,de
+	ex de,hl
+	jp ENDFUN
+	
+	
+;; 	ld a,01000000B ; 040h
+;; 	out (SEG7),a
+;; 	ld hl,1000	
+;; LEAD1:
+;; 	call PERIOD
+;; 	jr c,LEAD
+;; 	dec hl	
+;; 	ld a,h	
+;; 	or l	
+;; 	jr nz,LEAD1
+;; LEAD2:
+;; 	call PERIOD
+;; 	jr nc,LEAD2
+;; 	;
+;; 	ld hl,STEPBF
+;; 	ld bc,00007h
+;; 	call TAPEIN
+;; 	jr c,LEAD
+;; 	ld de,(STEPBF)
+;; 	call ADDRDP
+;; 	ld b,096h
+;; FILEDP:
+;; 	call SCAN1
+;; 	djnz FILEDP
+;; 	ld hl,(TEMP)
+;; 	or a	
+;; 	sbc hl,de
+;; 	jr nz,LEAD
+;; 	ld a,002h
+;; ;                                       p 22
+
+;; 	out (001h),a
+;; 	call GETPTR
+;; 	jr c,ERROR
+;; 	call TAPEIN
+;; 	jr c,ERROR
+;; 	call SUM1
+;; 	ld hl,STEPBF+6
+;; 	cp (hl)	
+;; 	jr nz,ERROR
+;; 	jr ENDTAPE
+
+	;; Align BRANCH
+	;; 	ds BASE+0x03B0-$
 	
 BRANCH:
 	ld e,(hl)	
@@ -3100,6 +3153,45 @@ NIBBLE2ASCII:
 	daa
 
 	ret
+
+	;; Read string containing four-digit hex number
+	;;
+	;; On entry:
+	;;   HL - address of start of string
+	;;
+	;; On exit:
+	;;   BC - value read
+	;;   HL - address beyond end of string
+	;;   DE, AF - corrupted
+GETNUM:	ld d,(hl)
+	inc hl
+	ld e,(hl)
+	inc hl
+	call ASCII2BYTE
+
+	ld b,a
+	
+	ld d,(hl)
+	inc hl
+	ld e,(hl)
+	inc hl
+	call ASCII2BYTE
+
+	ld c,a
+
+	ret
+	
+	;; Init display
+INIT_DISP:
+	ld hl, 0x2401
+	ld b,4
+
+GRT_POINT:
+	ld (hl),_FULLSTOP
+	inc hl
+	djnz GRT_POINT
+
+	ret
 	
 	;; -------------------------------------------------------------
 	;; JUPITER ACE 'CASSETTE INTERFACE' ROUTINES
@@ -3307,6 +3399,7 @@ L1897:  DJNZ    L1897           ; (13/8) self-loop for delay.
 	;;   AF, AF', BC, DE, HL - corrupted
 	;; -------------------------------------------------------------
 
+READ_FROM_TAPE:	
 L18A7:  NOP			; DI Disable interrupts for accurate timing
 
         PUSH    IY		; Save IY and move destination address
