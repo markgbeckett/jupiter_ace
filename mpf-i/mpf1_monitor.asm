@@ -13,9 +13,15 @@
 ; Assembled with z80pack/z80asm/z80asm -fh -v -l mpf1_u6_monitor.asm
 ; Reconstructed version v0.4
 
+	;; Recommended configuration parameters for different builds
+	;;   BASE    - 0x0000 (ROM-based); 0x4000 (RAM-based)
+	;;   UMEM    - 0x4000 (ROM-based); 0x8000 (RAM-based)
+	;;   ROMSIZE - 0x2000 (emulator use); 0x4000 (Minstrel 4th ROM
+	;;             page)
 BASE:	equ 0x0000
 UMEM:	equ 0x4000
-
+ROMSIZE:	equ 0x2000
+	
 	;; Load in Jupiter Ace character set encoding
 	include "..\3d_monster_maze\jupiter_chars.asm"
 P8255:		equ		0FFh	;8255 I control port
@@ -1216,7 +1222,7 @@ BITEND:
 	ret	
 	;
 
-	ds 0x05DE-$
+	ds BASE+0x05DE-$
 
 TONE1K:
 	ld c,F1KHZ
@@ -1239,7 +1245,7 @@ l05edh:
 	jr nz,SQWAVE
 	ret	
 	;
-	ds 0x05F6-$
+	ds BASE+0x05F6-$
 	
 RAMCHK:
 	ld a,(hl)	
@@ -1251,7 +1257,7 @@ RAMCHK:
 	cp (hl)	
 	ret	
 	;
-	ds 0x05FE-$		; Pad, so SCAN is properly aligned
+	ds BASE+0x05FE-$		; Pad, so SCAN is properly aligned
 SCAN:
 	push ix
 	ld hl,TEST
@@ -3652,7 +3658,7 @@ MPF2ACEMAP:
 	db 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 ; F8-FF
 
 	;; Populate rest of ROM with $FF
-	ds BASE+0x2000-$
+SPACE:	ds BASE + (ROMSIZE - $)
 	
 ;SYSTEM RAM AREA:
 USERSTK:	equ			UMEM-$80
