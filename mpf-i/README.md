@@ -14,7 +14,7 @@ The Monitor can be run in two modes:
 
 - Ideally, if you have an EPROM programmer and a suitable EPROM chip, you can write a new ROM image for your Minstrel 4th. This will give a more realistic (though still not perfect) experience.
 
-- Alternatively, you can load the monitor into RAM and run it from there. This works reasonably well though you need to be careful to avoid using zero-page restart instructions (such as `rst 0x38`) replacing them by suitable calls (something like, `call 0x4038`).
+- Alternatively, you can load the monitor into RAM and run it from there. This works reasonably well though you need to be careful to avoid using zero-page restart instructions (such as `rst 0x38`) replacing them by suitable calls (something like, `call 0x4038`). You also cannot use Reset in RAM version (see note below), so you can get stuck if your program has a bug and careers off into memory it is not meant to.
 
 Even the ROM version is missing some functionality, related to debugging and single-stepping. For this, the MPF-1 uses the non-maskable interrupt line and a timer provided by a [74LS90](https://www.ti.com/lit/ds/symlink/sn54ls90.pdf) integrated circuit. To generate an NMI, on the Minstrel 4th, would require an expansion device (such as an RC2014 card).
 
@@ -90,13 +90,19 @@ The easiest way to get familiar with the MPF-1 is to read the [user manual](http
 
 - Most examples in the user manual end with a `HALT` command. The manual tells you to press `MONI` to return to the Monitor. However, this will not work as `MONI` is not implemented. To work around this, I have provided an additional routine called `HALT` accessed at addresss 0x0800 (or 0x4800). Whenever you see a `HALT` instruction in the example code, replace this with `CALL HALT` (that is, CDh, 00h, 08h). This call will save the state of your program (registers, stack, etc.) and wait for you to press any key, at which point it will jump to the NMI routine (simulating the effect of pressing `MONI`).
 
-## Saving Your Work
+### Saving Your Work
 
 Saving to and loading from tape is supported. However, the port uses the Jupiter Ace code block format. This has the advantage that you can use files with either the MPF-1 ROM or the Jupiter Ace Forth ROM. Note, though, that the MPF-1 identifies files by four-digit hexadecimal numbers, You will only be able to load a code block written by the Jupiter Ace ROM if you use a four-character filename that corresponds to a hex number (e.g., `16384 128 BSAVE 1234` to write a code block that can be read into the MPF-1 Monitor using file id 1234h).
 
 If you are using the MPF-1 ROM image, you can load the examples from the User Manual from the audio files, named [`mpf1_um_example_1.wav`], etc.
 
-## Memory Map
+### Reset
+
+The MPF-1 interprets Restart (that is, a call to memory address 0x0000) as a warm restart of the Monitor, without affecting any user code or data in memory. This provides a useful way to recover from a bug that sends your program into memory it should not be accessing. Pressing the Reset key on the Minstrel 4th will stop your program and reset the Monitor. However, your program will still be in memory, assuming it has not been corrupted by the bug, so you can debug it.
+
+Note that this does not work for the RAM-based version of the Monitor. For this version, Reset will run the Ace ROM reset function which wipes the RAM, losing both user code and the monitor itself.
+
+### Memory Map
 
 The Minstrel 4th version of the Monitor has a simplified memory map compared to the MPF-1.
 
