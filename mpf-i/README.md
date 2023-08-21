@@ -6,13 +6,13 @@ The MPF-1 was intended to teach people about microprocessors, machine-code progr
 
 The MPF-1 shipped with 2 kilobytes of RAM and a built-in monitor program for entering, running, and debugging machine-code programs. Multitech also provided a range of expansion options including a BASIC interpretter ROM, memory expansion, EPROM programmer, and a thermal printer. 
 
-For more information on the Micro Professor, see [https://electrickery.nl/comp/mpf1](https://electrickery.nl/comp/mpf1).
+For more information on the Micro-Professor, see [https://electrickery.nl/comp/mpf1](https://electrickery.nl/comp/mpf1).
 
 MPF-1s do occasionally appear on auction sites, but tend to be very expensive. Given this, I thought it would be good if people could experience some of the fun of using an MPF-1 without the expense. To this end, I have ported the MPF-1 monitor to the Minstrel 4th (or Minstrel 4D).
 
 The Monitor can be run in two modes:
 
-- Ideally, if you have an EPROM programmer and a suitable EPROM, you can write a new ROM image for your Minstrel 4th. This will give a more realistic (though not perfect) experience.
+- Ideally, if you have an EPROM programmer and a suitable EPROM chip, you can write a new ROM image for your Minstrel 4th. This will give a more realistic (though still not perfect) experience.
 
 - Alternatively, you can load the monitor into RAM and run it from there. This works reasonably well though you need to be careful to avoid using zero-page restart instructions (such as `rst 0x38`) replacing them by suitable calls (something like, `call 0x4038`).
 
@@ -33,6 +33,7 @@ Once installed, check the jumpers/ switches are configured to select the correct
 
 The ROM image 'mpf-1.rom' has been padded out to 16 kilobytes to fill the ROM bank, even though the Minstrel 4th only addresses the first 8 kilobytes. This means the ROM will probably not work on an emulator (which will expect an 8-kilobyte ROM). To this end, I have also provided 'mpf-1_8k.rom', which is confirmed to work on the EightyOne emulator, at least.
 
+![](mpf-1.png "Power-on screen")
 
 ### RAM-based
 
@@ -71,36 +72,45 @@ The real MPF-1 has just 36 keys and a seven-character display. Because of this, 
 - X -- `DEL`
 - R -- `TAPE RD`
 - T -- `TAPE WR`
-- Reset -- `RESET` (not implemented)
+- Reset -- `RESET` (ROM version only)
 
-The key mapping is displayed on-screen whenever you are using the MPF-1 Monitor, so no need to memorise the list above.
+The key mapping is displayed on-screen whenever you are using the MPF-1 Monitor, so there is no need to memorise the list above.
 
-The easiest way to get familiar with the MPF-1 is to read the [user manual](https://electrickery.hosting.philpem.me.uk/comp/mpf1/doc/MPF-1_usersManual.pdf), but bearing in mind the following changes for the Minstrel 4D environment:
+The easiest way to get familiar with the MPF-1 is to read the [user manual](https://electrickery.hosting.philpem.me.uk/comp/mpf1/doc/MPF-1_usersManual.pdf), but bearing in mind the following changes for the Minstrel 4th environment:
 
 - User memory starts at 0x4000 (ROM version)/ 0x8000 (RAM version), not 0x1800. E.g., pressing `PC` when you first start the monitor will report the user's PC as being 0x4000 (or 0x8000).
 
 - Where the Micro-Professor uses fullstops to indicate status on the display, the Minstrel 4th port uses inverse video.
 
-- The following keys are not implemented: `STEP`, `MONI`, `INTR`, `USER KEY`. These require additional hardware to implement. However, some of the functionality of `MONI` can be accessed via the `HALT` routine, described below.
+- The following keys are not implemented: `STEP`, `MONI`, `INTR`, and `USER KEY`. These require additional hardware to implement. However, some of the functionality of `MONI` can be accessed via the `HALT` routine, described below.
 
 - While you can set and clear a breakpoint, this is ignored (again, breakpoints require extra hardware to implement).
 
-- Most examples in the user manual end with a `HALT` command. The manual tells you to press `MONI` to return to the Monitor. However, this will not work as `MONI` is not implemented. To work around this, I have provided an additional routine called `HALT` accessed at addresss 0x0800. Whenever you see a `HALT` instruction in the example code, replace this with `CALL HALT` (that is, CDh, 00h, 08h). This call will save the state of your program (registers, stack, etc.) and wait for you to press any key, at which point it will jump to the NMI routine (simulating the effect of pressing `MONI`).
+- The Monitor subroutines noted in Section 5 of the User Manual work, though for the RAM version of the monitor, entry points are all offset by 0x4000 -- e.g., the entry point for SCAN is 0x45FE (not 0x0624, as noted in the manual).
 
-- The Monitor subroutines noted in Section 5 of the User Manual mostly work, though for the RAM version of the monitor, entry points are all offset by 0x4000 -- e.g., the entry point for SCAN1 is 0x4624 (not 0x0624, as noted in the manual).
+- Most examples in the user manual end with a `HALT` command. The manual tells you to press `MONI` to return to the Monitor. However, this will not work as `MONI` is not implemented. To work around this, I have provided an additional routine called `HALT` accessed at addresss 0x0800 (or 0x4800). Whenever you see a `HALT` instruction in the example code, replace this with `CALL HALT` (that is, CDh, 00h, 08h). This call will save the state of your program (registers, stack, etc.) and wait for you to press any key, at which point it will jump to the NMI routine (simulating the effect of pressing `MONI`).
 
 ## Saving Your Work
 
 Saving to and loading from tape is supported. However, the port uses the Jupiter Ace code block format. This has the advantage that you can use files with either the MPF-1 ROM or the Jupiter Ace Forth ROM. Note, though, that the MPF-1 identifies files by four-digit hexadecimal numbers, You will only be able to load a code block written by the Jupiter Ace ROM if you use a four-character filename that corresponds to a hex number (e.g., `16384 128 BSAVE 1234` to write a code block that can be read into the MPF-1 Monitor using file id 1234h).
 
+If you are using the MPF-1 ROM image, you can load the examples from the User Manual from the audio files, named [`mpf1_um_example_1.wav`], etc.
+
 ## Memory Map
 
-The Minstrel 4th version of the Monitor has a simplified memory map compared to the MPF-1. User RAM either starts at 0x4000 (ROM version) or 0x8000 (RAM version). The system variables are stored from 0x3C00 (ROM version) or 0x7C00 (RAM version), the system stack grows down from the start of user memory and the user stack (by default) grows down from the start of user memory-0x80 (that is, either 0x3F80 or 0x7F80).
+The Minstrel 4th version of the Monitor has a simplified memory map compared to the MPF-1.
 
+The monitor program is located either at 0x0000 (ROM version) or 0x4000 (RAM version). For the RAM version, the usual Ace Forth ROM resides at 0x0000.
+
+User RAM either starts at 0x4000 (ROM version) or 0x8000 (RAM version). The system variables are stored from 0x3C00 (ROM version) or 0x7C00 (RAM version), the system stack grows down from the start of user memory and the user stack (by default) grows down from the start of user memory-0x80 (that is, either 0x3F80 or 0x7F80).
+
+As in the Minstrel 4th, the display map is stored at 0x2400 (and 0x2000) and the character set RAM is stored at 0x2800 (or 0x2C00). 
 
 ## Implementation
 
-The port is based on a commented disassembly by fjkraan@electrickery.nl, which is available from [https://electrickery.nl/comp/mpf1](https://electrickery.nl/comp/mpf1). I have made the following changes to the source code so that the Monitor will run in the upper memory of the Minstrel 4th:
+The port is based on a commented disassembly by fjkraan@electrickery.nl, which is available from [https://electrickery.nl/comp/mpf1](https://electrickery.nl/comp/mpf1). The modified source code should be able to be assembled with any standard Z80 cross-assembler (I use [the non-GNU z80asm](https://savannah.nongnu.org/projects/z80asm/)).
+
+I have made the following changes to the source code so that the Monitor will run in the upper memory of the Minstrel 4th:
 
 - Set all of the port address for to 8255 chip to 0xFF, as this version does not use that chip and I wanted to avoid interfering with peripherals.
 
