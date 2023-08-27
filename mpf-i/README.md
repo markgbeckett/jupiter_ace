@@ -62,17 +62,17 @@ The real MPF-1 has just 36 keys and a seven-character display. Because of this, 
 - U - `DATA`
 - I - `REG`
 - Shift-K - `+`
-- Shift-J -- `-`
-- G -- `GO`
-- J -- `SBR` (not very functional)
-- K -- `CBR` (not very functional)
-- M -- `MOVE`
-- N -- `RELA`
-- Z -- `INS`
-- X -- `DEL`
-- R -- `TAPE RD`
-- T -- `TAPE WR`
-- Reset -- `RESET` (ROM version only)
+- Shift-J - `-`
+- G - `GO`
+- J - `SBR` (not very functional)
+- K - `CBR` (not very functional)
+- M - `MOVE`
+- N - `RELA`
+- Z - `INS`
+- X - `DEL`
+- R - `TAPE RD`
+- T - `TAPE WR`
+- Reset - `RESET` (ROM version only)
 
 The key mapping is displayed on-screen whenever you are using the MPF-1 Monitor, so there is no need to memorise the list above.
 
@@ -86,15 +86,15 @@ The easiest way to get familiar with the MPF-1 is to read the [user manual](http
 
 - While you can set and clear a breakpoint, this is ignored (again, breakpoints require extra hardware to implement).
 
-- The Monitor subroutines noted in Section 5 of the User Manual work, though for the RAM version of the monitor, entry points are all offset by 0x4000 -- e.g., the entry point for SCAN is 0x45FE (not 0x0624, as noted in the manual).
+- The Monitor subroutines noted in Section 5 of the User Manual work, though for the RAM version of the monitor, entry points are all offset by 0x4000 -- e.g., the entry point for SCAN is 0x45FE (not 0x05FE, as noted in the manual).
 
-- Most examples in the user manual end with a `HALT` command. The manual tells you to press `MONI` to return to the Monitor. However, this will not work as `MONI` is not implemented. To work around this, I have provided an additional routine called `HALT` accessed at addresss 0x0800 (or 0x4800). Whenever you see a `HALT` instruction in the example code, replace this with `CALL HALT` (that is, CDh, 00h, 08h). This call will save the state of your program (registers, stack, etc.) and wait for you to press any key, at which point it will jump to the NMI routine (simulating the effect of pressing `MONI`).
+- Most examples in the user manual end with a `HALT` command. The manual tells you to press `MONI` to return to the Monitor. However, this will not work as `MONI` is not implemented. To work around this, I have provided an additional routine called `HALT` accessed at addresss 0x0800 (or 0x4800). Whenever you see a `HALT` instruction in the example code, replace this with `CALL HALT` (that is, 0xCD, 0x00, 0x08). This call will save the state of your program (registers, stack, etc.) and wait for you to press any key, at which point it will jump to the NMI routine (simulating the effect of pressing `MONI`).
 
 ### Saving Your Work
 
 Saving to and loading from tape is supported. However, the port uses the Jupiter Ace code block format. This has the advantage that you can use files with either the MPF-1 ROM or the Jupiter Ace Forth ROM. Note, though, that the MPF-1 identifies files by four-digit hexadecimal numbers, You will only be able to load a code block written by the Jupiter Ace ROM if you use a four-character filename that corresponds to a hex number (e.g., `16384 128 BSAVE 1234` to write a code block that can be read into the MPF-1 Monitor using file id 1234h).
 
-If you are using the MPF-1 ROM image, you can load the examples from the User Manual from the audio files, named [`mpf1_um_example_1.wav`], etc.
+If you are using the MPF-1 ROM image, you can load the examples from the User Manual from the audio files, named [mpf1_um_example_1.wav], etc.
 
 ### Reset
 
@@ -116,7 +116,7 @@ As in the Minstrel 4th, the display map is stored at 0x2400 (and 0x2000) and the
 
 The port is based on a commented disassembly by fjkraan@electrickery.nl, which is available from [https://electrickery.nl/comp/mpf1](https://electrickery.nl/comp/mpf1). The modified source code should be able to be assembled with any standard Z80 cross-assembler (I use [the non-GNU z80asm](https://savannah.nongnu.org/projects/z80asm/)).
 
-I have made the following changes to the source code so that the Monitor will run in the upper memory of the Minstrel 4th:
+I have made the following changes to the source code so that the Monitor will run on the Minstrel 4th:
 
 - Set all of the port address for to 8255 chip to 0xFF, as this version does not use that chip and I wanted to avoid interfering with peripherals.
 
