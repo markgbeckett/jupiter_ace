@@ -7,7 +7,7 @@ ifeq ($(OS),Windows_NT)
 	ERASE = rm
 endif
 
-SRC = mpf1_monitor.asm 
+SRC = mpf1_monitor.asm prt-ib.asm
 HEADERS = 
 
 OBJS = $(SRC:.asm=.bin)
@@ -15,7 +15,7 @@ OBJS = $(SRC:.asm=.bin)
 all: $(OBJS)
 
 %.bin:	%.asm Makefile $(HEADERS)
-	$(ASM) $(AFLAGS) -o $@ $< > $(basename $<).sym 2>&1 
+	$(ASM) $(AFLAGS) -o $@ $< > $*.sym 2>&1 
 
 clean:
 	$(ERASE) *.bin *.sym
