@@ -1,5 +1,5 @@
 ASM = z80asm
-AFLAGS = -L > mpf1_monitor.sym 2>&1
+AFLAGS = -L
 
 ifeq ($(OS),Windows_NT)
 	ERASE = erase
@@ -7,7 +7,7 @@ ifeq ($(OS),Windows_NT)
 	ERASE = rm
 endif
 
-SRC = mpf1_monitor.asm
+SRC = mpf1_monitor.asm 
 HEADERS = 
 
 OBJS = $(SRC:.asm=.bin)
@@ -15,7 +15,7 @@ OBJS = $(SRC:.asm=.bin)
 all: $(OBJS)
 
 %.bin:	%.asm Makefile $(HEADERS)
-	$(ASM) $(AFLAGS) $<
+	$(ASM) $(AFLAGS) -o $@ $< > $(basename $<).sym 2>&1 
 
 clean:
-	$(ERASE) a.bin
+	$(ERASE) *.bin *.sym
