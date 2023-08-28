@@ -7,14 +7,14 @@ ifeq ($(OS),Windows_NT)
 	ERASE = rm
 endif
 
-SRC = mpf1_monitor.asm prt-ib.asm
+SRC = mpf1_monitor.asm
 HEADERS = 
 
 OBJS = $(SRC:.asm=.bin)
 
 all: $(OBJS)
 
-%.bin:	%.asm Makefile $(HEADERS)
+%.bin:	%.asm Makefile $(HEADERS) prt-ib.asm
 	$(ASM) $(AFLAGS) -o $@ $< > $*.sym 2>&1 
 
 clean:

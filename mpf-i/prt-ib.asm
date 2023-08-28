@@ -5,7 +5,6 @@
 ;   wget https://electrickery.hosting.philpem.me.uk/comp/mpf1/doc/prt-ib.hex
 ;   xxd -r -p prt-ib.hex > prt-ib.bin
 ;   z80dasm -g 0x6000 -a -l prt-ib.bin
-	include "mpf1_monitor.sym"
 	
 PR_PRT_1:	equ 0cah
 PR_PRT_2:	equ 0cbh
@@ -29,8 +28,6 @@ NEXT_ADDR:	equ 05ffeh
 ;; FBEEP:		equ 01ff1h
 ;; TBEEP:		equ 01ff2h
 	
-	org	06000h
-
 	;; System RAM areas
 	;;
 	;; PRT-MPF stack grows down from 1F7Ch
@@ -40,6 +37,7 @@ NEXT_ADDR:	equ 05ffeh
 	;;
 	;; Z80 Disassembler
 	;; 
+DISASSEM:
 	ld sp,PRT_STACK		;6000
 	xor a
 	ld (SCROLL_COUNT),a
@@ -521,6 +519,7 @@ l62f6h:
 	;;
 	;; Memory Dump Utility
 	;; 
+DUMP_MEM:
 	ld sp,PRT_STACK		;6300
 	xor a
 	ld (SCROLL_COUNT),a
@@ -671,8 +670,8 @@ PLINEFD:
 	pop de
 	pop hl
 	ret
-	
-	ds 0x63d9-$
+
+	;; 	ds BASE+0x13d9-$
 	
 ;; 	ld a,080h		;63c4
 ;; 	out (PR_PRT_1),a		;63c6
@@ -1052,7 +1051,7 @@ l65f1h:
 ;; 	djnz l6612h		;6618
 	jp l65d7h		;661a
 
-	ds $661d-$
+	ds BASE+$0161d-$
 l661dh:
 	call sub_665bh		;661d - Pause
 	call sub_665bh		;6620 - Pause
@@ -3103,58 +3102,3 @@ l6fb8h:
 	or 0feh		;6ffc
 	sub l			;6ffe
 	rst 38h			;6fff
-
-SCROLL:	ld a,(SCROLL_COUNT)
-	inc a
-	cp 0x10
-	jr nz, SCROLL_CONT
-
-	ld hl, SCROLL_MSG
-	ld de, 0x241A
-	ld b,6
-SCROLL_LP1:
-	ld a,(hl)
-	ld (de),a
-	inc hl
-	inc de
-	djnz SCROLL_LP1
-
-SCROLLKEY:	
-	call GETKEY
-	inc a
-	jr z, SCROLLKEY
-
-	ld hl, SCROLL_CLR
-	ld de, 0x241A
-	ld b,6
-SCROLL_LP2:	
-	ld a,(hl)
-	ld (de),a
-	inc hl
-	inc de
-	djnz SCROLL_LP2
-
-	xor a
-SCROLL_CONT:	
-	ld (SCROLL_COUNT),a
-
-	ld de, 0x2400+8*0x20
-	ld hl, 0x2400+9*0x20
-	ld bc, 0x1E0
-	ldir
-
-	ld bc,0x0020
-	ld de,0x2400+0x17*0x20
-	ld hl,SCROLL_LN
-	ldir
-	
-	ld hl,0x2400+0x17*0x20+0x06
-	ld (NEXT_CELL),hl
-
-	call PAUSE
-	
-	ret
-
-SCROLL_MSG:	db _S+0x80, _C+0x80, _R+0x80, _O+0x80, _L+0x80, _L+0x80
-SCROLL_CLR:	db _SPACE, _SPACE, _SPACE, _SPACE, _SPACE, _SPACE
-SCROLL_LN:	db _SPACE, _SPACE, _SPACE, _SPACE, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE, _SPACE, _SPACE, _SPACE

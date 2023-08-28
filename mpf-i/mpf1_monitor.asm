@@ -20,6 +20,7 @@
 	;;             page)
 BASE:	equ 0x0000
 UMEM:	equ 0x4000
+MONSIZE:	equ 0x1000
 ROMSIZE:	equ 0x2000
 	
 	;; Load in Jupiter Ace character set encoding
@@ -3657,7 +3658,64 @@ MPF2ACEMAP:
 	db 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 ; F0-F7
 	db 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 ; F8-FF
 
+SCROLL:	ld a,(SCROLL_COUNT)
+	inc a
+	cp 0x10
+	jr nz, SCROLL_CONT
+
+	ld hl, SCROLL_MSG
+	ld de, 0x241A
+	ld b,6
+SCROLL_LP1:
+	ld a,(hl)
+	ld (de),a
+	inc hl
+	inc de
+	djnz SCROLL_LP1
+
+SCROLLKEY:	
+	call GETKEY
+	inc a
+	jr z, SCROLLKEY
+
+	ld hl, SCROLL_CLR
+	ld de, 0x241A
+	ld b,6
+SCROLL_LP2:	
+	ld a,(hl)
+	ld (de),a
+	inc hl
+	inc de
+	djnz SCROLL_LP2
+
+	xor a
+SCROLL_CONT:	
+	ld (SCROLL_COUNT),a
+
+	ld de, 0x2400+8*0x20
+	ld hl, 0x2400+9*0x20
+	ld bc, 0x1E0
+	ldir
+
+	ld bc,0x0020
+	ld de,0x2400+0x17*0x20
+	ld hl,SCROLL_LN
+	ldir
+	
+	ld hl,0x2400+0x17*0x20+0x06
+	ld (NEXT_CELL),hl
+
+	call PAUSE
+	
+	ret
+
+SCROLL_MSG:	db _S+0x80, _C+0x80, _R+0x80, _O+0x80, _L+0x80, _L+0x80
+SCROLL_CLR:	db _SPACE, _SPACE, _SPACE, _SPACE, _SPACE, _SPACE
+SCROLL_LN:	db _SPACE, _SPACE, _SPACE, _SPACE, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE, _SPACE, _SPACE, _SPACE
+
 	;; Populate rest of ROM with $FF
+	include "prt-ib.asm"
+
 SPACE:	ds BASE + (ROMSIZE - $)
 	
 ;SYSTEM RAM AREA:
