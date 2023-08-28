@@ -14,8 +14,8 @@ PR_PRT_2:	equ 0cbh
 ;; SCAN:		equ 005feh
 ;; TONE:		equ 005e4h
 	
-PRT_STACK:	equ 05f7ch	; 01f7ch
-LINE_BUFFER:	equ 05f7dh	; 01f7dh
+PRT_STACK:	equ UMEM-0x0100	; 01f7ch
+LINE_BUFFER:	equ 0x3C00	; 01f7dh
 NEXT_CELL:	equ 0x9999	; Temp location
 SCROLL_COUNT:	equ 0x9998
 NEXT_ADDR:	equ 05ffeh
@@ -99,7 +99,7 @@ l605eh:
 	ld (05ff7h),a		;6065
 	call sub_6451h		;6068
 	call PR_ADDR		;606b
-	ld (05f84h),a		;606e
+	ld (LINE_BUFFER+7),a	;606e - Space after instruction op-code
 	ld a,(ix+000h)		;6071
 	push af			;6074
 	call GETN		;6075
@@ -185,7 +185,7 @@ l60f0h:
 l60fah:				; Standard instruction
 	ld hl,l689eh		;60fa
 l60fdh:
-	ld de,05f85h		;60fd
+	ld de,LINE_BUFFER+8		;60fd
 	ld (05ff5h),de		;6100
 	cp 0ffh		;6104
 	jr nz,l6123h		;6106
@@ -200,7 +200,7 @@ l610fh:
 	jr l6129h		;6115
 l6117h:
 	ld a,053h		;6117
-	ld de,05f85h		;6119
+	ld de,LINE_BUFFER+8		;6119
 	ld (de),a			;611c
 	inc de			;611d
 	ld hl,l62a0h		;611e
@@ -215,7 +215,7 @@ l6129h:
 	ld a,(05ff7h)		;612d
 	and a			;6130
 	jr z,l614ah		;6131
-	ld hl,05f85h		;6133
+	ld hl,LINE_BUFFER+8		;6133
 l6136h:
 	ld a,(hl)			;6136
 l6137h:
