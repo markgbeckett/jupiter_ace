@@ -9,24 +9,19 @@
 PR_PRT_1:	equ 0cah
 PR_PRT_2:	equ 0cbh
 	
-;; IGNORE:		equ 003bbh
-;; STEPDP:		equ 0043ah
-;; SCAN:		equ 005feh
-;; TONE:		equ 005e4h
-	
 PRT_STACK:	equ UMEM-0x0100	; 01f7ch
-LINE_BUFFER:	equ 0x3C00	; 01f7dh
-NEXT_CELL:	equ 0x9999	; Temp location
-SCROLL_COUNT:	equ 0x9998
-NEXT_ADDR:	equ 05ffeh
-;; STMINOR:	equ 01fe3h
-;; STATE:		equ 01fe4h
-;; DISPBF:		equ 01fb6h
-;; STEPBF:		equ 01fafh
-;; ADSAVE:		equ 01fdeh
-;; BEEPSET:	equ 01ff0h
-;; FBEEP:		equ 01ff1h
-;; TBEEP:		equ 01ff2h
+LINE_BUFFER:	equ 0x3C00	; 01f7dh (35 bytes long)
+PR_VAR_1:	equ 0x3CE4	; Was 01ff4
+PR_VAR_2:	equ 0x3CE5	; Was 01ff5
+PR_VAR_3:	equ 0x3CE7	; Was 01ff7
+PR_VAR_4:	equ 0x3CE8	; Was 01ff8
+PR_VAR_5:	equ 0x3CE9	; Was 01ff9
+PR_VAR_6:	equ 0x3CEB	; Was 01ffa
+PR_VAR_7:	equ 0x3CED	; Was 01ffc
+PR_VAR_8:	equ 0x3CEE	; Was 01ffd
+NEXT_ADDR:	equ 0x3CEF      ; Was 01ffe
+SCROLL_COUNT:	equ 0x3CF1	; Scroll counter
+NEXT_CELL:	equ 0x3CF2	; Temp location
 	
 	;; System RAM areas
 	;;
@@ -94,9 +89,9 @@ l6047h:
 	call sub_6032h		;605b - ???
 l605eh:
 	xor a			;605e
-	ld (05ff4h),a		;605f
-	ld (05ff8h),a		;6062
-	ld (05ff7h),a		;6065
+	ld (0x3CF4),a		;605f
+	ld (PR_VAR_4),a		;6062
+	ld (PR_VAR_3),a		;6065
 	call sub_6451h		;6068
 	call PR_ADDR		;606b
 	ld (LINE_BUFFER+7),a	;606e - Space after instruction op-code
@@ -174,7 +169,7 @@ l60dah:				; ED instruction
 	ld hl,l6e19h		;60e6
 	jr l60f0h		;60e9
 l60ebh:				; FD instruction
-	ld (05ff7h),a		;60eb
+	ld (PR_VAR_3),a		;60eb
 	jr l60a3h		;60ee
 l60f0h:
 	push af			;60f0
@@ -186,7 +181,7 @@ l60fah:				; Standard instruction
 	ld hl,l689eh		;60fa
 l60fdh:
 	ld de,LINE_BUFFER+8		;60fd
-	ld (05ff5h),de		;6100
+	ld (0x3CF5),de		;6100
 	cp 0ffh		;6104
 	jr nz,l6123h		;6106
 	ld a,052h		;6108
@@ -212,7 +207,7 @@ l6129h:
 	ld a,00dh		;6129
 	inc de			;612b
 	ld (de),a			;612c
-	ld a,(05ff7h)		;612d
+	ld a,(PR_VAR_3)		;612d
 	and a			;6130
 	jr z,l614ah		;6131
 	ld hl,LINE_BUFFER+8		;6133
@@ -257,7 +252,7 @@ l6165h:
 	jr z,l6181h		;616c
 	cp 0e1h		;616e
 	jr nc,l6179h		;6170
-	ld a,(05ff4h)		;6172
+	ld a,(0x3CF4)		;6172
 	cp 0e1h		;6175
 	jr nc,l617ah		;6177
 l6179h:
@@ -265,7 +260,7 @@ l6179h:
 l617ah:
 	inc hl			;617a
 	ld a,d			;617b
-	ld (05ff4h),a		;617c
+	ld (0x3CF4),a		;617c
 	jr l615ah		;617f
 l6181h:
 	ld a,007h		;6181
@@ -297,7 +292,7 @@ l61aeh:
 	call sub_6393h		;61ae
 l61b1h:
 	ld a,005h		;61b1
-	ld (05ff8h),a		;61b3
+	ld (PR_VAR_4),a		;61b3
 	jp l6255h		;61b6
 l61b9h:
 	ld a,(ix+001h)		;61b9
@@ -306,7 +301,7 @@ l61b9h:
 	push ix		;61bf
 	bit 7,a		;61c1
 	jr nz,l61e3h		;61c3
-	ld ix,(05ffeh)		;61c5
+	ld ix,(NEXT_ADDR)		;61c5
 	add ix,bc		;61c9
 	push ix		;61cb
 	pop bc			;61cd
@@ -326,7 +321,7 @@ l61ceh:
 l61e3h:
 	push hl			;61e3
 	neg		;61e4
-	ld hl,(05ffeh)		;61e6
+	ld hl,(NEXT_ADDR)		;61e6
 	ld c,a			;61e9
 	sbc hl,bc		;61ea
 	ld c,l			;61ec
@@ -358,7 +353,7 @@ l6208h:
 	jr nz,l6217h		;6214
 	xor a			;6216
 l6217h:
-	ld (05ff8h),a		;6217
+	ld (PR_VAR_4),a		;6217
 	call sub_608bh		;621a
 	jp z,l6502h		;621d
 	jr l6255h		;6220
@@ -374,7 +369,7 @@ l622dh:
 	jr nc,l6235h		;6231
 	jr l622dh		;6233
 l6235h:
-	ld (05ff8h),a		;6235
+	ld (PR_VAR_4),a		;6235
 	jr l624eh		;6238
 sub_623ah:
 	ld hl,l62a6h		;623a
@@ -386,12 +381,12 @@ sub_623ah:
 l6247h:
 	ex af,af'			;6247
 	xor a			;6248
-	ld (05ff4h),a		;6249
+	ld (0x3CF4),a		;6249
 	ex af,af'			;624c
 	dec hl			;624d
 l624eh:
 	and 05fh		;624e
-	ld de,(05ff5h)		;6250
+	ld de,(0x3CF5)		;6250
 l6254h:
 	ld (de),a			;6254
 l6255h:
@@ -420,10 +415,10 @@ l6274h:
 	ret z			;627c
 	cp 0e1h		;627d
 	ret nc			;627f
-	ld a,(05ff8h)		;6280
+	ld a,(PR_VAR_4)		;6280
 	and a			;6283
 	ret nz			;6284
-	ld a,(05ff4h)		;6285
+	ld a,(0x3CF4)		;6285
 	and a			;6288
 	jr z,l629ah		;6289
 l628bh:
@@ -467,7 +462,7 @@ l62b4h:
 	jr nc,l624eh		;62b6
 	inc b			;62b8
 	ld a,b			;62b9
-	ld (05ff4h),a		;62ba
+	ld (0x3CF4),a		;62ba
 	jr l62ach		;62bd
 sub_62bfh:
 	ld bc,00006h		;62bf
@@ -724,11 +719,11 @@ l6416h:
 	jr l63e7h		;6419
 sub_641bh:
 	ld c,a			;641b
-	ld hl,01ffdh		;641c
+	ld hl,PR_VAR_8		;641c
 	call 003eeh		;641f
 	ld a,c			;6422
 	rld		;6423
-	ld a,(01ffdh)		;6425
+	ld a,(PR_VAR_8)		;6425
 	call 00671h		;6428
 	ld hl,01fb7h		;642b
 	ld a,(hl)			;642e
@@ -757,9 +752,9 @@ sub_6451h:
 	sbc hl,bc		;6459
 	ld c,l			;645b
 	ld b,h			;645c
-	ld hl,(05ffeh)		;645d
+	ld hl,(NEXT_ADDR)		;645d
 	add hl,bc			;6460
-	ld (05ffeh),hl		;6461
+	ld (NEXT_ADDR),hl		;6461
 	ld (USERSTK-2),ix		;6464
 	ret			;6468
 l6469h:
@@ -774,7 +769,7 @@ l6469h:
 	jr nc,l6441h		;647d
 l647fh:
 	ld hl,LINE_BUFFER		;647f
-	ld (01ff9h),hl		;6482
+	ld (PR_VAR_5),hl		;6482
 l6485h:
 	ld a,(ix+000h)		;6485
 	cp 0ffh		;6488
@@ -788,7 +783,7 @@ l6498h:
 	and 07fh		;6498
 	call sub_6536h		;649a
 	ld a,00dh		;649d
-	ld de,(01ff9h)		;649f
+	ld de,(PR_VAR_5)		;649f
 	ld (de),a			;64a3
 	ld hl,01f82h		;64a4
 l64a7h:
@@ -844,9 +839,9 @@ l64d9h:
 	jr l64b7h		;64eb
 l64edh:
 	call sub_6562h		;64ed
-	ld a,(01ffdh)		;64f0
+	ld a,(PR_VAR_8)		;64f0
 	dec a			;64f3
-	ld (01ffdh),a		;64f4
+	ld (PR_VAR_8),a		;64f4
 	jp z,l6402h		;64f7
 	inc ix		;64fa
 	jp l647fh		;64fc
@@ -879,11 +874,11 @@ l6526h:
 	ret			;6527
 	
 l6528h:
-	ld de,(01ff9h)		;6528
+	ld de,(PR_VAR_5)		;6528
 	call sub_63b7h		;652c
 	ld (de),a			;652f
 	inc de			;6530
-	ld (01ff9h),de		;6531
+	ld (PR_VAR_5),de		;6531
 	ret			;6535
 sub_6536h:
 	cp 010h		;6536
@@ -906,21 +901,21 @@ sub_6536h:
 	ex de,hl			;654d
 	and a			;654e
 	sbc hl,de		;654f
-	ld de,(01ff9h)		;6551
+	ld de,(PR_VAR_5)		;6551
 	ld a,l			;6555
 	ld l,c			;6556
 	ld h,b			;6557
 	ld c,a			;6558
 	ld b,000h		;6559
 	ldir		;655b
-	ld (01ff9h),de		;655d
+	ld (PR_VAR_5),de		;655d
 	ret			;6561
 
 
 	;; Print LINE BUFFER
 sub_6562h:
 	xor a			;6562
-	ld (05ffch),a		;6563
+	ld (PR_VAR_7),a		;6563
 
 	;; Check we have complete line
 	ld b,016h		;6566
@@ -939,7 +934,7 @@ l656bh:
 	ldir		;657c
 	
 	ld a,001h		;657e
-	ld (05ffch),a		;6580
+	ld (PR_VAR_7),a		;6580
 	ld a,00dh		;6583
 	ld hl,USERSTK-0x0D	;6585
 	ld (hl),a		;6588
@@ -951,11 +946,11 @@ l6590h:
 	inc hl			;6591
 	djnz l6590h		;6592
 l6594h:
-	ld (05ffah),ix		;6594
+	ld (PR_VAR_6),ix		;6594
 	ld ix,LINE_BUFFER	;6598
 l659ch:
 	call MTPPRT		;659c - Print Char
-	ld hl,05ffch		;659f
+	ld hl,PR_VAR_7		;659f
 	ld a,(hl)		;65a2
 	and a			;65a3
 	jr z,l661dh		;65a4
@@ -968,12 +963,16 @@ l659ch:
 	;; of the line buffer
 	;; 
 	;; 
+MTPPRT1:
+	call PLINEFD
 MTPPRT:
 	push af			;65ac
 	push bc			;65ad
 	push de			;65ae
 	push hl			;65af
 l65b0h:
+	;; xor a
+	;; ld (SCROLL_COUNT),a
 ;; 	in a,(PR_PRT_2)		;65b0
 ;; 	bit 1,a			;65b2
 ;; 	jr z,l65bch		;65b4
@@ -1059,7 +1058,7 @@ l661dh:
 	nop
 	;; xor a			;6623
 	;; out (PR_PRT_1),a		;6624
-	ld ix,(05ffah)		;6626
+	ld ix,(PR_VAR_6)		;6626
 	ret			;662a
 sub_662bh:
 	exx			;662b

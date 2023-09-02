@@ -16,6 +16,7 @@
 	;; Recommended configuration parameters for different builds
 	;;   BASE    - 0x0000 (ROM-based); 0x4000 (RAM-based)
 	;;   UMEM    - 0x4000 (ROM-based); 0x8000 (RAM-based)
+	;;   MONSIZE - 0x1000 (Monitor contained to first 4K)
 	;;   ROMSIZE - 0x2000 (emulator use); 0x4000 (Minstrel 4th ROM
 	;;             page)
 BASE:	equ 0x0000
@@ -3758,4 +3759,3 @@ BEEPSET:	equ SYSVARS + $41
 FBEEP:		equ SYSVARS + $42
 TBEEP:		equ SYSVARS + $43
 U_FILE_HDR:	equ SYSVARS + $45 ; User-specified file header
-S_FILE_HDR:	equ SYSVARS + $5E ; System-read file-header
