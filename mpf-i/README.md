@@ -4,11 +4,11 @@ The Micro-Professor (MPF-1) is a single-board, Z80-based computer produced by Mu
 
 The MPF-1 was intended to teach people about microprocessors, machine-code programming, and electronics. The computer came housed in a book-like case with a seven-segment LED display and a 32-key keypad.
 
-The MPF-1 shipped with 2 kilobytes of RAM and a built-in monitor program for entering, running, and debugging machine-code programs. Multitech also provided a range of expansion options including a BASIC interpretter ROM, memory expansion, EPROM programmer, and a thermal printer. 
+The MPF-1 shipped with 2 kilobytes of RAM and a built-in monitor program for entering, running, and debugging machine-code programs. Multitech also provided a range of expansion options including a BASIC interpretter ROM, memory expansion, EPROM programmer, and a thermal printer (the software for which included a Z80 disassembler). 
 
 For more information on the Micro-Professor, see [https://electrickery.nl/comp/mpf1](https://electrickery.nl/comp/mpf1).
 
-MPF-1s do occasionally appear on auction sites, but tend to be very expensive. Given this, I thought it would be good if people could experience some of the fun of using an MPF-1 without the expense. To this end, I have ported the MPF-1 monitor to the Minstrel 4th (or Minstrel 4D).
+MPF-1s do occasionally appear on auction sites, but tend to be very expensive. Given this, I thought it would be good if people could experience some of the fun of using an MPF-1 without the expense. To this end, I have ported the MPF-1 monitor to the Minstrel 4th (or Minstrel 4D). I also ported the thermal-printer ROM (creating a virtual, on-screen printer), so people could access the disassembler and memory-dump features.
 
 The Monitor can be run in two modes:
 
@@ -18,7 +18,7 @@ The Monitor can be run in two modes:
 
 Even the ROM version is missing some functionality, related to debugging and single-stepping. For this, the MPF-1 uses the non-maskable interrupt line and a timer provided by a [74LS90](https://www.ti.com/lit/ds/symlink/sn54ls90.pdf) integrated circuit. To generate an NMI, on the Minstrel 4th, would require an expansion device (such as an RC2014 card).
 
-Except for this, the port works well: the various Monitor subroutines, listed in the [User Manual](https://electrickery.hosting.philpem.me.uk/comp/mpf1/doc/MPF-1_usersManual.pdf), are available and, based on my testing so far, the various projects and examples (aslo in the User Manual) work as expected.
+Except for this, the port works well: the various Monitor subroutines, listed in the [User Manual](https://electrickery.hosting.philpem.me.uk/comp/mpf1/doc/MPF-1_usersManual.pdf) and the [PRT-MPF-IP User Manual](https://electrickery.hosting.philpem.me.uk/comp/mpf1/doc/prt-mpf-IP.pdf), are available and, based on my testing so far, the various projects and examples (also in the User Manual) work as expected.
 
 
 ## Loading the MPF-1 Monitor on your Minstrel 4th
@@ -111,6 +111,30 @@ The monitor program is located either at 0x0000 (ROM version) or 0x4000 (RAM ver
 User RAM either starts at 0x4000 (ROM version) or 0x8000 (RAM version). The system variables are stored from 0x3C00 (ROM version) or 0x7C00 (RAM version), the system stack grows down from the start of user memory and the user stack (by default) grows down from the start of user memory-0x80 (that is, either 0x3F80 or 0x7F80).
 
 As in the Minstrel 4th, the display map is stored at 0x2400 (and 0x2000) and the character set RAM is stored at 0x2800 (or 0x2C00). 
+
+### Printer Support
+
+A popular add-on for the Micro Professor was a small thermal printer called the PRT-MPF-IP printer. A key advantage of the printer was the ability to have more than the six characters of the LED display visible at once -- the printer software (supplied on a ROM) included both a Z80 disassembler and a memory-dump utility, which made it much easier to check and debug your code.
+
+I have also ported the printer software to run on the Minstrel 4th, exploiting the mostly unused 24x32 charater display of the Minstrel 4th to act as a virtual printer.
+
+The disassebler and memory-dump utility work as described in the manual, with a couple of exceptions:
+
+- The entry point for the routines has changed. The disassembler is access from address 0x1020 and the memory-dump utility is access from address 0x1324.
+
+- The virtual printer stops every 16 lines (that is, one screenfull) and prompts you to press any key to scroll.
+
+I have not ported the BASIC programming ROM and so have also not updated the BASIC listing routine in the printer ROM. You can call the routine (at address 0x141b) but it will produce nonesense.
+
+Some of the other routines, documented in the user guide are also available, though are possibly less useful:
+
+- `PLINE` can be accessed at 0x168E to scroll the virtual printer by two lines
+
+- `PLINEFD` can be accessed at 0x13EC to issue a line feed
+
+- `MTPPRD` can be accessed at 0x15C7 to print a line of text 
+
+Note: Printer support is only usable on the ROM-based version of the monitor. While you can call the various printer routines in the RAM-based version, there is no way to exit back to the monitor, as this requires a soft reset.
 
 ## Implementation
 
