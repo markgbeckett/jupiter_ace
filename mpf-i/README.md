@@ -116,7 +116,7 @@ As in the Minstrel 4th, the display map is stored at 0x2400 (and 0x2000) and the
 
 A popular add-on for the Micro Professor was a small thermal printer called the PRT-MPF-IP printer. A key advantage of the printer was the ability to have more than the six characters of the LED display visible at once -- the printer software (supplied on a ROM) included both a Z80 disassembler and a memory-dump utility, which made it much easier to check and debug your code.
 
-I have also ported the printer software to run on the Minstrel 4th, exploiting the mostly unused 24x32 charater display of the Minstrel 4th to act as a virtual printer.
+I have also ported the printer software to run on the Minstrel 4th (ROM-based version, only), exploiting the mostly unused 24x32 charater display of the Minstrel 4th to act as a virtual printer.
 
 The disassebler and memory-dump utility work as described in the manual, with a couple of exceptions:
 
@@ -134,11 +134,11 @@ Some of the other routines, documented in the user guide are also available, tho
 
 - `MTPPRD` can be accessed at 0x15C7 to print a line of text, but you must first call `PLINEFD` to initialise/ reinitialise the virtual printer immediately before each and every call to `MTPPRD`. On exit from `PLINEFD`, the HL register pair will be set to the start address for the printer buffer, which must be passed to `MTPPRD`. Failing to initialise the virtual printer will likely crash the MPF-1.
 
-*Note:* Printer support is only usable on the ROM-based version of the monitor. While you can call the various printer routines in the RAM-based version, there is no way to exit back to the monitor, as this requires a soft reset.
+*Note:* Printer support is only usable on the ROM-based version of the monitor. While you can call the various printer routines in the RAM-based version (adding 0x4000 to the relevant call address), there is no way to exit back to the monitor, as this requires a soft reset.
 
 ## Implementation
 
-The port is based on a commented disassembly by fjkraan@electrickery.nl, which is available from [https://electrickery.nl/comp/mpf1](https://electrickery.nl/comp/mpf1). The modified source code should be able to be assembled with any standard Z80 cross-assembler (I use [the non-GNU z80asm](https://savannah.nongnu.org/projects/z80asm/)).
+The port of the monitor is based on a commented disassembly by fjkraan@electrickery.nl, which is available from [https://electrickery.nl/comp/mpf1](https://electrickery.nl/comp/mpf1). The modified source code should be able to be assembled with any standard Z80 cross-assembler (I use [the non-GNU z80asm](https://savannah.nongnu.org/projects/z80asm/)).
 
 I have made the following changes to the source code so that the Monitor will run on the Minstrel 4th:
 
@@ -161,6 +161,8 @@ I have made the following changes to the source code so that the Monitor will ru
 - Written a conversion routine to translate between the MPF-1 character encoding (corresponds to bit pattern required for LED display) and the standard Ace character encoding.
 
 - Modified tape routines to use Jupiter Ace tape interface, which has been commented and copied into the MPF-1 ROM.
+
+The port of the printer PRT-MPF-1P ROM is based on a disassembled version of the HEX file, which is also available from [https://electrickery.nl/comp/mpf1](https://electrickery.nl/comp/mpf1). I have added modest comments to the resulting source file [prt-ib.asm], though plan to improve these comments over time.
 
 ## Further reading
 
