@@ -138,7 +138,7 @@ Some of the other routines, documented in the user guide are also available, tho
 
 ## Implementation
 
-The port of the monitor is based on a commented disassembly by fjkraan@electrickery.nl, which is available from [https://electrickery.nl/comp/mpf1](https://electrickery.nl/comp/mpf1). The modified source code should be able to be assembled with any standard Z80 cross-assembler (I use [the non-GNU z80asm](https://savannah.nongnu.org/projects/z80asm/)).
+The port of the monitor, [mpf1_monitor.asm](mpf1_monitor.asm), is based on a commented disassembly by fjkraan@electrickery.nl, which is available from [https://electrickery.nl/comp/mpf1](https://electrickery.nl/comp/mpf1). The modified source code should be able to be assembled with any standard Z80 cross-assembler (I use [the non-GNU z80asm](https://savannah.nongnu.org/projects/z80asm/)). I have included a [Makefile](Makefile) to help with this.
 
 I have made the following changes to the source code so that the Monitor will run on the Minstrel 4th:
 
