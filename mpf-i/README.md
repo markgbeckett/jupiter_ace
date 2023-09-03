@@ -162,7 +162,7 @@ I have made the following changes to the source code so that the Monitor will ru
 
 - Modified tape routines to use Jupiter Ace tape interface, which has been commented and copied into the MPF-1 ROM.
 
-The port of the printer PRT-MPF-1P ROM is based on a disassembled version of the HEX file, which is also available from [https://electrickery.nl/comp/mpf1](https://electrickery.nl/comp/mpf1). I have added modest comments to the resulting source file [prt-ib.asm], though plan to improve these comments over time.
+The port of the printer PRT-MPF-1P ROM is based on a disassembled version of the HEX file (available from [https://electrickery.nl/comp/mpf1](https://electrickery.nl/comp/mpf1)). I have added modest comments to the resulting source file [prt-ib.asm](prt-ib.asm), though plan to improve these comments over time.
 
 ## Further reading
 
