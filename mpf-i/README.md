@@ -98,7 +98,7 @@ If you are using the MPF-1 ROM image, you can load the examples from the User Ma
 
 ### Reset
 
-The MPF-1 interprets Restart (that is, a call to memory address 0x0000) as a warm restart of the Monitor, without affecting any user code or data in memory. This provides a useful way to recover from a bug that sends your program into memory it should not be accessing. Pressing the Reset key on the Minstrel 4th will stop your program and reset the Monitor. However, your program will still be in memory, assuming it has not been corrupted by the bug, so you can debug it.
+The MPF-1 interprets Restart (that is, a call to memory address 0x0000) as a warm restart of the Monitor, without affecting any user code or data in memory. This provides a useful way to recover from a bug that sends your program into memory it should not be accessing. Pressing the Reset key on the Minstrel 4th will stop your program and reset the Monitor. However, your program will still be in memory, so you can debug it (assuming it has not been corrupted by the bug).
 
 Note that this does not work for the RAM-based version of the Monitor. For this version, Reset will run the Ace ROM reset function which wipes the RAM, losing both user code and the monitor itself.
 
@@ -132,9 +132,9 @@ Some of the other routines, documented in the user guide are also available, tho
 
 - `PLINEFD` can be accessed at 0x13EC to issue a line feed
 
-- `MTPPRD` can be accessed at 0x15C7 to print a line of text 
+- `MTPPRD` can be accessed at 0x15C7 to print a line of text, but you must first call `PLINEFD` to initialise/ reinitialise the virtual printer immediately before each and every call to `MTPPRD`. On exit from `PLINEFD`, the HL register pair will be set to the start address for the printer buffer, which must be passed to `MTPPRD`. Failing to initialise the virtual printer will likely crash the MPF-1.
 
-Note: Printer support is only usable on the ROM-based version of the monitor. While you can call the various printer routines in the RAM-based version, there is no way to exit back to the monitor, as this requires a soft reset.
+*Note:* Printer support is only usable on the ROM-based version of the monitor. While you can call the various printer routines in the RAM-based version, there is no way to exit back to the monitor, as this requires a soft reset.
 
 ## Implementation
 
