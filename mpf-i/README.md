@@ -35,6 +35,10 @@ The ROM image 'mpf-1.rom' has been padded out to 16 kilobytes to fill the ROM ba
 
 ![](mpf-1.png "Power-on screen")
 
+#### Note for Minstrel 4D
+
+The MPF-1 ROM works with the Minstrel 4D too. However, before switching to the ROM image, you should boot the Minstrel 4D in the standard Ace Forth ROM and disable the Menu system and SD card (from `Menu`, `Settings`). Sadly, the MPF-1 does not work with the SD card on the Minstrel 4D: you will need to use either a cassette player or a PC with a sound card to load and save your programs.
+
 ### RAM-based
 
 Power on your Minstrel 4th and load the mmonitor from 'mpf.tap' (or 'mpf.wav') using the following command (case of filename is important):
@@ -118,11 +122,13 @@ A popular add-on for the Micro Professor was a small thermal printer called the 
 
 I have also ported the printer software to run on the Minstrel 4th (ROM-based version, only), exploiting the mostly unused 24x32 charater display of the Minstrel 4th to act as a virtual printer.
 
-The disassebler and memory-dump utility work as described in the manual, with a couple of exceptions:
+The disassembler and memory-dump utility work as described in the manual, with a couple of exceptions:
 
 - The entry point for the routines has changed. The disassembler is access from address 0x1020 and the memory-dump utility is access from address 0x1324.
 
 - The virtual printer stops every 16 lines (that is, one screenfull) and prompts you to press any key to scroll.
+
+![](mpf-2.png "Built-in disassembler")
 
 I have not ported the BASIC programming ROM and so have also not updated the BASIC listing routine in the printer ROM. You can call the routine (at address 0x141b) but it will produce nonesense.
 
