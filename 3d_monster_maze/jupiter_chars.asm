@@ -1,5 +1,6 @@
 	;; Jupiter Ace character-set codes (mostly ASCII)
 
+_NULL:			equ $00
 _CHEQUERBOARD:		equ $01     
 _TOPWHITEBOTTOMCHEQUER:	equ $02     
 _TOPCHEQUERBOTTOMWHITE:	equ $03
@@ -9,6 +10,7 @@ _TOPLEFTBLACK:		equ $12
 _TOPRIGHTBLACK:		equ $11     
 _TOPBLACK:		equ $13
 _APOSTROPHE:		equ $27
+_OPENBRACKET:		equ $28
 _CLOSEBRACKET: 		equ $29
 _ASTERISK:		equ $2A
 _PLUS:			equ $2B
