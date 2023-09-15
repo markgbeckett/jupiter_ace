@@ -24,7 +24,7 @@ INIT:
 	res 3,(IX+0x3E)	
 
 	;; Reset scroll count
-	xor a
+	ld a, 0x16
 	ld (SCROLL_COUNT),a
 	
 	ret
@@ -102,5 +102,3 @@ EXIT:	ld ix, 0x3C00
 	pop bc			; Balance stack
 	
 	jp (iy)
-
-

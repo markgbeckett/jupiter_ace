@@ -1,7 +1,5 @@
 	org 0x6800
 
-ADDRESS:	equ 0x7ff8
-	
 	;; Lookup table of lengths of different Z80 instructions
 
 TYPES: 
@@ -658,6 +656,8 @@ SKIP_CONT:
 
 	ds 0x6ae2-$
 	
+ADDRESS:	dw 0x0000
+	
 DATA:
 	;;  Control sequence entries XCDDDNNN, where:
 	;;     NNN - routine number
@@ -666,28 +666,73 @@ DATA:
 	;;     X - terminal sequence
 	
 	;; Sequence for X=0 (see sub-sequences for details)
-DATA_S0:			; SPLIT (on H)
+DATA_S0:			
+	db $00					; SPLIT (on H)
+	dw DATA_S0a, DATA_S0b, DATA_S0c, DATA_S0d
+	dw DATA_S0e, DATA_S0f, DATA_S0g, DATA_S0h
+	
+DATA_S0a:	; Relative jumps and assorted ops
+	db $06,$17			   	; SKIP ($17)
+	db $9A					; LIST-G (4)
+	db _N,_O,_P+$80			
+	db _E,_X,_SPACE,_A,_F,_COMMA,_A,_F,_APOSTROPHE+$80
+	db _D,_J,_N,_Z,_SPACE,$02+$80	
+	db _J,_R,_SPACE,$02+$80
+						; TERMINATE
+	db $09,_J,_R+$80			; LITERAL (inc space)
+	db $64					; SELECT-G (C(G)) (inc comma)
+	db $81, $02+$80				; LITERAL
+						; TERMINATE
+
+DATA_S0b:	; 16-bit load immediate/ add
+	db $07,$07		   	; K-SKIP
+	db $09,_L,_D+$80		; LITERAL (inc space)
+	db $4C				; SELECT-G (s(G))
+	db $81,$03+$80			; LITERAL
+					; TERMINATE
 	db $00
-	db $F3,$6A,$12,$6B,$22		; $6AE2 ..j.k"
-	db $6B,$52,$6B,$DD,$6C,$E2,$6C,$5E	; $6AE8 kRk.l.l^
-	db $6B,$64,$6B,$06,$17,$9A,$4E,$4F	; $6AF0 kdk...NO
-	db $D0,$45,$58,$20,$41,$46,$20,$41	; $6AF8 .EX AF A
-	db $46,$A7,$44,$4A,$4E,$5A,$20,$82	; $6B00 F.DJNZ .
-	db $4A,$52,$20,$82,$09,$4A,$D2,$64	; $6B08 JR ..J.d
-	db $81,$82,$07,$07,$09,$4C,$C4,$4C	; $6B10 .....L.L
-	db $81,$83,$00,$41,$41,$44,$44,$20	; $6B18 ...AADD 
-	db $81,$8C,$09,$4C,$C4,$BA,$28,$42	; $6B20 ...L..(B
-	db $43,$29,$2C,$C1,$41,$2C,$28,$42	; $6B28 C),.A,(B
-	db $43,$A9,$28,$44,$45,$29,$2C,$C1	; $6B30 C.(DE),.
-	db $41,$2C,$28,$44,$45,$A9,$28,$03	; $6B38 A,(DE.(.
-	db $29,$2C,$81,$01,$2C,$28,$03,$A9	; $6B40 ),..,(..
-	db $28,$03,$29,$2C,$C1,$41,$2C,$28	; $6B48 (.),.A,(
-	db $03,$A9,$07,$05,$09,$49,$4E,$C3	; $6B50 .....IN.
-	db $8C,$09,$44,$45,$C3,$8C,$09,$4C	; $6B58 ..DE...L
-	db $C4,$44,$81,$82,$BA,$52,$4C,$43	; $6B60 .D...RLC
-	db $C1,$52,$52,$43,$C1,$52,$4C,$C1	; $6B68 .RRC.RL.
-	db $52,$52,$C1,$44,$41,$C1,$43,$50	; $6B70 RR.DA.CP
-	db $CC,$53,$43,$C6,$43,$43,$C6		; $6B78 .SC.CC.
+	db $41,_A,_D,_D,_SPACE, $01+$80	; LITERAL (inc comma) 
+	db $8C				; SELECT-G (s(G))
+					; TERMINATE
+
+DATA_S0c:	; Indirect loads
+	db $09,_L,_D+$80		   	; LITERAL (inc space)
+	db $BA					; LIST-G(8) (10111010)
+	db _OPENBRACKET,_B,_C,_CLOSEBRACKET,_COMMA,_A+$80		; 
+	db _A,_COMMA,_OPENBRACKET,_B,_C,_CLOSEBRACKET+$80
+	db _OPENBRACKET,_D,_E,_CLOSEBRACKET,_COMMA,_A+$80
+	db _A,_COMMA,_OPENBRACKET,_D,_E,_CLOSEBRACKET+$80
+	db _OPENBRACKET,$03,_CLOSEBRACKET,_COMMA,$01+$80
+	db $01,_COMMA,_OPENBRACKET,$03,_CLOSEBRACKET+$80	
+	db _OPENBRACKET,$03,_CLOSEBRACKET,_COMMA,_A+$80
+	db _A,_COMMA,_OPENBRACKET,$03,_CLOSEBRACKET+$80
+
+DATA_S0d:	; 16-bit INC/ DEC
+	db $07,$05		   	; K-SKIP
+	db $09,_I,_N,_C+$80		; LITERAL (inc space)
+	db $8C				; SELECT-G (S(G))
+					; TERMINATE
+	db $09,_D,_E,_C+$80		; LITERAL (inc space)
+	db $8C				; SELECT-G (S(G))
+					; TERMINATE
+	
+DATA_S0g: 	; 8-bit load immediate
+	db $09,_L,_D+$80		; LITERAL (inc space)
+	db $44				; SELECT-G (r(G)) (inc comma)
+	db $81,$02+$80			; LITERAL
+					; TERMINATE
+	
+DATA_S0h:	; Assorted operations on accumulator/ flags
+	db $BA				; LIST-G (8) %10111010
+	db _R,_L,_C,_A+$80
+	db _R,_R,_C,_A+$80
+	db _R,_L,_A+$80
+	db _R,_R,_A+$80
+	db _D,_A,_A+$80
+	db _C,_P,_L+$80
+	db _S,_C,_F+$80
+	db _C,_C,_F+$80
+					; TERMINATE
 
 	;; Sequence for X=1 (8-bit LD between registers)
 DATA_S1:
@@ -705,23 +750,57 @@ DATA_S2:
 	;; Sequence for X=3 (see subcategories for details)
 DATA_S3:
 	db $00			; SPLIT (on H)
-        db $97 
-	db $6B,$9C,$6B,$B7,$6B,$BD,$6B,$E9	; $6B88 k.k.k.k.
-	db $6B,$F1,$6B,$00,$6C,$03,$6C,$09	; $6B90 k.k.l.l.
-	db $52,$45,$D4,$A4,$07,$05,$09,$50	; $6B98 RE.....P
-	db $4F,$D0,$94,$9A,$52,$45,$D4,$45	; $6BA0 O...RE.E
-	db $58,$D8,$4A,$50,$20,$28,$01,$A9	; $6BA8 X.JP (..
-	db $4C,$44,$20,$53,$50,$2C,$81,$09	; $6BB0 LD SP,..
-	db $4A,$D0,$64,$81,$83,$BA,$4A,$50	; $6BB8 J.d...JP
-	db $20,$83,$A0,$4F,$55,$54,$20,$28	; $6BC0  ..OUT (
-	db $02,$29,$2C,$C1,$49,$4E,$20,$41	; $6BC8 .),.IN A
-	db $2C,$28,$02,$A9,$45,$58,$20,$28	; $6BD0 ,(..EX (
-	db $53,$50,$29,$2C,$81,$45,$58,$20	; $6BD8 SP),.EX 
-	db $44,$45,$2C,$48,$CC,$44,$C9,$45	; $6BE0 DE,H.D.E
-	db $C9,$09,$43,$41,$4C,$CC,$64,$81	; $6BE8 ..CAL.d.
-	db $83					; $6BF0 . 
+	dw DATA_S3a
+	dw DATA_S3b
+	dw DATA_S3c
+	dw DATA_S3d
+	dw DATA_S3e
+	dw DATA_S3f
+	dw DATA_S3g
+	dw DATA_S3h
 
-	;; Sequence for X=3 and Z=5 (CALL or PUSH) 
+DATA_S3a:			; Conditional returns
+	db $09,_R,_E,_T+$80
+	db $A4				; SELECT-G(c(G)) (inc. comma)
+					; TERMINATE
+	
+DATA_S3b:
+	db $07,$05	; K-SKIP
+	db $09,_P,_O,_P+$80	; $6BA0 O...RE.E
+	db $94			; SELECT-G(q(G)
+				; TERMINATE
+	db $9A 		; LIST-G(4) 10011010
+	db _R,_E,_T+$80
+	db _E,_X,_X+$80
+	db _J,_P,_SPACE,_OPENBRACKET,$01,_CLOSEBRACKET+$80
+	db _L,_D,_SPACE,_S,_P,_COMMA,$01+$80
+				; TERMINATE
+
+DATA_S3c:		; Conditional jumps
+	db $09,_J,_P+$80	; LITERAL (inc. space)
+	db $64			; SELECT-G(c(G)) (inc. comma)
+	db $81,$03+$80		; LITERAL
+				; TERMINATE
+
+DATA_S3d: 		; Assorted operations
+	db $BA				   ; LIST-G(8)
+	db _J,_P,_SPACE,$03+$80
+	db _SPACE+$80
+	db _O,_U,_T,_SPACE,_OPENBRACKET,$02,_CLOSEBRACKET,_COMMA,_A+$80
+	db _I,_N,_SPACE,_A,_COMMA,_OPENBRACKET,$02,_CLOSEBRACKET+$80
+	db _E,_X,_SPACE,_OPENBRACKET,_S,_P,_CLOSEBRACKET,_COMMA,$01+$80
+	db _E,_X,_SPACE,_D,_E,_COMMA,_H,_L+$80
+	db _D,_I+$80
+	db _E,_I+$80
+
+DATA_S3e:		; Conditional call
+	db $09,_C,_A,_L,_L+$80			; LITERAL (inc. space)
+	db $64					; SELECT-G(c(G)) (inc. comma)
+	db $81,$03+$80				; LITERAL
+						; TERMINATE
+
+	;; Sequence for X=3 and Z=5 (CALL or PUSH)
+DATA_S3f:		; PUSH and various ops
 	db $07,$06 				; KSKIP 6 
 	db $09,_P,_U,_S,_H+$80			; LITERAL (inc. space)
 	db $94					; SELECT-G (s(G))
@@ -729,16 +808,29 @@ DATA_S3:
 	db $81,_C, _A, _L, _L, _SPACE, $80+3	; LITERAL
 						; TERMINATE
 
-	db $34,$81,$82,$09,$52,$53,$D4,$BA	; $6C00 4...RS..
-	db $30,$B0,$30,$38,$20,$82,$31,$B0	; $6C08 0.08 .1.
-	db $31,$B8,$32,$B0,$32,$B8,$33,$B0	; $6C10 1.2.2.3.
-	db $33,$B8	; $6C18 3.:RL.RR
+DATA_S3g:			; Operate on accumulator and immediate
+				; operand
+	db $34					; SELECT-G(x(G))
+	db $81,$02+$80				; LITERAL
+						; TERMINATE
+
+DATA_S3h:			; Restart routines
+	db $09,_R,_S,_T+$80			; LITERAL (inc space)
+	db $BA					; LIST-G(8)
+	db _0,_0+$80
+	db _0,_8+$80
+	db _1,_0+$80
+	db _1,_1+$80
+	db _2,_0+$80
+	db _2,_8+$80
+	db _3,_0+$80
+	db _3,_8+$80
 
 	;; Sequence for X=0, CLASS=1 (CB prefix) (rotate instructions
 	;; not involving ALU)
 DATA_S4:
 	db $3A 			; LIST-G (8 ITEMS) %00111010
-	db _R,_L,_C+80
+	db _R,_L,_C+$80
 	db _R,_R,_C+$80
 	db _R,_L+$80
 	db _R,_R+$80
@@ -746,53 +838,137 @@ DATA_S4:
 	db _S,_R,_A+$80
 	db _SPACE+$80		; *** This looks like error ***
 	db _S,_R,_L+$80
-	db $01,_SPACE+80	; LITERAL
-	db $85			; SELECT-H
-				; Terminate
+	db $01,_SPACE+$80			; LITERAL
+	db $85					; SELECT-H
+						; TERMINATE
 
 	;; Sequence for X=1, CLASS=1 (CB prefix) (BIT instructions)
 DATA_S5:
-	db $09,$42,$49,$D4,$5C,$85	; $6C32 ...BI.\.
+	db $09,_B,_I,_T+$80 			; LITERAL (inc space)
+	db $5C		    			; SELECT-G (n(G))
+	db $85		    			; SELECT-H (r(G))
+						; TERMINATE
 
 	;; Sequence for X=2, CLASS=1 (CB prefix) (RES instructions)
 DATA_S6:	
-	db $09,$52,$45,$D3,$5C,$85	; $6C38 .RE.\.
+	db $09,_R,_E,_S+$80 			; LITERAL (inc space)
+	db $5C		    			; SELECT-G (n(G))
+	db $85		    			; SELECT-H (r(G))
+						; TERMINATE
 
 	;; Sequence for X=3, CLASS=1 (CB prefix) (SET instructions)
 DATA_S7:
-	db $09,$53				; .S
-	db $45,$D4,$5C,$85
+	db $09,_S,_E,_T+$80			; LITERAL (inc space)
+	db $5C		    			; SELECT-G (n(G))
+	db $85		    			; SELECT-H (r(G))
+						; TERMINATE
 
 	;; Sequence for X=0, CLASS=2 (ED prefix) Invalid opcode
 
 	;; Sequence for X=1, CLASS=2 (ED prefix) (various, see
 	;; sub-sequences for details)
 DATA_S8:	
-	db $00,$55,$6C,$5D	; $6C40 E.\..Ul]
-	db $6C,$66,$6C,$78,$6C,$6A,$6C,$8E	; $6C48 lflxljl.
-	db $6C,$9A,$6C,$A8,$6C,$09,$49,$CE	; $6C50 l.l.l.I.
-	db $44,$81,$28,$43,$A9,$41,$4F,$55	; $6C58 D.(C.AOU
-	db $54,$20,$28,$43,$A9,$84,$07,$08	; $6C60 T (C....
-	db $41,$53,$42,$43,$20,$48,$CC,$8C	; $6C68 ASBC H..	
-	db $41,$41,$44,$43,$20,$48,$CC,$8C	; $6C70 AADC H..
-	db $07,$08,$41,$4C,$44,$20,$28,$03	; $6C78 ..ALD (.
-	db $A9,$8C,$09,$4C,$C4,$4C,$81,$28	; $6C80 ...L.L.(
-	db $03,$A9,$81,$4E,$45,$C7,$07,$05	; $6C88 ...NE...
-	db $81,$52,$45,$54,$CE,$81,$52,$45	; $6C90 .RET..RE
-	db $54,$C9,$9A,$49,$4D,$20,$B0,$A0	; $6C98 T..IM ..
-	db $49,$4D,$20,$B1,$49,$4D,$20,$B2	; $6CA0 IM .IM .
-	db $BA,$4C,$44,$20,$49,$2C,$C1,$4C	; $6CA8 .LD I,.L
-	db $44,$20,$52,$2C,$C1,$4C,$44,$20	; $6CB0 D R,.LD 
-	db $41,$2C,$C9,$4C,$44,$20,$41,$2C	; $6CB8 A,.LD A,
-	db $D2,$52,$52,$C4,$52,$4C,$C4,$A0	; $6CC0 .RR.RL..
-	db $A0					; $6CC8 ..L.C.I.
+	db $00
+	dw DATA_S8a
+	dw DATA_S8b
+	dw DATA_S8c
+	dw DATA_S8d
+	dw DATA_S8e
+	dw DATA_S8f
+	dw DATA_S8g
+	dw DATA_S8h
+
+DATA_S8a:		; Input from port with 16-bit address
+	db $09,_I,_N+$80			; LITERAL (inc space)
+	db $44					; SELECT G(r(G)) (inc comma)
+	db $81,_OPENBRACKET,_C,_CLOSEBRACKET+$80
+						; LITERAL
+						; TERMINATE
+
+DATA_S8b:		; Output to port with 16-bit address
+	db $41,_O,_U,_T,_SPACE,_OPENBRACKET,_C,_CLOSEBRACKET+$80
+						; LITERAL (inc comma)
+	db $84					; SELECT G(r(G))
+						; TERMINATE
+DATA_S8c:	
+	db $07,$08			   	; K-SKIP
+	db $41,_S,_B,_C,_SPACE,_H,_L+$80	; LITERAL (inc comma)
+	db $8C					; SELECT-G(s(G))
+						; TERMINATE
+	db $41,_A,_D,_C,_SPACE,_H,_L+$80	; LITERAL (inc. comma)
+	db $8C					; SELECT-G(s(G))
+						; TERMINATE
+	
+DATA_S8d:	
+	db $07,$08	; K-SKIP
+	db $41,_L,_D,_SPACE,_OPENBRACKET,$03,_CLOSEBRACKET+$80
+ 						; LITERAL (inc comma)
+	db $8C					; SELECT-G(s(G))
+						; TERMINATE
+	db $09,_L,_D+$80	; LITERAL (inc space)
+	db $4C			; SELECT-G(s(G)) (inc comma)
+	db $81,_OPENBRACKET,$03,_CLOSEBRACKET+$80
+				; TERMINATE
+DATA_S8e:
+	db $81,_N,_E,_G+$80		; LITERAL
+
+DATA_S8f:	
+	db $07,$05			; K-SKIP
+	db $81,_R,_E,_T,_N+$80		; LITERAL
+					; TERMINATE
+	db $81,_R,_E,_T,_I+$80		; LITERAL
+					; TERMINATE
+	
+DATA_S8g:	
+	db $9A	; LIST-G(4)
+	db _I,_M,_SPACE,_0+$80
+	db _SPACE+$80
+	db _I,_M,_SPACE,_1+$80
+	db _I,_M,_SPACE,_2+$80
+					; TERMINATE
+
+DATA_S8h:	
+	db $BA				; LIST-G(8)
+	db _L,_D,_SPACE,_I,_COMMA,_A+$80
+	db _L,_D,_SPACE,_R,_COMMA,_A+$80
+	db _L,_D,_SPACE,_A,_COMMA,_I+$80
+	db _L,_D,_SPACE,_A,_COMMA,_R+$80
+	db _R,_R,_D+$80
+	db _R,_L,_D+$80
+	db _SPACE+$80
+	db _SPACE+$80
+					; TERMINATE
 
 	;; Sequence for X=2, CLASS=2 (ED prefix) (block instructions)
 DATA_S9:	
-	db $1B,$4C,$C4,$43,$D0,$49,$CE		; $6CC9 ..L.C.I.
-	db $4F,$D4,$BA,$A0,$A0,$A0,$A0,$C9	; $6CD0 O.......
-	db $C4,$49,$D2,$44,$D2,$09,$49,$4E	; $6CD8 .I.D..IN
-	db $C3,$84,$09,$44,$45,$C3,$84,$1C	; $6CE0 ...DE...
+	db $1B					; LIST-H (4)
+	db _L,_D+$80
+	db _C,_P+$80
+	db _I,_N+$80
+	db _O,_T+$80
+	db $BA					; LIST-G(8)
+	db _SPACE+$80
+	db _SPACE+$80
+	db _SPACE+$80
+	db _SPACE+$80
+	db _I+$80
+	db _D+$80
+	db _I,_R+$80
+	db _D,_R+$80
+						;  TERMINATE
+	
+DATA_S0e:	
+	db $09,_I,_N,_C+$80			; LITERAL (inc space)
+	db $84					; SELECT-G (r(G))
+						; TERMINATE
+
+DATA_S0f:
+	db $09,_D,_E,_C+$80		  	; LITERAL (inc space)
+	db $84					; SELECT-G (r(G))
+						; TERMINATE
+
+	;; Not sure any of this is needed
+	db $1C	; $6CE0 ...DE...
 	db $00,$00,$00,$00,$00,$00,$00,$00	; $6CE8 ........ 
 	db $00,$00,$00,$00,$00,$00,$00,$00	; $6CF0 ........
 	db $00,$00,$00,$00,$00,$00,$00,$00	; $6CF8 ........
@@ -802,7 +978,6 @@ DATA_S9:
 	db $00,$00,$00,$00,$00,$00,$00,$00	; $6D18 ........
 
 	;; Sequence for X=3, CLASS=2 (ED prefix) Invalid opcode
-
 
 
 LENS:	db 0x5F, 0x55, 0x55, 0xA5, 0x55, 0x55, 0x55, 0xA5
