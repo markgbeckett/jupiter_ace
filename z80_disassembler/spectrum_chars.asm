@@ -11,8 +11,8 @@ _DOLLAR:		equ $24
 _PERCENT:		equ $25
 _AMPERSAND:		equ $26
 _APOSTROPHE:		equ $27
-_OPENBRACKET:		equ $28
-_CLOSEBRACKET: 		equ $29
+_LEFTPARENTH:		equ $28
+_RIGHTPARENTH: 		equ $29
 _ASTERISK:		equ $2A
 _PLUS:			equ $2B
 _COMMA:			equ $2C

@@ -1,19 +1,20 @@
 	org 0x6800
 
 	;; Lookup table of lengths of different Z80 instructions
+	jp START
 
 TYPES: 
-	db $C2,$C3,$C4,$C5,$C8,$CC,$80,$C1		; $6800
-	db $42,$C3,$44,$C5,$81,$53,$D0,$00		; $6808
-	db $42,$C3,$44,$C5,$81,$41,$C6,$00		; $6810
-	db $B0,$B1,$B2,$B3,$B4,$B5,$B6,$B7		; $6818
-	db $4E,$DA,$DA,$4E,$C3,$C3,$50,$CF		; $6820
-	db $50,$C5,$D0,$CD,$00,$00,$00,$00		; $6828
-	db $41,$44,$44,$20,$41,$AC,$41,$44		; $6830
-	db $43,$20,$41,$AC,$53,$55,$42,$A0		; $6838
-	db $53,$42,$43,$20,$41,$AC,$41,$4E		; $6840
-	db $44,$A0,$58,$4F,$52,$A0,$4F,$52		; $6848
-	db $A0,$43,$50,$A0                        ; $6850
+	db _B+$80,_C+$80,_D+$80,_E+$80,_H+$80,_L+$80,$80,_A+$80		; $6800
+	db _B,_C+$80,_D,_E+$80,$01+$80,_S,_P+$80,$00		; $6808
+	db _B,_C+$80,_D,_E+$80,$01+$80,_A,_F+$80,$00		; $6810
+	db _0+$80,_1+$80,_2+$80,_3+$80,_4+$80,_5+$80,_6+$80,_7+$80		; $6818
+	db _N,_Z+$80,_Z+$80,_N,_C+$80,_C+$80,_P,_O+$80		; $6820
+	db _P,_E+$80,_P+$80,_M+$80,$00,$00,$00,$00		; $6828
+	db _A,_D,_D,_SPACE,_A,_COMMA+$80,_A,_D		; $6830
+	db _C,_SPACE,_A,_COMMA+$80,_S,_U,_B,_COMMA+$80		; $6838
+	db _S,_B,_C,_SPACE,_A,_COMMA+$80,_A,_N		; $6840
+	db _D,_SPACE+$80,_X,_O,_R,_SPACE+$80,_O,_R		; $6848
+	db _SPACE+$80,_C,_P,_SPACE+$80                        ; $6850
 	
 	;; Addresses of eigth subroutines
 SUBRTS:	dw SPLIT
@@ -152,10 +153,15 @@ HP_A:	push af			; Save A
 HP_AL:
 	and %00001111		; Isolate lower nibble
 
-	cp 0x0A			; Convert to ASCII
-	sbc a,0x69
-	daa
+	add a,_0
+	cp _9+1
+	jr c, HP_CONT
+	add a,_A-_9-1
+	;; cp 0x0A			; Convert to ASCII
+	;; sbc a,0x69
+	;; daa
 
+HP_CONT:
 	call PRINT_A
 
 	ret
@@ -597,8 +603,9 @@ SELECT_CONT:
 
 	ld a,e
 	and 0x38
+	add a, TYPES & 0xFF
 	ld l,a
-	ld h, 0x68
+	ld h, (TYPES >> 8) & 0xFF 
 	pop af
 
 	call SELECT
@@ -654,8 +661,6 @@ SKIP_CONT:
 
 	ret
 
-	ds 0x6ae2-$
-	
 ADDRESS:	dw 0x0000
 	
 DATA:
@@ -680,7 +685,8 @@ DATA_S0a:	; Relative jumps and assorted ops
 	db _J,_R,_SPACE,$02+$80
 						; TERMINATE
 	db $09,_J,_R+$80			; LITERAL (inc space)
-	db $64					; SELECT-G (C(G)) (inc comma)
+	db $64					; SELECT-G (C(G)) (inc
+						; comma)
 	db $81, $02+$80				; LITERAL
 						; TERMINATE
 
@@ -691,7 +697,7 @@ DATA_S0b:	; 16-bit load immediate/ add
 	db $81,$03+$80			; LITERAL
 					; TERMINATE
 	db $00
-	db $41,_A,_D,_D,_SPACE, $01+$80	; LITERAL (inc comma) 
+	db $41,_A,_D,_D,_SPACE,$01+$80	; LITERAL (inc comma) 
 	db $8C				; SELECT-G (s(G))
 					; TERMINATE
 
