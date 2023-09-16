@@ -1,10 +1,10 @@
 	include "z80_disassembler.asm"
 
 	;; Retrieve character set
-	include "..\3d_monster_maze\jupiter_chars.asm"
+	include "..\utilities\jupiter_chars.asm"
 
-STKEND:	dw 0x2701		; Address if AceFORTH pad
-SCROLL_COUNT:	dw 0x67FE
+DISS:	dw 0x2701		; Address if AceFORTH pad
+SCROLL_COUNT:	db 0x00
 OLD_SP:	dw 0x67FC
 	
 SCRPOS:	equ 0x3C1C

@@ -47,7 +47,7 @@ DATADS:	dw DATA_S0		; $6AE2
 REPLACE:
 	pop ix			; Retrieve pointer to subroutine arguments
 
-	ld de,(STKEND)		; Retrieve address of start of DISS
+	ld de,(DISS)		; Retrieve address of start of DISS
 
 	and a			; Compute length of string to modify (HL
 	sbc hl,de		; points to current location in
@@ -114,7 +114,7 @@ CHR:
 
 	and %01111111		; Ignore bit 7
 
-	ld hl, (STKEND)		; Retrieve start of DIS
+	ld hl, (DISS)		; Retrieve start of DIS
 
 	;; Increase length count (first byte of DIS)
 	ld c,(hl)
@@ -206,7 +206,7 @@ DECODE:	exx
 	ld c,a
 
 	;; Point to start of DIS and retrieve length
-	ld hl,(STKEND)
+	ld hl,(DISS)
 	ld b,(hl)
 
 DECODE_LP:
@@ -219,7 +219,7 @@ DECODE_LP:
 	jr nz, DECODE_3
 
 	call REPLACE
-	db 0x04, _OPENBRACKET, _H, _L, _CLOSEBRACKET
+	db 0x04, _LEFTPARENTH, _H, _L, _RIGHTPARENTH
 
 	jr DECODE_2
 
@@ -227,12 +227,12 @@ DECODE_3:
 	dec a
 	jr nz, DECODE_5
 	call REPLACE
-	db 0x06, _OPENBRACKET, _I, _X, _PLUS, 0x02, _CLOSEBRACKET
+	db 0x06, _LEFTPARENTH, _I, _X, _PLUS, 0x02, _RIGHTPARENTH
 	jr DECODE_2
 
 DECODE_5:
 	call REPLACE
-	db 0x06, _OPENBRACKET, _I, _Y, _PLUS, 0x02, _CLOSEBRACKET
+	db 0x06, _LEFTPARENTH, _I, _Y, _PLUS, 0x02, _RIGHTPARENTH
 
 DECODE_2:
 	ld a,(hl)
@@ -258,7 +258,7 @@ DECODE_7:
 
 DECODE_4:
 	djnz DECODE_LP
-	ld hl,(STKEND)
+	ld hl,(DISS)
 	ld b,(hl)
 
 DECODE_LP_2:
@@ -310,7 +310,7 @@ DECODE_10:
 
 DECODE_11:
 	djnz DECODE_LP_2
-	ld hl,(STKEND)
+	ld hl,(DISS)
 	ld b,(hl)
 	
 DECODE_LP_3:
@@ -329,7 +329,7 @@ START:	call INIT		; System specific initialisation
 	exx
 
 RESTART:
-	ld hl,(STKEND)
+	ld hl,(DISS)
 	ld (hl),0x00
 	
 	exx
@@ -698,14 +698,14 @@ DATA_S0b:	; 16-bit load immediate/ add
 DATA_S0c:	; Indirect loads
 	db $09,_L,_D+$80		   	; LITERAL (inc space)
 	db $BA					; LIST-G(8) (10111010)
-	db _OPENBRACKET,_B,_C,_CLOSEBRACKET,_COMMA,_A+$80		; 
-	db _A,_COMMA,_OPENBRACKET,_B,_C,_CLOSEBRACKET+$80
-	db _OPENBRACKET,_D,_E,_CLOSEBRACKET,_COMMA,_A+$80
-	db _A,_COMMA,_OPENBRACKET,_D,_E,_CLOSEBRACKET+$80
-	db _OPENBRACKET,$03,_CLOSEBRACKET,_COMMA,$01+$80
-	db $01,_COMMA,_OPENBRACKET,$03,_CLOSEBRACKET+$80	
-	db _OPENBRACKET,$03,_CLOSEBRACKET,_COMMA,_A+$80
-	db _A,_COMMA,_OPENBRACKET,$03,_CLOSEBRACKET+$80
+	db _LEFTPARENTH,_B,_C,_RIGHTPARENTH,_COMMA,_A+$80		; 
+	db _A,_COMMA,_LEFTPARENTH,_B,_C,_RIGHTPARENTH+$80
+	db _LEFTPARENTH,_D,_E,_RIGHTPARENTH,_COMMA,_A+$80
+	db _A,_COMMA,_LEFTPARENTH,_D,_E,_RIGHTPARENTH+$80
+	db _LEFTPARENTH,$03,_RIGHTPARENTH,_COMMA,$01+$80
+	db $01,_COMMA,_LEFTPARENTH,$03,_RIGHTPARENTH+$80	
+	db _LEFTPARENTH,$03,_RIGHTPARENTH,_COMMA,_A+$80
+	db _A,_COMMA,_LEFTPARENTH,$03,_RIGHTPARENTH+$80
 
 DATA_S0d:	; 16-bit INC/ DEC
 	db $07,$05		   	; K-SKIP
@@ -772,7 +772,7 @@ DATA_S3b:
 	db $9A 		; LIST-G(4) 10011010
 	db _R,_E,_T+$80
 	db _E,_X,_X+$80
-	db _J,_P,_SPACE,_OPENBRACKET,$01,_CLOSEBRACKET+$80
+	db _J,_P,_SPACE,_LEFTPARENTH,$01,_RIGHTPARENTH+$80
 	db _L,_D,_SPACE,_S,_P,_COMMA,$01+$80
 				; TERMINATE
 
@@ -786,9 +786,9 @@ DATA_S3d: 		; Assorted operations
 	db $BA				   ; LIST-G(8)
 	db _J,_P,_SPACE,$03+$80
 	db _SPACE+$80
-	db _O,_U,_T,_SPACE,_OPENBRACKET,$02,_CLOSEBRACKET,_COMMA,_A+$80
-	db _I,_N,_SPACE,_A,_COMMA,_OPENBRACKET,$02,_CLOSEBRACKET+$80
-	db _E,_X,_SPACE,_OPENBRACKET,_S,_P,_CLOSEBRACKET,_COMMA,$01+$80
+	db _O,_U,_T,_SPACE,_LEFTPARENTH,$02,_RIGHTPARENTH,_COMMA,_A+$80
+	db _I,_N,_SPACE,_A,_COMMA,_LEFTPARENTH,$02,_RIGHTPARENTH+$80
+	db _E,_X,_SPACE,_LEFTPARENTH,_S,_P,_RIGHTPARENTH,_COMMA,$01+$80
 	db _E,_X,_SPACE,_D,_E,_COMMA,_H,_L+$80
 	db _D,_I+$80
 	db _E,_I+$80
@@ -881,12 +881,12 @@ DATA_S8:
 DATA_S8a:		; Input from port with 16-bit address
 	db $09,_I,_N+$80			; LITERAL (inc space)
 	db $44					; SELECT G(r(G)) (inc comma)
-	db $81,_OPENBRACKET,_C,_CLOSEBRACKET+$80
+	db $81,_LEFTPARENTH,_C,_RIGHTPARENTH+$80
 						; LITERAL
 						; TERMINATE
 
 DATA_S8b:		; Output to port with 16-bit address
-	db $41,_O,_U,_T,_SPACE,_OPENBRACKET,_C,_CLOSEBRACKET+$80
+	db $41,_O,_U,_T,_SPACE,_LEFTPARENTH,_C,_RIGHTPARENTH+$80
 						; LITERAL (inc comma)
 	db $84					; SELECT G(r(G))
 						; TERMINATE
@@ -901,13 +901,13 @@ DATA_S8c:
 	
 DATA_S8d:	
 	db $07,$08	; K-SKIP
-	db $41,_L,_D,_SPACE,_OPENBRACKET,$03,_CLOSEBRACKET+$80
+	db $41,_L,_D,_SPACE,_LEFTPARENTH,$03,_RIGHTPARENTH+$80
  						; LITERAL (inc comma)
 	db $8C					; SELECT-G(s(G))
 						; TERMINATE
 	db $09,_L,_D+$80	; LITERAL (inc space)
 	db $4C			; SELECT-G(s(G)) (inc comma)
-	db $81,_OPENBRACKET,$03,_CLOSEBRACKET+$80
+	db $81,_LEFTPARENTH,$03,_RIGHTPARENTH+$80
 				; TERMINATE
 DATA_S8e:
 	db $81,_N,_E,_G+$80		; LITERAL

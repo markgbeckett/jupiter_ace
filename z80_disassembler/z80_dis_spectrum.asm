@@ -4,7 +4,7 @@
 	include "spectrum_chars.asm"
 
 TVFLAGS:	equ 0x5c3c
-STKEND:		equ 0x5c65
+DISS:		equ 0x5c65
 
 	;; Initialise display, etc.
 INIT:
