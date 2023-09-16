@@ -1,4 +1,4 @@
- 	include "jupiter_chars.asm"
+ 	include "..\utilities\jupiter_chars.asm"
 	
 ROLLUP: ; 36 seconds
 	; "  ROLL UP, ROLL UP,    "

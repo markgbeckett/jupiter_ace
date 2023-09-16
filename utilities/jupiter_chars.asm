@@ -10,8 +10,8 @@ _TOPLEFTBLACK:		equ $12
 _TOPRIGHTBLACK:		equ $11     
 _TOPBLACK:		equ $13
 _APOSTROPHE:		equ $27
-_OPENBRACKET:		equ $28
-_CLOSEBRACKET: 		equ $29
+_LEFTPARENTH:		equ $28
+_RIGHTPARENTH: 		equ $29
 _ASTERISK:		equ $2A
 _PLUS:			equ $2B
 _MINUS:			equ $2D

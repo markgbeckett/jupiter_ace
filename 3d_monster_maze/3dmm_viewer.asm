@@ -11,7 +11,7 @@ BUFFER:		equ 0x3c76	; Address of screen buffer
 				; To write directly to screen, use 0x2400
 STACK_TO_BC:	equ 0x084e	; ROM routine to extract TOS into BC pair
 
-	include "jupiter_chars.asm"
+	include "..\utilities\jupiter_chars.asm"
 	
 	org 0x4A0D		; Set ORG address to be start of 3DVIEW 
 				; word in dictionary, and make sure
