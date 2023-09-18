@@ -7,7 +7,7 @@ ifeq ($(OS),Windows_NT)
 	ERASE = rm
 endif
 
-SRC = z80_dis_ace.asm z80_dis_spectrum.asm
+SRC = z80_dis_ace.asm z80_dis_spectrum.asm z80_dis_zx80.asm
 HEADERS = z80_disassembler.asm
 
 OBJS = $(SRC:.asm=.bin)
