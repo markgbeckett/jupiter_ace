@@ -1,3 +1,5 @@
+	org 0x6800
+
 	include "z80_disassembler.asm"
 
 	;; Retrieve character set
@@ -5,6 +7,11 @@
 
 TVFLAGS:	equ 0x5c3c
 DISS:		equ 0x5c65
+
+EXT_ADDR: equ 0x00
+IND_ADDR: equ 0x01
+IMM_ADDR:	equ 0x02
+IMM_EXT_ADDR:	equ 0x03
 
 	;; Initialise display, etc.
 INIT:

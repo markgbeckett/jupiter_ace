@@ -1,17 +1,15 @@
-	org 0x6800
-
 	;; Lookup table of lengths of different Z80 instructions
 	jp START
 
 TYPES: 
-	db _B+$80,_C+$80,_D+$80,_E+$80,_H+$80,_L+$80,$80,_A+$80		; $6800
-	db _B,_C+$80,_D,_E+$80,$01+$80,_S,_P+$80,$00		; $6808
-	db _B,_C+$80,_D,_E+$80,$01+$80,_A,_F+$80,$00		; $6810
+	db _B+$80,_C+$80,_D+$80,_E+$80,_H+$80,_L+$80,EXT_ADDR+$80,_A+$80		; $6800
+	db _B,_C+$80,_D,_E+$80,IND_ADDR+$80,_S,_P+$80,$00		; $6808
+	db _B,_C+$80,_D,_E+$80,IND_ADDR+$80,_A,_F+$80,$00		; $6810
 	db _0+$80,_1+$80,_2+$80,_3+$80,_4+$80,_5+$80,_6+$80,_7+$80		; $6818
 	db _N,_Z+$80,_Z+$80,_N,_C+$80,_C+$80,_P,_O+$80		; $6820
 	db _P,_E+$80,_P+$80,_M+$80,$00,$00,$00,$00		; $6828
 	db _A,_D,_D,_SPACE,_A,_COMMA+$80,_A,_D		; $6830
-	db _C,_SPACE,_A,_COMMA+$80,_S,_U,_B,_COMMA+$80		; $6838
+	db _C,_SPACE,_A,_COMMA+$80,_S,_U,_B,_SPACE+$80		; $6838
 	db _S,_B,_C,_SPACE,_A,_COMMA+$80,_A,_N		; $6840
 	db _D,_SPACE+$80,_X,_O,_R,_SPACE+$80,_O,_R		; $6848
 	db _SPACE+$80,_C,_P,_SPACE+$80                        ; $6850
@@ -218,7 +216,7 @@ DECODE:	exx
 DECODE_LP:
 	inc hl
 	ld a,(hl)
-	and a
+	sub EXT_ADDR
 	jr nz, DECODE_2
 	ld a,c
 	and a
@@ -233,16 +231,16 @@ DECODE_3:
 	dec a
 	jr nz, DECODE_5
 	call REPLACE
-	db 0x06, _LEFTPARENTH, _I, _X, _PLUS, 0x02, _RIGHTPARENTH
+	db 0x06, _LEFTPARENTH, _I, _X, _PLUS, IMM_ADDR, _RIGHTPARENTH
 	jr DECODE_2
 
 DECODE_5:
 	call REPLACE
-	db 0x06, _LEFTPARENTH, _I, _Y, _PLUS, 0x02, _RIGHTPARENTH
+	db 0x06, _LEFTPARENTH, _I, _Y, _PLUS, IMM_ADDR, _RIGHTPARENTH
 
 DECODE_2:
 	ld a,(hl)
-	dec a
+	sub IND_ADDR
 	jr nz, DECODE_4
 	ld a,c
 	and a
@@ -270,7 +268,7 @@ DECODE_4:
 DECODE_LP_2:
 	inc hl
 	ld a,(hl)
-	sub 0x02
+	sub IMM_ADDR
 	jr nz, DECODE_8
 	call REPLACE
 	db 0x02, _NULL, _NULL
@@ -681,23 +679,23 @@ DATA_S0a:	; Relative jumps and assorted ops
 	db $9A					; LIST-G (4)
 	db _N,_O,_P+$80			
 	db _E,_X,_SPACE,_A,_F,_COMMA,_A,_F,_APOSTROPHE+$80
-	db _D,_J,_N,_Z,_SPACE,$02+$80	
-	db _J,_R,_SPACE,$02+$80
+	db _D,_J,_N,_Z,_SPACE,IMM_ADDR+$80	
+	db _J,_R,_SPACE,IMM_ADDR+$80
 						; TERMINATE
 	db $09,_J,_R+$80			; LITERAL (inc space)
 	db $64					; SELECT-G (C(G)) (inc
 						; comma)
-	db $81, $02+$80				; LITERAL
+	db $81, IMM_ADDR+$80				; LITERAL
 						; TERMINATE
 
 DATA_S0b:	; 16-bit load immediate/ add
 	db $07,$07		   	; K-SKIP
 	db $09,_L,_D+$80		; LITERAL (inc space)
 	db $4C				; SELECT-G (s(G))
-	db $81,$03+$80			; LITERAL
+	db $81,IMM_EXT_ADDR+$80			; LITERAL
 					; TERMINATE
 	db $00
-	db $41,_A,_D,_D,_SPACE,$01+$80	; LITERAL (inc comma) 
+	db $41,_A,_D,_D,_SPACE,IND_ADDR+$80	; LITERAL (inc comma) 
 	db $8C				; SELECT-G (s(G))
 					; TERMINATE
 
@@ -708,10 +706,10 @@ DATA_S0c:	; Indirect loads
 	db _A,_COMMA,_LEFTPARENTH,_B,_C,_RIGHTPARENTH+$80
 	db _LEFTPARENTH,_D,_E,_RIGHTPARENTH,_COMMA,_A+$80
 	db _A,_COMMA,_LEFTPARENTH,_D,_E,_RIGHTPARENTH+$80
-	db _LEFTPARENTH,$03,_RIGHTPARENTH,_COMMA,$01+$80
-	db $01,_COMMA,_LEFTPARENTH,$03,_RIGHTPARENTH+$80	
-	db _LEFTPARENTH,$03,_RIGHTPARENTH,_COMMA,_A+$80
-	db _A,_COMMA,_LEFTPARENTH,$03,_RIGHTPARENTH+$80
+	db _LEFTPARENTH,IMM_EXT_ADDR,_RIGHTPARENTH,_COMMA,IND_ADDR+$80
+	db $01,_COMMA,_LEFTPARENTH,IMM_EXT_ADDR,_RIGHTPARENTH+$80	
+	db _LEFTPARENTH,IMM_EXT_ADDR,_RIGHTPARENTH,_COMMA,_A+$80
+	db _A,_COMMA,_LEFTPARENTH,IMM_EXT_ADDR,_RIGHTPARENTH+$80
 
 DATA_S0d:	; 16-bit INC/ DEC
 	db $07,$05		   	; K-SKIP
@@ -725,7 +723,7 @@ DATA_S0d:	; 16-bit INC/ DEC
 DATA_S0g: 	; 8-bit load immediate
 	db $09,_L,_D+$80		; LITERAL (inc space)
 	db $44				; SELECT-G (r(G)) (inc comma)
-	db $81,$02+$80			; LITERAL
+	db $81,IMM_ADDR+$80			; LITERAL
 					; TERMINATE
 	
 DATA_S0h:	; Assorted operations on accumulator/ flags
@@ -778,23 +776,23 @@ DATA_S3b:
 	db $9A 		; LIST-G(4) 10011010
 	db _R,_E,_T+$80
 	db _E,_X,_X+$80
-	db _J,_P,_SPACE,_LEFTPARENTH,$01,_RIGHTPARENTH+$80
-	db _L,_D,_SPACE,_S,_P,_COMMA,$01+$80
+	db _J,_P,_SPACE,_LEFTPARENTH,IND_ADDR,_RIGHTPARENTH+$80
+	db _L,_D,_SPACE,_S,_P,_COMMA,IND_ADDR+$80
 				; TERMINATE
 
 DATA_S3c:		; Conditional jumps
 	db $09,_J,_P+$80	; LITERAL (inc. space)
 	db $64			; SELECT-G(c(G)) (inc. comma)
-	db $81,$03+$80		; LITERAL
+	db $81,IMM_EXT_ADDR+$80		; LITERAL
 				; TERMINATE
 
 DATA_S3d: 		; Assorted operations
 	db $BA				   ; LIST-G(8)
-	db _J,_P,_SPACE,$03+$80
+	db _J,_P,_SPACE,IMM_EXT_ADDR+$80
 	db _SPACE+$80
-	db _O,_U,_T,_SPACE,_LEFTPARENTH,$02,_RIGHTPARENTH,_COMMA,_A+$80
-	db _I,_N,_SPACE,_A,_COMMA,_LEFTPARENTH,$02,_RIGHTPARENTH+$80
-	db _E,_X,_SPACE,_LEFTPARENTH,_S,_P,_RIGHTPARENTH,_COMMA,$01+$80
+	db _O,_U,_T,_SPACE,_LEFTPARENTH,IMM_ADDR,_RIGHTPARENTH,_COMMA,_A+$80
+	db _I,_N,_SPACE,_A,_COMMA,_LEFTPARENTH,IMM_ADDR,_RIGHTPARENTH+$80
+	db _E,_X,_SPACE,_LEFTPARENTH,_S,_P,_RIGHTPARENTH,_COMMA,IND_ADDR+$80
 	db _E,_X,_SPACE,_D,_E,_COMMA,_H,_L+$80
 	db _D,_I+$80
 	db _E,_I+$80
@@ -802,7 +800,7 @@ DATA_S3d: 		; Assorted operations
 DATA_S3e:		; Conditional call
 	db $09,_C,_A,_L,_L+$80			; LITERAL (inc. space)
 	db $64					; SELECT-G(c(G)) (inc. comma)
-	db $81,$03+$80				; LITERAL
+	db $81,IMM_EXT_ADDR+$80				; LITERAL
 						; TERMINATE
 
 	;; Sequence for X=3 and Z=5 (CALL or PUSH)
@@ -811,13 +809,13 @@ DATA_S3f:		; PUSH and various ops
 	db $09,_P,_U,_S,_H+$80			; LITERAL (inc. space)
 	db $94					; SELECT-G (s(G))
 						; TERMINATE
-	db $81,_C, _A, _L, _L, _SPACE, $80+3	; LITERAL
+	db $81,_C, _A, _L, _L, _SPACE,IMM_EXT_ADDR+$80	; LITERAL
 						; TERMINATE
 
 DATA_S3g:			; Operate on accumulator and immediate
 				; operand
 	db $34					; SELECT-G(x(G))
-	db $81,$02+$80				; LITERAL
+	db $81,IMM_ADDR+$80				; LITERAL
 						; TERMINATE
 
 DATA_S3h:			; Restart routines
@@ -907,13 +905,13 @@ DATA_S8c:
 	
 DATA_S8d:	
 	db $07,$08	; K-SKIP
-	db $41,_L,_D,_SPACE,_LEFTPARENTH,$03,_RIGHTPARENTH+$80
+	db $41,_L,_D,_SPACE,_LEFTPARENTH,IMM_EXT_ADDR,_RIGHTPARENTH+$80
  						; LITERAL (inc comma)
 	db $8C					; SELECT-G(s(G))
 						; TERMINATE
 	db $09,_L,_D+$80	; LITERAL (inc space)
 	db $4C			; SELECT-G(s(G)) (inc comma)
-	db $81,_LEFTPARENTH,$03,_RIGHTPARENTH+$80
+	db $81,_LEFTPARENTH,IMM_EXT_ADDR,_RIGHTPARENTH+$80
 				; TERMINATE
 DATA_S8e:
 	db $81,_N,_E,_G+$80		; LITERAL

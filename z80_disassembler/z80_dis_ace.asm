@@ -1,9 +1,17 @@
+	org 0x6800
+
 	include "z80_disassembler.asm"
 
 	;; Retrieve character set
 	include "..\utilities\jupiter_chars.asm"
 
 DISS:	dw 0x2701		; Address if AceFORTH pad
+
+EXT_ADDR: equ 0x00
+IND_ADDR: equ 0x01
+IMM_ADDR:	equ 0x02
+IMM_EXT_ADDR:	equ 0x03
+
 SCROLL_COUNT:	db 0x00
 OLD_SP:	dw 0x67FC
 	
