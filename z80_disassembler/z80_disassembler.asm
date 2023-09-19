@@ -1,20 +1,92 @@
-	;; Lookup table of lengths of different Z80 instructions
-	jp START
+	;; Z80 Disassembler, by Toni Baker, published in 'Mastering
+	;; Machine Code on Your ZX Spectrum', Interface Publications Ltd
+	;; (1983).
+	;;
+	;; Adapted to be portable to a range of Z80-based systems and
+	;; commented to make easier to understand the program flow by
+	;; George Beckett (2023)
 
-TYPES: 
-	db _B+$80,_C+$80,_D+$80,_E+$80,_H+$80,_L+$80,EXT_ADDR+$80,_A+$80		; $6800
-	db _B,_C+$80,_D,_E+$80,IND_ADDR+$80,_S,_P+$80,$00		; $6808
-	db _B,_C+$80,_D,_E+$80,IND_ADDR+$80,_A,_F+$80,$00		; $6810
-	db _0+$80,_1+$80,_2+$80,_3+$80,_4+$80,_5+$80,_6+$80,_7+$80		; $6818
-	db _N,_Z+$80,_Z+$80,_N,_C+$80,_C+$80,_P,_O+$80		; $6820
-	db _P,_E+$80,_P+$80,_M+$80,$00,$00,$00,$00		; $6828
-	db _A,_D,_D,_SPACE,_A,_COMMA+$80,_A,_D		; $6830
-	db _C,_SPACE,_A,_COMMA+$80,_S,_U,_B,_SPACE+$80		; $6838
-	db _S,_B,_C,_SPACE,_A,_COMMA+$80,_A,_N		; $6840
-	db _D,_SPACE+$80,_X,_O,_R,_SPACE+$80,_O,_R		; $6848
-	db _SPACE+$80,_C,_P,_SPACE+$80                        ; $6850
+	;; Z80 disassembler is based on an algorithm, as described in
+	;; http://www.z80.info/decoding.htm, which enables a very
+	;; compact implementation (in this case, a little under 1.5
+	;; kilobytes). The in-line comments use naming convention in
+	;; that description.
+	;;
+	;; The bits that make up the opcode byte (having first checked
+	;; for any prefixes (CB, DD, ED, or FD) as follows:
+	;;
+	;; Bits in opcode (MSB -> LSB)
+	;;  7   6   5   4   3   2   1   0
+	;; <--x--> <----y----> <----z---->
+	;;         <--p--><-q->
+
+	jp START
 	
-	;; Addresses of eigth subroutines
+	;; Table to enable blocks of similar instructions to be
+	;; represented in a compact form
+TYPES:
+	;; 8-bit registers -- denoted "r" in description of algorithm
+	db _B+$80
+	db _C+$80
+	db _D+$80
+	db _E+$80
+	db _H+$80
+	db _L+$80
+	db EXT_ADDR+$80
+	db _A+$80
+
+	;; Register pairs featuring SP -- denoted "rp" in description of
+	;; algorithm
+	db _B,_C+$80
+	db _D,_E+$80
+	db IND_ADDR+$80
+	db _S,_P+$80
+	db $00			; padding 
+
+	;; Register pairs featuring AF -- denoted "rp2" in description
+	;; of algorithm
+	db _B,_C+$80
+	db _D,_E+$80
+	db IND_ADDR+$80
+	db _A,_F+$80
+	db $00			; padding
+	
+	;; Bit references for index operations -- not included in
+	;; original version of algorithm
+	db _0+$80
+	db _1+$80
+	db _2+$80
+	db _3+$80
+	db _4+$80
+	db _5+$80
+	db _6+$80
+	db _7+$80
+	
+	;; Conditions -- denoted "cc" in description of algorithm
+	db _N,_Z+$80
+	db _Z+$80
+	db _N,_C+$80
+	db _C+$80
+	db _P,_O+$80
+	db _P,_E+$80
+	db _P+$80
+	db _M+$80
+	db $00,$00,$00,$00 	; padding
+
+	;; Arithmetic/ logic operations -- denoted "alu" in description
+	;; of algorithm
+	db _A,_D,_D,_SPACE,_A,_COMMA+$80
+	db _A,_D,_C,_SPACE,_A,_COMMA+$80
+	db _S,_U,_B,_SPACE+$80
+	db _S,_B,_C,_SPACE,_A,_COMMA+$80
+	db _A,_N,_D,_SPACE+$80
+	db _X,_O,_R,_SPACE+$80
+	db _O,_R,_SPACE+$80
+	db _C,_P,_SPACE+$80
+
+	
+	;; Table of jump addresses for the eight subroutines that
+	;; encapsulate the key manipulations required for the algorithm
 SUBRTS:	dw SPLIT
 	dw LITERAL
 	dw LIST_G
@@ -24,23 +96,25 @@ SUBRTS:	dw SPLIT
 	dw SKIP
 	dw QSKIP
 
-	;; Control sequence for different values of F (and CB/DE
-	;; modifiers)
-DATADS:	dw DATA_S0		; $6AE2 
-	dw DATA_S1         	; $6B7F
-	dw DATA_S2         	; $6B84
-	dw DATA_S3         	; $6B86
-	dw DATA_S4       	; $6C1A
-	dw DATA_S5       	; $6C32
-	dw DATA_S6       	; $6C38
-	dw DATA_S7       	; $6C3E
+	;; Control sequence for different values of 'x' (and CB/DE
+	;; prefix)
+DATADS:	dw DATA_S0		; 'x' = 0
+	dw DATA_S1		; 'x' = 1
+	dw DATA_S2		; 'x' = 2
+	dw DATA_S3		; 'x' = 3
+	dw DATA_S4		; 'x' = 0, CB prefix
+	dw DATA_S5		; 'x' = 1, CB prefix
+	dw DATA_S6		; 'x' = 2, CB prefix
+	dw DATA_S7		; 'x' = 3, CB prefix
 	dw $0000		; Invalid op-code
-	dw DATA_S8       	; $6C44
-	dw DATA_S9       	; $6CC9
+	dw DATA_S8		; 'x' = 1, ED prefix
+	dw DATA_S9		; 'x' = 2, ED prefix
 	dw $0000              	; Invalid op-code
 
-	;; Replace current byte in DISS (x, y, v, and w) as required
-	;; with IX, IT, (HL), etc.
+	
+	;; 
+	;; Replace current byte in DISS as required with IX, IY, (HL),
+	;; etc.
 	;; 
 	;; On entry, HL points to current location in DISS
 REPLACE:
@@ -104,8 +178,10 @@ REPLACE:
 				; field
 
 	ret			; Jump to (DE)
-	
+
+	;; 
 	;; Add character to the end of the current string, DIS
+	;; 
 CHR:
 	push af			; Save registers
 	push bc
@@ -113,7 +189,7 @@ CHR:
 
 	and %01111111		; Ignore bit 7
 
-	ld hl, (DISS)		; Retrieve start of DIS
+	ld hl,(DISS)		; Retrieve start of DIS
 
 	;; Increase length count (first byte of DIS)
 	ld c,(hl)
@@ -131,13 +207,17 @@ CHR:
 	pop af
 
 	ret
-	
+
+	;; 
 	;; Print contents of BC in hex
+	;; 
 HP_BC:	ld a,b
 	call HP_A
 	ld a,c
 
+	;; 
 	;; Print contents of A in hex
+	;; 
 HP_A:	push af			; Save A
 	rra			; Isolate high nibble
 	rra
@@ -147,25 +227,26 @@ HP_A:	push af			; Save A
 	
 	pop af			; Retrieve A
 
-	;; Print lower nibble of A in hex
+	;; 
+	;; Print lower nibble of A in hex (generalised to cope with
+	;; systems that do not use ASCII character coding (e.g., ZX80)
+	;; 
 HP_AL:
 	and %00001111		; Isolate lower nibble
+	add a,_0		; Assume is 0,...,9
+	cp _9+1			; Check if actually A,...,F
+	jr c, HP_CONT		; Jump forward if not
 
-	add a,_0
-	cp _9+1
-	jr c, HP_CONT
-	add a,_A-_9-1
-	;; cp 0x0A			; Convert to ASCII
-	;; sbc a,0x69
-	;; daa
-
+	add a,_A-_9-1		; Adjust for A,...,F
 HP_CONT:
-	call PRINT_A
+	call PRINT_A		; Print to display
 
 	ret
 
+	;; 
 	;; Insert next byte (two characters) of subject program into DIS
 	;; (HL)
+	;; 
 INS:
 	;; Retrieve number from BC'
 	exx
@@ -183,7 +264,7 @@ INS:
 	rra
 INS_2:	and 0x0F		; Isolate lower nibble
 
-	;; Convert to character code (relies on A...F being after 0...9)
+	;; Convert to character code
 	add a, _0
 	cp _9 + 1
 	jr c,INS_CH
@@ -195,12 +276,14 @@ INS_CH:	ld (hl),a
 
 	ret
 
-RETURN:	bit 6,e
+RETURN:	bit 6,e			; Check if need to add comma to current
+				; string
 	jr z, NOCOMMA
 	ld a, _COMMA
 	call CHR		; Deposit character in DIS
 NOCOMMA:
-	bit 7,e
+	bit 7,e			; Check if done (indicated by bit 7
+				; being high)
 	jp z, CONTROL
 
 	;; Decode DIS and print final output
@@ -209,7 +292,7 @@ DECODE:	exx
 	exx
 	ld c,a
 
-	;; Point to start of DIS and retrieve length
+	;; Point to start of DISS and retrieve length
 	ld hl,(DISS)
 	ld b,(hl)
 
@@ -294,7 +377,7 @@ DECODE_9:
 	nop
 	exx
 	jr DECODE_10
-;
+
 DECODE_8:
 	dec a
 	jr nz,DECODE_11
@@ -324,23 +407,27 @@ DECODE_LP_3:
 	djnz DECODE_LP_3
 	jr RESTART
 
+	;; 
 	;; Entry point for disassembler
-START:	call INIT		; System specific initialisation
+	;; 
+START:	call INIT		; System-specific initialisation
 
-	;; Retrieve ADDRESS into BC' and zero DE'
+	;; Retrieve ADDRESS into BC'
 	exx
 	ld bc, (ADDRESS)
 	exx
 
+	;; Next instruction
 RESTART:
-	ld hl,(DISS)
+	ld hl,(DISS)		; Reset DISS string
 	ld (hl),0x00
-	
+
+	;; Reset CLASS and INDEX (in D' and E', respectively)
 	exx
 	ld de, 0x0000
 	exx
 	
-MAIN:	ld a, _CARRIAGERETURN	; Print newline
+MAIN:	ld a,_CARRIAGERETURN	; Print newline
 	call PRINT_A
 
 	;; Print current address followed by space
@@ -360,13 +447,14 @@ MAIN_LOOP_1:
 	exx
 	pop bc
 
-	cp 0x76			; Test for HALT
+	cp 0x76			; Test for HALT (special case, would
+				; decode to ld (hl),(hl))
+
 	jr nz, MAIN_CHECK_PREFIX
 
-	;; Check if CLASS is zero (otherwise is not HALT)
-	;; 	inc c			; Different from Toni's original code
-	dec c
-	jr z, MAIN_2
+	;; Check if CLASS is 1 (then is not 'halt', but 'bit 6,(hl)'
+	dec c			; Does not deal with case ED,76, which	
+	jr z, MAIN_2		; is not a valid opcode
 
 	ld hl, HALT_STR
 	ld b, 0x04
@@ -381,8 +469,9 @@ HALT_LOOP:
 HALT_STR:
 	db _H, _A, _L, _T
 	
-	;; Check for special codes
-MAIN_2:	inc c
+	;; Check for prefix codes
+MAIN_2:	inc c			; Restore CLASS value
+
 MAIN_CHECK_PREFIX:
 	cp 0xCB
 	jr z, CB_INST
@@ -432,7 +521,7 @@ MAIN_NEXT_INST:
 MAIN_PROC_INST:
 	ld d,a			; Retrieve op code
 
-	;; Extract 'F'
+	;; Extract 'x'
 	and %11000000		; Isolate bit 7 and 6 
 	or c			; Augment with CLASS
 	
@@ -440,18 +529,23 @@ MAIN_PROC_INST:
 	rlca			; respectively. Bit 1 and 0 move to 4
 	rlca			; and 3, respectively
 
-	;; Next step relies on low-order bytes of types being zero
+	;; Work out offset into DATADS for appropriate command sequence
+	;; (relies on low byte of DATADS being close to 00)
 	add a, DATADS & 0xFF
 	ld l,a
 	ld h, (DATADS >> 8) & 0xFF		; 0x68
+
+	;; Retrieve address of command sequence into BC
 	ld c, (hl)
 	inc hl
 	ld b,(hl)
 
+	;; Move address of sequence into HL
 	push bc
 	exx
 	pop hl
 	exx
+	
 CONTROL:			; Was called MASTER in original listing
 	exx
 	ld a, (hl)		; Find byte of data and increment pointer
@@ -511,7 +605,7 @@ SPLIT: 	ld a,d
 
 	ret
 
-	;; Append string from control sequence to DIS
+	;; Append string from control sequence to DISS
 LITERAL:
 	exx
 LIT_LP:	ld a,(hl) 		; Retrieve next character
@@ -541,6 +635,8 @@ SELECT:	ld b,a
 	dec b
 	ret z
 
+	;; Skip forward B lists, where list end is indicated by Bit 7
+	;; being high in list entry
 FIND_LP:
 	ld a,(hl)
 	inc hl
@@ -618,11 +714,11 @@ SELECT_LP:
 
 	ret
 
-	;; Subsequent step based on value of Q (0/1)
+	;; Subsequent step based on value of 'q' (0/1)
 QSKIP:
 	ld a,d			; Retrieve saved copy of Op Code
 	rra			; Shift P right one bit (into Bits 4 and 5)
-	and %00011000		; and isolate it (so A contains P*8)
+	and %00011000		; and isolate it (so A contains 'p'*8)
 	ld b,a			; Save it
 	ld a,d			; Retried Op Code again
 	rla			; Move Q left twice (to Bit 6) ...
@@ -707,7 +803,7 @@ DATA_S0c:	; Indirect loads
 	db _LEFTPARENTH,_D,_E,_RIGHTPARENTH,_COMMA,_A+$80
 	db _A,_COMMA,_LEFTPARENTH,_D,_E,_RIGHTPARENTH+$80
 	db _LEFTPARENTH,IMM_EXT_ADDR,_RIGHTPARENTH,_COMMA,IND_ADDR+$80
-	db $01,_COMMA,_LEFTPARENTH,IMM_EXT_ADDR,_RIGHTPARENTH+$80	
+	db IND_ADDR,_COMMA,_LEFTPARENTH,IMM_EXT_ADDR,_RIGHTPARENTH+$80	
 	db _LEFTPARENTH,IMM_EXT_ADDR,_RIGHTPARENTH,_COMMA,_A+$80
 	db _A,_COMMA,_LEFTPARENTH,IMM_EXT_ADDR,_RIGHTPARENTH+$80
 
