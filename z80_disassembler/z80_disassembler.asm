@@ -20,7 +20,7 @@
 	;; <--x--> <----y----> <----z---->
 	;;         <--p--><-q->
 
-	jp START
+	;; 	jp START
 	
 	;; Table to enable blocks of similar instructions to be
 	;; represented in a compact form
@@ -52,7 +52,8 @@ TYPES:
 	db $00			; padding
 	
 	;; Bit references for index operations -- not included in
-	;; original version of algorithm
+	;; original version of algorithm, though denoted by "n" in this
+	;; source code
 	db _0+$80
 	db _1+$80
 	db _2+$80
@@ -89,10 +90,10 @@ TYPES:
 	;; encapsulate the key manipulations required for the algorithm
 SUBRTS:	dw SPLIT
 	dw LITERAL
-	dw LIST_G
-	dw LIST_H
-	dw SELECT_G
-	dw SELECT_H
+	dw LIST_Y
+	dw LIST_Z
+	dw SELECT_Y
+	dw SELECT_Z
 	dw SKIP
 	dw QSKIP
 
@@ -254,6 +255,7 @@ INS:
 	inc bc
 	exx
 
+INS2:	
 	push af			; Save A
 	call INS_2		; Insert lower nibble
 	pop af			; Restore A
@@ -287,10 +289,17 @@ NOCOMMA:
 	jp z, CONTROL
 
 	;; Decode DIS and print final output
+	;; 
+	;; At this point:
+	;; - BC' = address of next byte in program
+	;; - DE' = CLASS and INDEX
+	;; - HL' = pointer to control sequence for particular 'x' and
+	;;         CLASS
+	;; - D   = current op-code
 DECODE:	exx
-	ld a,d
+	ld a,d			; Retrieve INDEX from DE'
 	exx
-	ld c,a
+	ld c,a			; ... and save it in C
 
 	;; Point to start of DISS and retrieve length
 	ld hl,(DISS)
@@ -325,7 +334,7 @@ DECODE_2:
 	ld a,(hl)
 	sub IND_ADDR
 	jr nz, DECODE_4
-	ld a,c
+	ld a,c			; Check INDEX
 	and a
 	jr nz, DECODE_6
 	call REPLACE
@@ -345,6 +354,7 @@ DECODE_7:
 
 DECODE_4:
 	djnz DECODE_LP
+
 	ld hl,(DISS)
 	ld b,(hl)
 
@@ -391,11 +401,60 @@ DECODE_8:
 	inc hl
 	inc hl
 
+	jr DECODE_10
+	
+DECODE_11:
+	dec a
+	jr nz,DECODE_12
+
+	;; Insert four spaces
+	call REPLACE
+	defb $04,_NULL, _NULL, _NULL, _NULL
+	
+	;; Retrieve relative address
+	exx
+	ld a,(bc)
+	inc bc
+	exx
+
+	push bc
+	
+	ld c,a
+	
+	cp 0x80			; Check if positive or negative
+	ccf
+	sbc a,a
+	ld b,a
+
+	push hl
+	
+	exx
+	push bc
+	exx
+	pop hl
+
+	add hl,bc
+	ld c,l
+	ld b,h
+	
+	pop hl
+	
+	ld a,c
+	call INS2
+
+	ld a,b
+	call INS2
+
+	pop bc
+	
+	inc hl
+	inc hl
+	
 DECODE_10:
 	inc hl
 	inc hl
 
-DECODE_11:
+DECODE_12:	
 	djnz DECODE_LP_2
 	ld hl,(DISS)
 	ld b,(hl)
@@ -439,8 +498,8 @@ MAIN:	ld a,_CARRIAGERETURN	; Print newline
 
 	;; Retrieve next byte to disassemble and advance pointer
 MAIN_LOOP_1:
-	ld a,(bc)
-	inc bc
+	ld a,(bc)		; Retrieve next byte of program
+	inc bc			; Advance pointer
 
 	;; Retrieve status info
 	push de			; D=INDEX; C=CLASS
@@ -512,14 +571,19 @@ CB_INST:
 	exx
 
 MAIN_NEXT_INST:
+	;; Update DE' (long-term copy of CLASS and INDEX)
 	push bc
 	exx
 	pop de
 
 	jr MAIN_LOOP_1
 
+	;; At this point:
+	;; - A   = opcode of current instruction
+	;; - BC' = address of next byte in program
+	;; - DE' = CLASS and INDEX
 MAIN_PROC_INST:
-	ld d,a			; Retrieve op code
+	ld d,a			; Save op code
 
 	;; Extract 'x'
 	and %11000000		; Isolate bit 7 and 6 
@@ -529,27 +593,38 @@ MAIN_PROC_INST:
 	rlca			; respectively. Bit 1 and 0 move to 4
 	rlca			; and 3, respectively
 
+	;; At this point, A = 4*CLASS + x
+	
 	;; Work out offset into DATADS for appropriate command sequence
-	;; (relies on low byte of DATADS being close to 00)
-	add a, DATADS & 0xFF
-	ld l,a
-	ld h, (DATADS >> 8) & 0xFF		; 0x68
+	ld c,a
+	ld b,0x00
+	ld hl, DATADS
+	add hl, bc
+	
+	;; ld l,a
+	;; ld h, (DATADS >> 8) & 0xFF		; 0x68
 
 	;; Retrieve address of command sequence into BC
 	ld c, (hl)
 	inc hl
 	ld b,(hl)
 
-	;; Move address of sequence into HL
+	;; Move address of sequence into HL'
 	push bc
 	exx
 	pop hl
 	exx
 	
+	;; At this point:
+	;; - BC' = address of next byte in program
+	;; - DE' = CLASS and INDEX
+	;; - HL' = pointer to control sequence for particular 'x' and
+	;;         CLASS
+	;; - D   = current op-code
 CONTROL:			; Was called MASTER in original listing
 	exx
-	ld a, (hl)		; Find byte of data and increment pointer
-	inc hl
+	ld a, (hl)		; Retrieve next control command
+	inc hl			; Advance control-sequence pointer
 	exx
 	
 	;; Save copy of byte (needed again later)
@@ -572,13 +647,30 @@ CONTROL:			; Was called MASTER in original listing
 	inc hl
 	ld b,(hl)
 
+	;; At this point:
+	;; - BC' = address of next byte in program
+	;; - DE' = CLASS and INDEX
+	;; - HL' = pointer to next value control sequence for particular
+	;;         'x' and CLASS
+	;; - D   = current op-code
+	;; - E   = current control-sequence command
+	;; - BC  = address of control routine to call
+	
 	;; Jump to subroutine
 	push bc
 	ret
 
-	;; Retrieve n'th address from list pointed to by HL' and load
+	;; Retrieve (z+1)'th address from list pointed to by HL' and load
 	;; that address into HL'
-SPLIT: 	ld a,d
+	;;
+	;; On entry:
+	;; - BC' = address of next byte in program
+	;; - DE' = CLASS and INDEX
+	;; - HL' = pointer to next value control sequence for particular
+	;;         'x' and CLASS
+	;; - D   = current op-code
+	;; - E   = current control-sequence command
+SPLIT: 	ld a,d			; Retrieve op-code
 	exx			; Save active registers
 
 	;; Isolate lower three bits and multply by two to get offset to
@@ -591,8 +683,10 @@ SPLIT: 	ld a,d
 	ld e,a
 	ld d,0x00
 
-	;; Retrieve addresss into HL
+	;; Skip forward 'z' words in control sequence
 	add hl,de
+
+	;; Retrieve addresss into HL' (new location in control sequence)
 	ld e,(hl)
 	inc hl
 	ld d,(hl)
@@ -603,9 +697,20 @@ SPLIT: 	ld a,d
 
 	exx
 
+	;; Done
 	ret
 
-	;; Append string from control sequence to DISS
+	;; Append string from control sequence (terminated by character
+	;; with bit 7 high) to DISS. If control data has bit 3 set,
+	;; append a space to end of string
+	;;
+	;; On entry:
+	;; - BC' = address of next byte in program
+	;; - DE' = CLASS and INDEX
+	;; - HL' = pointer to next value control sequence for particular
+	;;         'x' and CLASS
+	;; - D   = current op-code
+	;; - E   = current control-sequence command
 LITERAL:
 	exx
 LIT_LP:	ld a,(hl) 		; Retrieve next character
@@ -646,60 +751,130 @@ FIND_LP:
 
 	ret
 
-LIST_G: ld a,d
+	;; Select (y+1)th entry in subsequent list of strings and append
+	;; to DISS (each string terminates with character with bit 7
+	;; set). Control byte data (bits 3,4, and 5) specify whether
+	;; list has 4 or 8 entries.
+	;;
+	;; On entry:
+	;; - BC' = address of next byte in program
+	;; - DE' = CLASS and INDEX
+	;; - HL' = pointer to next value control sequence for particular
+	;;         'x' and CLASS
+	;; - D   = current op-code
+	;; - E   = current control-sequence command
+LIST_Y: ld a,d			; Retrieve current op-code
+	rra			; Rotate Y into bits 0, 1, and 2, then
+	rra			; continue as for LIST_Z
 	rra
-	rra
-	rra
+	
 	jr LIST_CONT
 	
-LIST_H:	ld a,d
+	;; Select (z+1)th entry in subsequent list of strings and append
+	;; to DISS (each string terminates with character with bit 7
+	;; set). Control byte data (bits 3,4, and 5) specify whether
+	;; list has 4 or 8 entries.
+	;;
+	;;
+	;; On entry:
+	;; - BC' = address of next byte in program
+	;; - DE' = CLASS and INDEX
+	;; - HL' = pointer to next value control sequence for particular
+	;;         'x' and CLASS
+	;; - D   = current op-code
+	;; - E   = current control-sequence command
+LIST_Z:	ld a,d
 
 LIST_CONT:	
-	and %00000111
-	call FIND
+	and %00000111		; Isolate index (lower three bits)
+	call FIND		; Find corresponding string
 
 LIST_LP:
-	ld a,(hl)
-	inc hl
-	call CHR
-	rla
+	ld a,(hl)		; Retrieve next character from string
+	inc hl			; Advance pointer
+	call CHR		; Add to DISS
+	rla			; Check if done
 	jr nc, LIST_LP
 
-	ld a,e
+	;; Update HL to point beyond string list
+	ld a,e			; Retrieve length of list
 	rra
 	rra
 	rra
 	and %00000111
-	inc a
-	call FIND
+	inc a			; One more that number of strings
+	call FIND		; Find end of list
 
-	push hl
+	push hl			; Save it
 	exx
 	pop hl
 	exx
 
 	ret
 
-SELECT_G:
-	ld a,d
+	;; Insert string into DISS from one of the TYPES lists
+	;; (determined by control data), as follows: -
+	;;  000 - r(y)
+	;;  001 - rp(y)
+	;;  010 - rp2(y)
+	;;  011 - n(y)
+	;;  100 - cc(y)
+	;;  101 - not used
+	;;  110 - alu(y)
+	;;  111 - not used
+	;;
+	;; On entry:
+	;; - BC' = address of next byte in program
+	;; - DE' = CLASS and INDEX
+	;; - HL' = pointer to next value control sequence for particular
+	;;         'x' and CLASS
+	;; - D   = current op-code
+	;; - E   = current control-sequence command
+SELECT_Y:
+	ld a,d			; Retrieve op code
+	rra			; Move Y into bits 0,1, and 2
 	rra
 	rra
-	rra
-	jr SELECT_CONT
+	jr SELECT_CONT		; Proceed as for SELECT_Z
 
-SELECT_H:
-	ld a,d
+	;; Insert string into DISS from one of the TYPES lists
+	;; (determined by control data), as follows: -
+	;;  000 - r(z)
+	;;  001 - rp(z)
+	;;  010 - rp2(z)
+	;;  011 - n(z)
+	;;  100 - cc(z)
+	;;  101 - not used
+	;;  110 - alu(z)
+	;;  111 - not used
+	;;
+	;; On entry:
+	;; - BC' = address of next byte in program
+	;; - DE' = CLASS and INDEX
+	;; - HL' = pointer to next value control sequence for particular
+	;;         'x' and CLASS
+	;; - D   = current op-code
+	;; - E   = current control-sequence command
+SELECT_Z:
+	ld a,d			; Retrieve op code
 
-SELECT_CONT:
-	and %00000111
+SELECT_CONT:			
+	and %00000111		; Isolate lower three bits
 
 	push af
 
-	ld a,e
-	and 0x38
-	add a, TYPES & 0xFF
-	ld l,a
-	ld h, (TYPES >> 8) & 0xFF 
+	ld a,e			; Retreive data from current control-
+	and 0x38		; sequence command (conveniently,
+				; already x8)
+	
+	ld c,a
+	ld b,0x00
+	ld hl,TYPES
+	add hl,bc
+	
+	;; add a, TYPES & 0xFF
+	;; ld l,a
+	;; ld h, (TYPES >> 8) & 0xFF 
 	pop af
 
 	call SELECT
@@ -715,6 +890,14 @@ SELECT_LP:
 	ret
 
 	;; Subsequent step based on value of 'q' (0/1)
+	;;
+	;; On entry:
+	;; - BC' = address of next byte in program
+	;; - DE' = CLASS and INDEX
+	;; - HL' = pointer to next value control sequence for particular
+	;;         'x' and CLASS
+	;; - D   = current op-code
+	;; - E   = current control-sequence command
 QSKIP:
 	ld a,d			; Retrieve saved copy of Op Code
 	rra			; Shift P right one bit (into Bits 4 and 5)
@@ -730,16 +913,29 @@ QSKIP:
 	xor d
 	ld d,a			; D contains modified inst with P and Q swapped
 	
-SKIP: 	bit 5,d			; Test value of Q
+	;; Skip forward n bytes in control sequence is bit 5 of op-code
+	;; is high (setting low first)
+	;;
+	;; On entry:
+	;; - BC' = address of next byte in program
+	;; - DE' = CLASS and INDEX
+	;; - HL' = pointer to next value control sequence for particular
+	;;         'x' and CLASS
+	;; - D   = current op-code
+	;; - E   = current control-sequence command
+SKIP: 	bit 5,d			; Test value of p(1) 
 	jr nz, SKIP_CONT	; If set, skip forward 'n' steps in sequence
+
 	exx			; Otherwise, advance to next step in sequence
 	inc hl 
 	exx
+
 	ret
 
 SKIP_CONT:
-	res 5,d
+	res 5,d			; Reset p(1)
 
+	;; Skip forward 'n' bytes in control sequence
 	exx
 
 	push bc
@@ -747,7 +943,7 @@ SKIP_CONT:
 	ld c,(hl)
 	inc hl
 	ld b,0x00
-	add hl, bc
+	add hl,bc
 
 	pop bc
 
@@ -775,13 +971,13 @@ DATA_S0a:	; Relative jumps and assorted ops
 	db $9A					; LIST-G (4)
 	db _N,_O,_P+$80			
 	db _E,_X,_SPACE,_A,_F,_COMMA,_A,_F,_APOSTROPHE+$80
-	db _D,_J,_N,_Z,_SPACE,IMM_ADDR+$80	
-	db _J,_R,_SPACE,IMM_ADDR+$80
+	db _D,_J,_N,_Z,_SPACE,REL_ADDR+$80	
+	db _J,_R,_SPACE,REL_ADDR+$80
 						; TERMINATE
 	db $09,_J,_R+$80			; LITERAL (inc space)
 	db $64					; SELECT-G (C(G)) (inc
 						; comma)
-	db $81, IMM_ADDR+$80				; LITERAL
+	db $81, REL_ADDR+$80				; LITERAL
 						; TERMINATE
 
 DATA_S0b:	; 16-bit load immediate/ add
@@ -1067,16 +1263,6 @@ DATA_S0f:
 	db $84					; SELECT-G (r(G))
 						; TERMINATE
 
-	;; Not sure any of this is needed
-	db $1C	; $6CE0 ...DE...
-	db $00,$00,$00,$00,$00,$00,$00,$00	; $6CE8 ........ 
-	db $00,$00,$00,$00,$00,$00,$00,$00	; $6CF0 ........
-	db $00,$00,$00,$00,$00,$00,$00,$00	; $6CF8 ........
-	db $00,$00,$00,$00,$00,$00,$00,$00	; $6D00 ........
-	db $00,$00,$00,$00,$00,$00,$00,$00	; $6D08 ........
-	db $00,$00,$00,$00,$00,$00,$00,$00	; $6D10 ........
-	db $00,$00,$00,$00,$00,$00,$00,$00	; $6D18 ........
-
 	;; Sequence for X=3, CLASS=2 (ED prefix) Invalid opcode
 
 
@@ -1096,4 +1282,3 @@ LENS:	db 0x5F, 0x55, 0x55, 0xA5, 0x55, 0x55, 0x55, 0xA5
         db 0x55, 0xFA, 0xF5, 0xA5, 0x55, 0xFA, 0xF5, 0xA5
         db 0x55, 0xF5, 0xF5, 0xA5, 0x55, 0xF5, 0xFA, 0xA5
         db 0x55, 0xF5, 0xF5, 0xA5, 0x55, 0xF5, 0xF5, 0xA5
-

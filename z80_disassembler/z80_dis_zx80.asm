@@ -8,14 +8,15 @@ DISS:		dw DISS_BUFF
 DISS_BUFF:	ds 0x20
 
 	;; Following codes must be sequential
-EXT_ADDR: equ 0x02
-IND_ADDR: equ 0x03
+EXT_ADDR:	equ 0x02
+IND_ADDR:	equ 0x03
 IMM_ADDR:	equ 0x04
 IMM_EXT_ADDR:	equ 0x05
+REL_ADDR:	equ 0x06
 
 SCROLL_COUNT:	db 0x00
-OLD_SP:	dw 0x67FC
-PRPOS:	equ 0x06E0
+OLD_SP:		dw 0x67FC
+PRPOS:		equ 0x06E0		; Corrupts HL, BC, and DE
 PRINT_CH:	equ 0x0720
 TVFLAGS:	equ 0x5C3C
 

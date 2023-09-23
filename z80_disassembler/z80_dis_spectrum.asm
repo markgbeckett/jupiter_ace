@@ -12,6 +12,7 @@ EXT_ADDR: equ 0x00
 IND_ADDR: equ 0x01
 IMM_ADDR:	equ 0x02
 IMM_EXT_ADDR:	equ 0x03
+REL_ADDR:	equ 0x04
 
 	;; Initialise display, etc.
 INIT:
