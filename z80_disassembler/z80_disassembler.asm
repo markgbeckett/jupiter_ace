@@ -114,59 +114,78 @@ DATADS:	dw DATA_S0		; 'x' = 0
 
 	
 	;; 
-	;; Replace current byte in DISS as required with IX, IY, (HL),
-	;; etc.
+	;; Replace current byte in DISS by a string of one or more bytes.
 	;; 
-	;; On entry, HL points to current location in DISS
+	;; On entry:
+	;;   HL - insert location in DISS
+	;;   TOS - return address (TOS) contains address of counted
+	;;         string to be substituted.
+	;;
+	;; On exit:
+	;;   HL - new insert location in DISS
+	;;   AF, DE, and IX - corrupted
+	;; 
 REPLACE:
-	pop ix			; Retrieve pointer to subroutine arguments
+	pop ix			; Retrieve pointer to string
 
 	ld de,(DISS)		; Retrieve address of start of DISS
 
-	and a			; Compute length of string to modify (HL
-	sbc hl,de		; points to current location in
-				; DISS). Assume answer is one byte long
-				; (i.e., fits in L)
-
+	;; Compute length of remaining string (to right of current
+	;; location) which needs to be moved to allow insertion
+	and a			; Reset carry
+	sbc hl,de		; Compute length of string to left of
+				; DE.  Assume answer is one byte long
+				; (i.e., fits in L and H is zero)
 	ld a,(de)		; Retrieve length of DISS
 	sub l			; and compute length of remaining string
-	inc a			; in A
+	inc a			; (inc. current byte)
 
+	;; Insert space for replacement string
 	push af			; Save length of string remainder
 	ld a,(de)		; Retrieve length of DISS
 	ld l,a			; Save it
 
-	;; Work out new length of string
-	add a,(ix+0x00)		; Add length of parameter field
-	dec a
+	;; Update length of DISS (one less than length of replacement
+	;; string)
+	add a,(ix+0x00)		; Retrieve length of replacement string
+	dec a			; Reduce by one
 	ld (de),a		; and update length of DISS
-	
-	add hl,de		; Set HL to point to end of DISS
 
-	;; Compute end of topical string
-	ld e,(ix+0x00)		; DE = Length of replacement string
-	ld d,0x00		; 
-	push hl			; Save HL
-	add hl,de		; Compute address of end of topical
-	dec hl			; string
-	ex de,hl		; Move to DE (new end of DISS)
-	pop hl			; Restore HL (old end of DISS)
+	;; Set HL to point to end of DISS (L saved previously)
+	add hl,de		; H should still be 0
+
+	;; Compute end of new DISS (after insertion)
+	ld e,(ix+0x00)		; Set DE to length of replacement
+	ld d,0x00		; string
+	push hl			; Save HL (end of original string)
+	add hl,de		; Compute address of end of new string
+	dec hl 			; One character is removed as part of
+				; substitution
+	ex de,hl		; Set DE to end of new string
+	pop hl			; Restore HL (end of original string)
+
+	;; Retrieve length of remainder of string into BC
 	pop af			; Restore length
 
 	push bc			; Save BC
 	ld c,a			; Move length to BC
 	ld b,0x00		; Effectively insert space into string
+
+	;;  Move string tail to make space for insertion
 	lddr
 
 	;; Insert replacement text
-	ex de,hl		; DE now points to insertion point in
-	inc de			; string
+	ex de,hl		; Set DE to insertion point for
+	inc de			; insertiong string
 
-	ld c, (ix+0x00)		; Length of insertion text
+	ld c, (ix+0x00)		; Retrieve length of insertion text
+	ld b,0x00		; into BC
+
+	;; Set HL to start of insertion text
 	push ix
 	pop hl
 	inc hl			; HL is start of string to insertion
-	ld b,0x00
+	
 	ldir			; Insert new text into DISS
 
 	ex de,hl		; DE points to byte after parameter
@@ -175,14 +194,20 @@ REPLACE:
 				; DISS
 	
 	pop bc			; Restore BC
+
 	push de			; Push address of code past parameter
-				; field
+				; field, ready for return
 
 	ret			; Jump to (DE)
 
 	;; 
 	;; Add character to the end of the current string, DIS
-	;; 
+	;;
+	;; On entry:
+	;;   A - character to insert
+	;;
+	;; On exit:
+	;;   All registers preserved
 CHR:
 	push af			; Save registers
 	push bc
@@ -210,8 +235,13 @@ CHR:
 	ret
 
 	;; 
-	;; Print contents of BC in hex
-	;; 
+	;; Print contents of BC in hex to screen
+	;;
+	;; On entry:
+	;;   BC - number to print
+	;;
+	;; On exit:
+	;;   A - corrupted
 HP_BC:	ld a,b
 	call HP_A
 	ld a,c
@@ -219,6 +249,11 @@ HP_BC:	ld a,b
 	;; 
 	;; Print contents of A in hex
 	;; 
+	;; On entry:
+	;;   A - number to print
+	;;
+	;; On exit:
+	;;   A - corrupted
 HP_A:	push af			; Save A
 	rra			; Isolate high nibble
 	rra
@@ -246,10 +281,10 @@ HP_CONT:
 
 	;; 
 	;; Insert next byte (two characters) of subject program into DIS
-	;; (HL)
+	;; (HL) and advice pointer into object code
 	;; 
 INS:
-	;; Retrieve number from BC'
+	;; Retrieve number from BC' (current location in object code)
 	exx
 	ld a,(bc)
 	inc bc
@@ -951,8 +986,6 @@ SKIP_CONT:
 
 	ret
 
-ADDRESS:	dw 0x0000
-	
 DATA:
 	;;  Control sequence entries XCDDDNNN, where:
 	;;     NNN - routine number

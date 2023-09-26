@@ -15,6 +15,7 @@ IMM_EXT_ADDR:	equ 0x05
 REL_ADDR:	equ 0x06
 
 SCROLL_COUNT:	db 0x00
+ADDRESS:	dw 0x00
 OLD_SP:		dw 0x67FC
 PRPOS:		equ 0x06E0		; Corrupts HL, BC, and DE
 PRINT_CH:	equ 0x0720

@@ -14,6 +14,8 @@ IMM_ADDR:	equ 0x02
 IMM_EXT_ADDR:	equ 0x03
 REL_ADDR:	equ 0x04
 
+ADDRESS:	dw 0x0000
+
 	;; Initialise display, etc.
 INIT:
 	;; Retrieve address from stack into DE
