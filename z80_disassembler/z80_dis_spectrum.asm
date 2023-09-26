@@ -37,3 +37,7 @@ PRINT_A:
 	pop bc
 
 EXIT:	ret
+
+TAB:	ld a, 0x06
+	jr PRINT_A
+

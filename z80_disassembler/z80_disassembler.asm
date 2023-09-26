@@ -512,7 +512,7 @@ START:	call INIT		; System-specific initialisation
 	exx
 
 	;; Next instruction
-RESTART:
+RESTART:	
 	ld hl,(DISS)		; Reset DISS string
 	ld (hl),0x00
 
@@ -531,6 +531,82 @@ MAIN:	ld a,_CARRIAGERETURN	; Print newline
 	ld a,_SPACE
 	call PRINT_A
 
+	;; Print in hexadecimal
+	push bc
+	push de
+	
+	ld h,b
+	ld l,c
+
+	ld c,0
+
+	ld a,(hl)
+	cp 0xDD
+	jr z, DDFD
+	cp 0xfD
+	jr nz, NORM
+
+DDFD:	call HP_A
+	inc hl
+	inc c
+	ld a,(hl)
+NORM:	cp 0xED
+	jr nz, SIMPLE
+
+	call HP_A
+	inc hl
+	ld a,(hl)
+	and 0xC7
+	cp 0x43
+	ld b,0x01
+	jr nz, NXT_BYT
+	ld b,0x03
+	jr NXT_BYT
+
+SIMPLE:	push hl
+	srl a
+
+	push af
+
+	ld hl, LENS
+	ld d,0x00
+	ld e,a
+	add hl,de
+
+	pop af
+	ld a,(hl)
+
+	jr c, NIBBLE
+	rra
+	rra
+	rra
+	rra
+NIBBLE:	dec c
+
+	jr nz, OK
+
+	rra
+	rra
+
+OK:	and 0x03
+
+	ld b,a
+
+	pop hl
+
+NXT_BYT:
+	ld a,(hl)
+	inc hl
+
+	call HP_A
+
+	djnz NXT_BYT
+	
+	pop de
+	pop bc
+
+	call TAB
+	
 	;; Retrieve next byte to disassemble and advance pointer
 MAIN_LOOP_1:
 	ld a,(bc)		; Retrieve next byte of program

@@ -15,7 +15,7 @@ OBJS = $(SRC:.asm=.bin)
 all: $(OBJS)
 
 %.bin:	%.asm Makefile $(HEADERS)
-	$(ASM) $(AFLAGS) -o $@ $< > $*.sym 2>&1 
+	$(ASM) $(AFLAGS) -o $@ $< > $*.sym 2>&1
 
 clean:
 	$(ERASE) *.bin *.sym

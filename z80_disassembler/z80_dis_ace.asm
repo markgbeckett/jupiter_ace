@@ -65,6 +65,24 @@ PRINT_A:
 
 	jr PRINT_CONT
 
+TAB:	push hl
+	ld hl,(SCRPOS)
+
+TAB_STEP:
+	inc hl
+	ld a,l
+	and %00001111
+	jr nz, TAB_STEP
+
+	dec hl
+	dec hl
+	
+	ld (SCRPOS),hl
+	
+	pop hl
+
+	ret
+	
 NEWLINE:
 	inc hl
 	ld a,l

@@ -69,6 +69,14 @@ PRINT_CNT:
 
 	ret
 	
+TAB:	ld a,_SPACE
+	call PRINT_A
+	ld a,(iy+$24)
+	and %00001100
+	jr nz, TAB
+
+	ret
+	
 	;; Exit to BASIC
 EXIT:	
 	;; Transfer address of next command to disasseble to HL, so it
