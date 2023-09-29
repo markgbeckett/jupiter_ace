@@ -531,69 +531,77 @@ MAIN:	ld a,_CARRIAGERETURN	; Print newline
 	ld a,_SPACE
 	call PRINT_A
 
-	;; Print in hexadecimal
-	push bc
+	;; Print object code for current command in hexadecimal
+	push bc			; Save registers
 	push de
 	
-	ld h,b
+	ld h,b			; Transfer current address to HL
 	ld l,c
 
-	ld c,0
+	ld c,0			; Set counter to 0
 
-	ld a,(hl)
-	cp 0xDD
+	ld a,(hl)		; Retrieve current byte of instruction
+	cp 0xDD			; Check for index instruction
 	jr z, DDFD
 	cp 0xfD
 	jr nz, NORM
 
-DDFD:	call HP_A
-	inc hl
-	inc c
+DDFD:	call HP_A		; Print index byte
+	inc c			; Record is index instruction (C=1)
+	inc hl			; Advance to next byte and retrieve
 	ld a,(hl)
-NORM:	cp 0xED
+
+NORM:	cp 0xED			; Check for ED prefix
 	jr nz, SIMPLE
 
-	call HP_A
-	inc hl
+	;; Instruction has ED prefix
+	call HP_A		; Print prefix
+	inc hl			; Advance to next byte and retrieve
 	ld a,(hl)
-	and 0xC7
-	cp 0x43
-	ld b,0x01
+	and %11001111		; Mask off 'p'
+	cp  %10000011		; All instructions of form 10XX0011 are
+				; three bytes long (exc prefix). Others
+				; are one-byte
+	ld b,0x01		; One-byte instruction
 	jr nz, NXT_BYT
-	ld b,0x03
+	ld b,0x03		; Three-byte instruction
 	jr NXT_BYT
 
-SIMPLE:	push hl
-	srl a
+	;; Check length in LENS
+SIMPLE:	push hl			; Save current address
+	srl a			; Divide instruction code by 2
+				; (remainder in carry)
 
-	push af
+	push af			; Save flag
 
-	ld hl, LENS
-	ld d,0x00
+	ld hl, LENS		; Point to corresponding entry
+	ld d,0x00		; in LENS
 	ld e,a
 	add hl,de
 
-	pop af
-	ld a,(hl)
+	pop af			; Retrieve flag
+	ld a,(hl)		; Retrieve length of instruction
 
+	;; Select appropriate nibble
 	jr c, NIBBLE
 	rra
 	rra
 	rra
 	rra
-NIBBLE:	dec c
+NIBBLE:	dec c			; Check if index instruction
 
 	jr nz, OK
 
+	rra			; Choose bits 2 and 3 if index
 	rra
-	rra
 
-OK:	and 0x03
+OK:	and 0x03		; Isolate bits 0 and 1
 
-	ld b,a
+	ld b,a			; Set instruction length
 
-	pop hl
+	pop hl			; Retrieve current address
 
+	;; Print instruction (starting at HL of length B)
 NXT_BYT:
 	ld a,(hl)
 	inc hl
@@ -601,10 +609,12 @@ NXT_BYT:
 	call HP_A
 
 	djnz NXT_BYT
-	
+
+	;; Restore registers 
 	pop de
 	pop bc
 
+	;; Pad with space to ensure instructions are aligned
 	call TAB
 	
 	;; Retrieve next byte to disassemble and advance pointer
