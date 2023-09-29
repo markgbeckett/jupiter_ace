@@ -8,14 +8,14 @@
 DISS:		dw 0x2701		; Address of AceFORTH pad
 ADDRESS:	equ 0x27FE
 OLD_SP:		equ 0x27FC
+SCROLL_COUNT:	equ 0x27FB
+	
 
 EXT_ADDR: equ 0x00
 IND_ADDR: equ 0x01
 IMM_ADDR:	equ 0x02
 IMM_EXT_ADDR:	equ 0x03
 REL_ADDR:	equ 0x04
-	
-SCROLL_COUNT:	db 0x00
 	
 SCRPOS:	equ 0x3C1C
 L_HALF:	equ 0x3C24
