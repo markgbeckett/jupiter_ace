@@ -68,12 +68,14 @@ PRINT_CNT:
 	pop bc
 
 	ret
-	
-TAB:	ld a,_SPACE
+
+	;; Advance to 14th column
+TAB:	ld a,_SPACE		; Pad with space
 	call PRINT_A
-	ld a,(iy+$24)
-	and %00001100
-	jr nz, TAB
+	ld a,(iy+$24)		; Retrieve current column (counted from
+				; right)
+	cp 0x14			; Check if reached col 14 (=22h-14h)
+	jr nc, TAB		; Pad with another space, if not
 
 	ret
 	
