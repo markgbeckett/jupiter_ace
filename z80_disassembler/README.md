@@ -9,19 +9,19 @@ Toni's Z80 disassembler is designed to be as compact as possible, occupying arou
 
 ## Usage
 
-For this project, I have provided source code: you would typically assemble and package the disassembler for your specific system and requirements. I have also included three, example 'ports' of the disassembler -- for the Jupiter Ace, the ZX80 (4K ROM) and the ZX Spectrumm -- which along with these notes should help you get started.
+For this project, I have provided source code: you would typically build your own disassembler package for your specific system and requirements. I have also included three example 'ports' of the disassembler -- for the Jupiter Ace, the ZX80 (4K ROM) and the ZX Spectrum -- which along with these notes should help you get started.
 
 The source code can be assembled with any standard Z80 cross-assembler (I use [the non-GNU z80asm](https://savannah.nongnu.org/projects/z80asm/)). I have included a [Makefile](Makefile) to help with this.
 
 To make the disassembler more portable, I have partitioned the program into two parts:
 
-- [z80_disassembler.asm](z80_disassembler.asm), which contains the core of Toni's Z80 disassembler implementation in a form that can run on almost any Z80 platform with sufficient resouces (most notably, memory).
-- a platform-specific wrapper (e.g., see [z80_dis_ace.asm](z80_dis_ace.asm)) that contains implementations of initialisation and screen handling tailored to the requirements of the specific platform.
+- [z80_disassembler.asm](z80_disassembler.asm), which contains the core of Toni's Z80 disassembler implementation in a form that can run on almost any Z80 platform with sufficient resouces (most notably, memory). There should be no reason to change this file, unless you wish to change or extend the disassembler's functionality.
+- a platform-specific wrapper (e.g., see [z80_dis_ace.asm](z80_dis_ace.asm)) that contains implementations of initialisation and screen handling tailored to the requirements of a specific platform and usage. This is the file you will probably need to create for your system and requirements.
 
 Probably the easiest way to create a new port is to start from one of the existing platform-specific wrappers: whichever one seems most similar to your target system and use.
 
 The platform-specific wrapper needs to include the following elements:
-- A definition file for the system character set, following the labelling convention in (../utilities/jupiter_chars.asm)[../utilities/jupiter_chars.asm]. In fact, for any system that uses ASCII-like character coding, the Ace definition file is likely to be good enough (possibly with some tweaks).
+- A definition file for the system character set, following the labelling convention in [jupiter_chars.asm](../utilities/jupiter_chars.asm). In fact, for any system that uses ASCII-like character coding, the Ace definition file is likely to be good enough (possibly with some tweaks).
 - A buffer of bytes, in RAM, in which the current instruction can be disassembled, pointed to by the label `DISS`. For example, on the Jupiter Ace, I set `DISS` to point to the beginning of the PAD at address 0x2701.
 - A label named `ADDRESS` that points to word (two bytes) in RAM that can be used by the disassembler to store an address. For the Jupiter Ace, I have specified the last two bytes of PAD, at address 0x27FE.
 - Five `equ` instructions defining character codes that are mapped to `EXT_ADDR`, `IND_ADDR`, `IMM_ADDR`, `IMM_EXT_ADDR`, and `REL_ADDR` and that the disassembler can use to note special decoding. You should choose codes that do not coincide with printable letters, numbers, punctuation marks, or carriage return. On most systems, codes 0, 1, 2, 3, and 4 are suitable. The only exception I have found is the ZX80 which maps printable characters onto these codes.
