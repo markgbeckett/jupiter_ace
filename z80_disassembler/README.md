@@ -10,6 +10,8 @@ Toni's Z80 disassembler is designed to be as compact as possible, occupying arou
 
 For this project, I have provided source code: you would typically build your own package for your specific system and requirements. To help, I have included three example 'ports' of the disassembler -- for the Minstrel 4th, the Minstrel 2 (4K ROM) and the ZX Spectrum. Along with these notes, these should help you get started.
 
+![](z80_dis_ace.png "Minstrel 4th version of disassembler")
+
 The source code can be assembled with any standard Z80 cross-assembler (I have used [the non-GNU z80asm](https://savannah.nongnu.org/projects/z80asm/)). I have included a [Makefile](Makefile) to help with this.
 
 To make the disassembler more portable, I have partitioned the program into two parts:
