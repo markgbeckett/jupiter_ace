@@ -25,7 +25,7 @@ MONSIZE:	equ 0x1000
 ROMSIZE:	equ 0x2000
 	
 	;; Load in Jupiter Ace character set encoding
-	include "..\3d_monster_maze\jupiter_chars.asm"
+	include "..\utilities\jupiter_chars.asm"
 P8255:		equ		0FFh	;8255 I control port
 DIGIT:		equ		0FFh	;8255 I port C
 SEG7:		equ		0FFh	;8255 I port B
@@ -1999,7 +1999,7 @@ L0085:  EX      DE,HL                   ; switch pointers.
         JR      NZ,L007C                ; back for all 95 characters.
 
 	;; Clear the screen
-        xor a		; clear accumulator.
+CLS:	xor a		; clear accumulator.
         ld ($2700),a	; make location after screen zero.
 
 	ld hl, 0x2400		; Start of video RAM
