@@ -4,7 +4,7 @@ The Micro-Professor (MPF-1) is a single-board, Z80-based computer produced by Mu
 
 The MPF-1 was intended to teach people about microprocessors, machine-code programming, and electronics. The computer came housed in a book-like case with a seven-segment LED display and a 32-key keypad.
 
-The MPF-1 shipped with 2 kilobytes of RAM and a built-in monitor program for entering, running, and debugging machine-code programs. Multitech also provided a range of expansion options including a BASIC interpretter ROM, memory expansion, EPROM programmer, and a thermal printer (the software for which included a Z80 disassembler). 
+The MPF-1 shipped with 2 kilobytes of RAM and a built-in monitor program for entering, running, and debugging machine-code programs. Multitech also provided a range of optional add-ons including a BASIC interpretter ROM, memory expansion, EPROM programmer, and a thermal printer (the software for which included a Z80 disassembler). 
 
 For more information on the Micro-Professor, see [https://electrickery.nl/comp/mpf1](https://electrickery.nl/comp/mpf1).
 
@@ -14,7 +14,7 @@ The Monitor can be run in two modes:
 
 - Ideally, if you have an EPROM programmer and a suitable EPROM chip, you can write a new ROM image for your Minstrel 4th. This will give a more realistic (though still not perfect) experience.
 
-- Alternatively, you can load the monitor into RAM and run it from there. This works reasonably well though you need to be careful to avoid using zero-page restart instructions (such as `rst 0x38`) replacing them by suitable calls (something like, `call 0x4038`). You also cannot use Reset in RAM version (see note below), so you can get stuck if your program has a bug and careers off into memory it is not meant to.
+- Alternatively, you can load the monitor into RAM and run it from there. This works reasonably well though you need to be careful to avoid using zero-page restart instructions (such as `rst 0x38`) replacing them by suitable calls (something like, `call 0x4038`). You also cannot use Reset in the RAM version (see note below), so you can get stuck if your program has a bug and careers off into memory it is not meant to.
 
 Even the ROM version is missing some functionality, related to debugging and single-stepping. For this, the MPF-1 uses the non-maskable interrupt line and a timer provided by a [74LS90](https://www.ti.com/lit/ds/symlink/sn54ls90.pdf) integrated circuit. To generate an NMI, on the Minstrel 4th, would require an expansion device (such as an RC2014 card).
 
@@ -27,11 +27,11 @@ The procedure for accessing the MPF-1 Monitor depends on which version of the mo
 
 ### ROM image
 
-The MPF-1 ROM image 'mpf_1.rom' can be burned onto a suitable EPROM and installed into the Minstrel 4th or Minstrel 4D. Jumpers/ switches on the main board allow you to select between multiple ROMs, so you could set up the standard AceForth ROM in the first ROM bank and the MPF-1 Monitor in the second, for example (see Minstrel 4th User Guide for more information).
+The MPF-1 ROM image 'mp-1.rom' can be burned onto a suitable EPROM and installed into the Minstrel 4th or Minstrel 4D. Jumpers/ switches on the main board allow you to select between multiple ROMs, so you could set up the standard AceForth ROM in the first ROM bank and the MPF-1 Monitor in the second, for example (see Minstrel 4th User Guide for more information).
 
 Once installed, check the jumpers/ switches are configured to select the correct ROM bank and power on. The MPF-1 should boot as shown in the screenshot.
 
-The ROM image 'mpf-1.rom' has been padded out to 16 kilobytes to fill the ROM bank, even though the Minstrel 4th only addresses the first 8 kilobytes. This means the ROM will probably not work on an emulator (which will expect an 8-kilobyte ROM). To this end, I have also provided 'mpf-1_8k.rom', which is confirmed to work on the EightyOne emulator, at least.
+The ROM image 'mpf-1.rom' has been padded out to 16 kilobytes to fill the ROM bank, even though the real contents fits into the first 8 kilobytes. This means the ROM will probably not work on an emulator (which will expect an 8-kilobyte ROM). To this end, I have also provided 'mpf-1_8k.rom', which is confirmed to work on the EightyOne emulator, at least.
 
 ![](mpf-1.png "Power-on screen")
 
@@ -124,21 +124,24 @@ I have also ported the printer software to run on the Minstrel 4th (ROM-based ve
 
 The disassembler and memory-dump utility work as described in the manual, with a couple of exceptions:
 
-- The entry point for the routines has changed. The disassembler is access from address 0x1020 and the memory-dump utility is access from address 0x1324.
+- The entry point for some of the routines has changed. The disassembler is access from address 0x1000 and the memory-dump utility is access from address 0x1304.
 
 - The virtual printer stops every 16 lines (that is, one screenfull) and prompts you to press any key to scroll.
 
 ![](mpf-2.png "Built-in disassembler")
 
+You can restore the on-screen instructions by running the clear-screen
+routine at address 0x0541.
+
 I have not ported the BASIC programming ROM and so have also not updated the BASIC listing routine in the printer ROM. You can call the routine (at address 0x141b) but it will produce nonesense.
 
 Some of the other routines, documented in the user guide are also available, though are possibly less useful:
 
-- `PLINE` can be accessed at 0x168E to scroll the virtual printer by two lines
+- `PLINE` can be accessed at 0x1648 to scroll the virtual printer by two lines
 
-- `PLINEFD` can be accessed at 0x13EC to issue a line feed
+- `PLINEFD` can be accessed at 0x13CC to issue a line feed
 
-- `MTPPRD` can be accessed at 0x15C7 to print a line of text, but you must first call `PLINEFD` to initialise/ reinitialise the virtual printer immediately before each and every call to `MTPPRD`. On exit from `PLINEFD`, the HL register pair will be set to the start address for the printer buffer, which must be passed to `MTPPRD`. Failing to initialise the virtual printer will likely crash the MPF-1.
+- `MTPPRD` can be accessed at 0x15AA to print a line of text, but you must first call `PLINEFD` to initialise/ reinitialise the virtual printer immediately before each and every call to `MTPPRD`. On exit from `PLINEFD`, the HL register pair will be set to the start address for the printer buffer, which must be passed to `MTPPRD`. Failing to initialise the virtual printer will likely crash the MPF-1.
 
 *Note:* Printer support is only usable on the ROM-based version of the monitor. While you can call the various printer routines in the RAM-based version (adding 0x4000 to the relevant call address), there is no way to exit back to the monitor, as this requires a soft reset.
 
