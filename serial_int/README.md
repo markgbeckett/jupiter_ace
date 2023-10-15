@@ -65,7 +65,9 @@ FORTH-word macro was created by Alexander Sharihin (@nihirash).
 
 ### Notes
 
-Current version of send routine has some deviations from the standard in that it will pad the transfer size to the next 128-byte boundary, without putting in padding. For example, if you run the command:
+You must disable echoing command line to serial port (using `UNTEE`) before using XMODEM commands.
+
+The current version of XBPUT has some deviations from the XMODEM standard in that it will pad the transfer size to the next 128-byte boundary, without putting in padding. For example, if you run the command:
 
 `0000 10 XBPUT`
 
