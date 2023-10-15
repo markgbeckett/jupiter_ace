@@ -19,13 +19,13 @@
 	;;   MONSIZE - 0x1000 (Monitor contained to first 4K)
 	;;   ROMSIZE - 0x2000 (emulator use); 0x4000 (Minstrel 4th ROM
 	;;             page)
-BASE:	equ 0x0000
-UMEM:	equ 0x4000
+BASE:	equ 0x4000
+UMEM:	equ 0x6000
 MONSIZE:	equ 0x1000
 ROMSIZE:	equ 0x2000
 	
 	;; Load in Jupiter Ace character set encoding
-	include "..\3d_monster_maze\jupiter_chars.asm"
+	include "..\utilities\jupiter_chars.asm"
 P8255:		equ		0FFh	;8255 I control port
 DIGIT:		equ		0FFh	;8255 I port C
 SEG7:		equ		0FFh	;8255 I port B
@@ -1095,133 +1095,188 @@ GETP:
 
 	ex de,hl	
 	ret	
-	;
-TAPEIN:
-	xor a	
-	ex af,af'	
-TLOOP:
-	call GETBYTE
-	ld (hl),e	
-	cpi
-	jp pe,TLOOP
-	ex af,af'	
-	ret	
-	;
-GETBYTE:
-	call GETBIT
-	ld d,008h
-BLOOP:
-	call GETBIT
-	rr e
-	dec d	
-	jr nz,BLOOP
-	call GETBIT
-	ret	
-	;
-GETBIT:
-;                                       p 33
 
-	exx	
-	;
-	ld hl,l0000h
-	;
-COUNT:
-	call PERIOD
-	inc d	
-	;
-	dec d	
-	jr nz,TERR
-	;
-	jr c,SHORTP
-	;
-	dec l	
-	;
-	dec l	
-	set 0,h
-	jr COUNT
-SHORTP:
-	inc l	
-	bit 0,h
-	jr z,COUNT
-;                                       p 34
+CLS_U:	call CLS
+	jp 0x0000
+CLS:
+	xor a		; clear accumulator.
+        ld ($2700),a	; make location after screen zero.
 
-	rl l
-	exx	
-	ret	
-TERR:
-	ex af,af'	
-	scf	
-	ex af,af'	
-	exx	
-	ret	
-	;
-PERIOD:
-	ld de,l0000h
-LOOPH:
-	in a,(0xFE)
-	inc de	
-	rla
-	rla
-	rla
-	rla
-	jr c,LOOPH
-	ld a,11111111B ; 0ffh
-	out (0xFE),a
-LOOPL:
-	in a,(0xFE)
-	inc de	
-	rla
-	rla
-	rla
-	rla
-	jr nc,LOOPL
-	ld a,01111111B ; 07fh
+	ld hl, 0x2400		; Start of video RAM
+	ld (hl), _SPACE		; Space
+	ld de, 0x2401
+	ld bc, 0x2FF
+	ldir
+
+	;; Print instructions
+	ld de, MPF1_HELP	; Start of instructions
+
+NEW_LINE:
+	ld hl, 0x2400		; Start of display
+
+	ld a,(de)		; Retrieve command
+	inc de			; Advance pointer
 	
-	out (0xFE),a
-	ld a,e	
-	
-	cp MPERIOD
-	ret	
-	;
-TAPEOUT:
-	ld e,(hl)	
-	call OUTBYTE
-	cpi
-	jp pe,TAPEOUT
-;                                       p 35
+	;; Check if done
+	cp 0xFF
+	ret z
 
-	ret	
+	push de			; Save pointer
+	ld b,a			; Move row number into B (must be >0)
+	ld de, 0x0020		; Length of a row
+
+ADD_ROW:
+	add hl,de		; Advance one row
+	djnz ADD_ROW
+
+	pop de			; Retrieve pointers
+	
+	ld a,(de)		; Retrieve column number
+	inc de			; Advance pointer
+
+	add a,l			; Add to current display pointer
+	ld l,a			; Should be no overflow
+
+	;; HL points to next location in display file
+PR_CHR: ld a,(de)		; Retrieve character
+	inc de			; Advance pointer
+	cp 0x0D			; Check for CR
+	jr z, NEW_LINE		; Jump if so
+
+	ld (hl),a		; Print character
+	inc hl			; Advance display-file pointer
+
+	jr PR_CHR		; Next character
+
+	ret
+
+				;
+;; TAPEIN:
+;; 	xor a	
+;; 	ex af,af'	
+;; TLOOP:
+;; 	call GETBYTE
+;; 	ld (hl),e	
+;; 	cpi
+;; 	jp pe,TLOOP
+;; 	ex af,af'	
+;; 	ret	
 	;
-OUTBYTE:
-	ld d,008h
-	or a	
-	call OUTBIT
-OLOOP:
-	rr e
-	call OUTBIT
-	dec d	
-	jr nz,OLOOP
-	scf	
-	call OUTBIT
-	ret	
-	;
-OUTBIT:
-	exx	
-	ld h,000h
-	jr c,OUT1
-OUT0:
-	ld l,ZERO_2K
-	call TONE2K
-	ld l,ZERO_1K
-	jr BITEND
-OUT1:
-	ld l,ONE_2K
-	call TONE2K
-	ld l,ONE_1K
-BITEND:
-	call TONE1K
-	exx	
-	ret	
+;; GETBYTE:
+;; 	call GETBIT
+;; 	ld d,008h
+;; BLOOP:
+;; 	call GETBIT
+;; 	rr e
+;; 	dec d	
+;; 	jr nz,BLOOP
+;; 	call GETBIT
+;; 	ret	
+;; 	;
+;; GETBIT:
+;; ;                                       p 33
+
+;; 	exx	
+;; 	;
+;; 	ld hl,l0000h
+;; 	;
+;; COUNT:
+;; 	call PERIOD
+;; 	inc d	
+;; 	;
+;; 	dec d	
+;; 	jr nz,TERR
+;; 	;
+;; 	jr c,SHORTP
+;; 	;
+;; 	dec l	
+;; 	;
+;; 	dec l	
+;; 	set 0,h
+;; 	jr COUNT
+;; SHORTP:
+;; 	inc l	
+;; 	bit 0,h
+;; 	jr z,COUNT
+;; ;                                       p 34
+
+;; 	rl l
+;; 	exx	
+;; 	ret	
+;; TERR:
+;; 	ex af,af'	
+;; 	scf	
+;; 	ex af,af'	
+;; 	exx	
+;; 	ret	
+;; 	;
+;; PERIOD:
+;; 	ld de,l0000h
+;; LOOPH:
+;; 	in a,(0xFE)
+;; 	inc de	
+;; 	rla
+;; 	rla
+;; 	rla
+;; 	rla
+;; 	jr c,LOOPH
+;; 	ld a,11111111B ; 0ffh
+;; 	out (0xFE),a
+;; LOOPL:
+;; 	in a,(0xFE)
+;; 	inc de	
+;; 	rla
+;; 	rla
+;; 	rla
+;; 	rla
+;; 	jr nc,LOOPL
+;; 	ld a,01111111B ; 07fh
+	
+;; 	out (0xFE),a
+;; 	ld a,e	
+	
+;; 	cp MPERIOD
+;; 	ret	
+;; 	;
+;; TAPEOUT:
+;; 	ld e,(hl)	
+;; 	call OUTBYTE
+;; 	cpi
+;; 	jp pe,TAPEOUT
+;; ;                                       p 35
+
+;; 	ret	
+;; 	;
+;; OUTBYTE:
+;; 	ld d,008h
+;; 	or a	
+;; 	call OUTBIT
+;; OLOOP:
+;; 	rr e
+;; 	call OUTBIT
+;; 	dec d	
+;; 	jr nz,OLOOP
+;; 	scf	
+;; 	call OUTBIT
+;; 	ret	
+;; 	;
+;; OUTBIT:
+;; 	exx	
+;; 	ld h,000h
+;; 	jr c,OUT1
+;; OUT0:
+;; 	ld l,ZERO_2K
+;; 	call TONE2K
+;; 	ld l,ZERO_1K
+;; 	jr BITEND
+;; OUT1:
+;; 	ld l,ONE_2K
+;; 	call TONE2K
+;; 	ld l,ONE_1K
+;; BITEND:
+;; 	call TONE1K
+;; 	exx	
+;; 	ret	
 	;
 
 	ds BASE+0x05DE-$
@@ -1999,54 +2054,7 @@ L0085:  EX      DE,HL                   ; switch pointers.
         JR      NZ,L007C                ; back for all 95 characters.
 
 	;; Clear the screen
-        xor a		; clear accumulator.
-        ld ($2700),a	; make location after screen zero.
-
-	ld hl, 0x2400		; Start of video RAM
-	ld (hl), _SPACE		; Space
-	ld de, 0x2401
-	ld bc, 0x2FF
-	ldir
-
-	;; Print instructions
-	ld de, MPF1_HELP	; Start of instructions
-
-NEW_LINE:
-	ld hl, 0x2400		; Start of display
-
-	ld a,(de)		; Retrieve command
-	inc de			; Advance pointer
-	
-	;; Check if done
-	cp 0xFF
-	jr z, DONE
-
-	push de			; Save pointer
-	ld b,a			; Move row number into B (must be >0)
-	ld de, 0x0020		; Length of a row
-
-ADD_ROW:
-	add hl,de		; Advance one row
-	djnz ADD_ROW
-
-	pop de			; Retrieve pointers
-	
-	ld a,(de)		; Retrieve column number
-	inc de			; Advance pointer
-
-	add a,l			; Add to current display pointer
-	ld l,a			; Should be no overflow
-
-	;; HL points to next location in display file
-PR_CHR: ld a,(de)		; Retrieve character
-	inc de			; Advance pointer
-	cp 0x0D			; Check for CR
-	jr z, NEW_LINE		; Jump if so
-
-	ld (hl),a		; Print character
-	inc hl			; Advance display-file pointer
-
-	jr PR_CHR		; Next character
+	call CLS
 	
 	;; Return to the MPF-1 initialisation routine
 DONE:	jp INI
@@ -2081,7 +2089,6 @@ MPF1_HELP:
 	db _E, _MINUS, _F+0x80, _H+0x80, _SPACE, _SPACE, _F, _MINUS, _F+0x80, _L+0x80
 	db 0x0D
 	db 0xFF
-
 
 ; -------------------
 ; THE 'CHARACTER SET'
@@ -3714,7 +3721,9 @@ SCROLL_MSG:	db _S+0x80, _C+0x80, _R+0x80, _O+0x80, _L+0x80, _L+0x80
 SCROLL_CLR:	db _SPACE, _SPACE, _SPACE, _SPACE, _SPACE, _SPACE
 SCROLL_LN:	db _SPACE, _SPACE, _SPACE, _SPACE, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE+0x80, _SPACE, _SPACE, _SPACE, _SPACE
 
+	ds BASE + (0x1000-$)
 	;; Populate rest of ROM with $FF
+PRT_MPF:
 	include "prt-ib.asm"
 
 SPACE:	ds BASE + (ROMSIZE - $)

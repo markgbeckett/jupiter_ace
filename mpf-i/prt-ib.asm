@@ -1050,7 +1050,7 @@ l65f1h:
 ;; 	djnz l6612h		;6618
 	jp l65d7h		;661a
 
-	ds BASE+$0161d-$
+	;; ds BASE+$0161d-$
 l661dh:
 	call sub_665bh		;661d - Pause
 	call sub_665bh		;6620 - Pause
