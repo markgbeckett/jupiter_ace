@@ -3532,12 +3532,12 @@ L18FE:  LD      B,$C7		; (7) Set initial timing/ timeout
         RET     NC		; (11/5) Return if failed
 
 	;; Timing is based on 776 + (E2h-C7h-1)*59 = 2,310 T states
-	;; (plus 54 T states for cost of processing each bit). Wavelegth
-	;; for '0' should be approx 1,596 T states and wavelength for
-	;; '1' should be approx 3,176 T states. Midpoint between two is
-	;; 2,366 T states. B value of E3h means wavelength no less than
-	;; 2,365 T states and B value of E2h means wavelength no more
-	;; than 2,384 T states.
+	;; (plus 54 T states for cost of processing each
+	;; bit). Wavelength for '0' should be approx 1,596 T states and
+	;; wavelength for '1' should be approx 3,176 T states. Midpoint
+	;; between two is 2,366 T states. B value of E3h means
+	;; wavelength no less than 2,365 T states and B value of E2h
+	;; means wavelength no more than 2,384 T states.
         LD      A,$E2		; (7) If B>$E2, then interpret as '1',
         CP      B		; (4) otherwise '0': this is
 				; automatically reflected in Carry
