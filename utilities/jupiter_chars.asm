@@ -70,6 +70,7 @@ _W:			equ $57
 _X:			equ $58
 _Y:			equ $59
 _Z:			equ $5a
+_COPYRIGHT:		equ $7F
 _INVA:			equ $c1
 _INVC:			equ $c3
 _INVI:			equ $c9

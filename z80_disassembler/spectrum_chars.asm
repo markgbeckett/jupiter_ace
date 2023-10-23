@@ -62,7 +62,8 @@ _W:			equ $57
 _X:			equ $58
 _Y:			equ $59
 _Z:			equ $5A
-
+_COPYRIGHT:		equ $7F
+	
 _TOPRIGHTBLACK:		equ $81
 _TOPLEFTBLACK:		equ $82     
 _TOPBLACK:		equ $83

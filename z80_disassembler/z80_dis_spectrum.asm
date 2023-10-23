@@ -24,6 +24,34 @@ INIT:
 
 	ret
 
+	;; Make sure character in A is printable, replacing with a
+	;; fullstop if not printable
+	;;
+	;; On entry:
+	;;   A - character to test
+	;;
+	;; On exit:
+	;;   A - character to print
+	;;   C - corrupted
+	
+CHECKPRINTABLE:	
+
+	;; Check low-end range
+	cp _SPACE
+	jr c, NONPRINT
+
+	;; Check high-end range
+	cp _COPYRIGHT+1
+	jr nc, NONPRINT
+
+	ret
+	
+	;; Character is not printable, so replace it
+NONPRINT:
+	ld a, _FULLSTOP
+	ret
+
+
 	;; Print A to screen, protecting registers
 PRINT_A:
 	push bc

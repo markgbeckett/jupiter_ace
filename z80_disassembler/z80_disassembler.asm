@@ -501,6 +501,77 @@ DECODE_LP_3:
 	djnz DECODE_LP_3
 	jr RESTART
 
+	;;
+	;; Entry point for hex dump utility
+	;;
+HDUMP:	call INIT
+
+	;; New line
+	ld a,_CARRIAGERETURN
+	call PRINT_A
+
+DADDR:	;; Retrieve ADDRESS into BC
+	ld a,(ADDRESS)
+	and %11110000
+	ld (ADDRESS),a
+	
+	ld bc,(ADDRESS)
+	
+	;; Print address
+	call HP_BC
+
+	ld a,_COLON
+	call PRINT_A
+
+	ld a,_CARRIAGERETURN
+	call PRINT_A
+
+	;; Print hex codes
+DHEX:	ld b,0x08		; Eight bytes per line
+
+	ld hl,(ADDRESS)
+
+DLOOP_1:
+	ld a,(hl)
+	inc hl
+
+	call HP_A
+
+	ld a,_SPACE
+	call PRINT_A
+
+	djnz DLOOP_1
+
+	;; Print chars
+	ld b,0x08		; Eight bytes per line
+
+	ld hl,(ADDRESS)
+
+DLOOP_2:
+	ld a,(hl)
+	inc hl
+	
+	call CHECKPRINTABLE
+	
+	call PRINT_A
+
+	djnz DLOOP_2
+
+	
+	ld a,_CARRIAGERETURN
+	call PRINT_A
+
+	ld hl,(ADDRESS)
+	ld bc,0x0008
+	add hl,bc
+	ld (ADDRESS),hl
+
+	ld a,l
+	and %00011111
+	jr nz, DHEX
+
+	jr DADDR
+	
 	;; 
 	;; Entry point for disassembler
 	;; 
