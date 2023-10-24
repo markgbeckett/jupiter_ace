@@ -13,3 +13,4 @@ serial_int/serial.wav
 *.txt~
 rc2014_sound_card/Makefile~
 mpf-i/Makefile~
+z80_disassembler/Makefile~
