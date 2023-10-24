@@ -6,17 +6,21 @@ This project takes a compact Z80 disassembler, developed by Toni Baker and descr
 
 Toni's Z80 disassembler is designed to be as compact as possible, occupying around 1.25 kB, meaning it can easily coexist with other development tools and any program being developed. Further, for the Minstrel 4th, it can be added to the Ace Forth ROM, in the extra space at 0x2800--03BFF (see (Minstrel Goes Forth)[http://blog.tynemouthsoftware.co.uk/2020/05/minstrel-goes-forth.html]).
 
+![](z80_dis_ace.png "Minstrel 4th version of disassembler")
+
 The disassembler includes a hex-dump function that is useful for checking numeric or character data that is stored alongside a machine-code program. The hex dump displays the content of memory both in hex and the machine's character set.
+
+![](z80_dis_ace_dump.png "Minstrel 4th version of hex dump")
 
 ## Usage
 
 For this project, I have provided source code: you would typically build your own package for your specific system and requirements. To help, I have included three example 'ports' of the disassembler -- for the Minstrel 4th, the Minstrel 2 (4K ROM) and the ZX Spectrum. Along with these notes, these should help you get started.
 
-![](z80_dis_ace.png "Minstrel 4th version of disassembler")
-
 The source code can be assembled with any standard Z80 cross-assembler (I have used [the non-GNU z80asm](https://savannah.nongnu.org/projects/z80asm/)). I have included a [Makefile](Makefile) to help with this.
 
 To start the disassembler, you should run/ call the machine-code routine labelled `START`. The address from which to disassemble needs to be stored a the word labelled `ADDRESS` (see below). This could be set from the calling routine or as part of `INIT` (again, see notes below). For example, in the Minstrel 2 implementation, I have POKE'd the start address before calling the disassembler. In contrast, the Minstrel 4th version pops a start address from the stack (in `INIT`) and copies it into `ADDRESS`.
+
+To start a hex dump, you should run/ call the machine-code routine labelled `HDUMP`. Again, the start address is specified in `ADDRESS`.
 
 To make the disassembler more portable, I have partitioned the program into two parts:
 
