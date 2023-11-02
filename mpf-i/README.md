@@ -39,6 +39,12 @@ The ROM image 'mpf-1.rom' has been padded out to 16 kilobytes to fill the ROM ba
 
 The MPF-1 ROM works with the Minstrel 4D too. However, before switching to the ROM image, you should boot the Minstrel 4D in the standard Ace Forth ROM and disable the Menu system and SD card (from `Menu`, `Settings`). Sadly, the MPF-1 does not work with the SD card on the Minstrel 4D: you will need to use either a cassette player or a PC with a sound card to load and save your programs.
 
+The MPF-1 monitor tries to distinguish between a cold boot (when the Minstrel 4D is powered on or power-cycled) and a warm boot (when the reset button is pressed). It does this by storing a particular value in a system variable and then, when booting, checks if the value is correct.
+
+Accepting there is small chance that the memory location will randomly have that special value when the computer is first powered on, this works well on the MPF-1 hardware, though less well on the Minstrel 4D on which the contents or RAM can persist for up to a few minutes without power. Thus, if you power-cycle the Minstrel 4D, it is likely the Monitor will incorrectly treat this as a warm reboot. Worse still the display and character memory are a different technology from the main memory and will lose their contents almost instantly. This means that when rebooted you get a corrupted screen (though the MPF-1 will otherwise function as expected).
+
+To work around this, I have added a cold-boot ROM routine which you can access by executing the code at address 0x1FF0. For example, press `Y` to select the address field, enter the address `1FF0`, and press `G` to correctly perform a cold reboot.
+
 ### RAM-based
 
 Power on your Minstrel 4th and load the mmonitor from 'mpf.tap' (or 'mpf.wav') using the following command (case of filename is important):

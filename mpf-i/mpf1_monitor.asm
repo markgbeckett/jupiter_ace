@@ -19,10 +19,10 @@
 	;;   MONSIZE - 0x1000 (Monitor contained to first 4K)
 	;;   ROMSIZE - 0x2000 (emulator use); 0x4000 (Minstrel 4th ROM
 	;;             page)
-BASE:	equ 0x4000
-UMEM:	equ 0x6000
+BASE:	equ 0x0000
+UMEM:	equ 0x4000
 MONSIZE:	equ 0x1000
-ROMSIZE:	equ 0x2000
+ROMSIZE:	equ 0x4000
 	
 	;; Load in Jupiter Ace character set encoding
 	include "..\utilities\jupiter_chars.asm"
@@ -68,9 +68,10 @@ l0002h:
 	ld sp,SYSSTK
 ;                                       p 2
 
-	ld a,(POWERUP)
-	cp 0a5h
-	call nz,INIM		; Minstrel ROM initialisation
+	call INIM  ; Minstrel ROM initialisation
+	;; ld a,(POWERUP)
+	;; cp 0a5h
+	;; call nz,INIM		; Minstrel ROM initialisation
 	;
 	ld hl,UMEM
 	call RAMCHK
@@ -83,6 +84,7 @@ PREPC:
 	;
 	jr RESET1
 	;
+	ds BASE + (0x28-$)
 RST28:	
 	;; org 28h
 	;
@@ -92,6 +94,8 @@ RST28:
 	ld (HLTEMP),hl
 	jr CONT28
 	;
+	ds BASE+ (0x30-$)
+
 RST30:	
 	;; org	30h
 	jr NMI
@@ -137,7 +141,7 @@ RESET2:
 	jp SETSTO
 ;
 	;; 	org	66h
-	ds BASE+0x66-$
+	ds BASE + (0x66-$)
 NMI:
 	ld (ATEMP),a
 	ld a,10010000B ; 090h
@@ -815,7 +819,7 @@ INI:
 	ld ix,BLANK
 	ld c,007h
 INI1:
-	ld b,038h
+	ld b,0E0h
 INI2:
 	call SCAN1
 	djnz INI2
@@ -1279,7 +1283,7 @@ PR_CHR: ld a,(de)		; Retrieve character
 ;; 	ret	
 	;
 
-	ds BASE+0x05DE-$
+	ds BASE+ (0x05DE-$)
 
 TONE1K:
 	ld c,F1KHZ
@@ -1302,7 +1306,7 @@ l05edh:
 	jr nz,SQWAVE
 	ret	
 	;
-	ds BASE+0x05F6-$
+	ds BASE + (0x05F6-$)
 	
 RAMCHK:
 	ld a,(hl)	
@@ -1343,7 +1347,7 @@ KEYMAP:
 	;; ld a,(hl)	
 	ret	
 	;
-	ds BASE+0x0624-$
+	ds BASE+ (0x0624-$)
 	
 SCAN1:	exx	; Save primary registers
 
@@ -1389,7 +1393,7 @@ KEYPRESSED:
 
 	ret
 
-	ds BASE+0x0665-$		; Ensure location of next routine not changed
+	ds BASE + (0x0665-$)	; Ensure location of next routine not changed
 	
 ADDRDP:
 	ld hl,DISPBF+2
@@ -1479,7 +1483,7 @@ NOTONE:
 	pop af	
 	jp KEYEXEC
 	
-	ds BASE+0x0737-$
+	ds BASE + (0x0737-$)
 KSUBFUN:
 		defw	KINC
 		defb	-KINC+KINC
@@ -2053,10 +2057,15 @@ L0085:  EX      DE,HL                   ; switch pointers.
 
         JR      NZ,L007C                ; back for all 95 characters.
 
+	;; Check if this is a cold start
+	ld a,(POWERUP)
+	cp PWCODE
+	ret z			; Done if not
+
 	;; Clear the screen
 	call CLS
 	
-	;; Return to the MPF-1 initialisation routine
+	;; Continue with MPF-1 original initialisation routine
 DONE:	jp INI
 
 MPF1_HELP:	
@@ -3726,6 +3735,13 @@ SCROLL_LN:	db _SPACE, _SPACE, _SPACE, _SPACE, _SPACE+0x80, _SPACE+0x80, _SPACE+0
 PRT_MPF:
 	include "prt-ib.asm"
 
+	ds BASE+ (0x1ff0-$)
+	
+COLD_START:
+	xor a
+	ld (POWERUP),a
+	jp 0x0000
+	
 SPACE:	ds BASE + (ROMSIZE - $)
 	
 ;SYSTEM RAM AREA:
