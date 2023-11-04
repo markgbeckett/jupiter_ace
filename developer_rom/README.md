@@ -4,13 +4,13 @@ The Minstrel 4th (and 4D) actually has an additional ROM segment over what is av
 
 Alexander Sharihin (https://github.com/nihirash) formulated a clean and simple way to add words to the standard (that is, ROM-based) Ace Forth dictionary. I have used this approach to extend the Ace FORTH Rom with some much-needed developer tools, including the following additional words:
 
-- `.S ( -- )` prints out a copy of the data stack (without affecting it). This is commonplace word on more modern FORTH systems. This version is based on the listing on page 143 of the Jupiter Ace manual.
+- `.S ( -- )` prints out a copy of the data stack (without affecting it). `.S` is commonplace word on more modern FORTH systems. This version is based on the listing on page 143 of the Jupiter Ace manual.
 
-- `DIS ( addr -- )` runs the disassembler (see [../z80_disassembler/README](../z80_disassembler/README)), disassembling from the address on the top of the stack.
+- `DIS ( addr -- )` runs the disassembler (see [../z80_disassembler/README.md](../z80_disassembler/README.md)), disassembling from the address on the top of the stack.
 
 - `DUMP ( addr -- )` prints a hex dump of memory (see [../z80_disassembler/README.md](../z80_disassembler/README.md)), starting from the address on the top of the stack.
 
-- `CODE <word>` allows the user to create a word using machine code (see page 147 of the Jupiter Ace manual.
+- `CODE <word>` allows the user to create a word using machine code (see page 147 of the Jupiter Ace manual).
 
 - `HEX ( -- )` switches the interpreter to base 16 (hexadecimal). Effectively, this runs `DECIMAL 16 BASE C!`.
 
