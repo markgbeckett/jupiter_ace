@@ -124,6 +124,7 @@ NEXT_COMM:
 	jr nc, PROCESS_COMM	; Carry set, indicates end of channel
 
 	;;  Close down channel and associated play string
+	ld a,(CUR_CH)
 	call CLOSE_CHANNEL
 	
 	set 7,(IY + CH_N)	; Set bit 7 to indicate channel inactive
@@ -1059,7 +1060,7 @@ CHANNEL_1_INFO:
 	db 0x0F			; Volume
 
 CHANNEL_2_INFO:
-	db 0x01			; Channel number
+	db 0x02			; Channel number
 	dw MK3			; Start of Play string
 	dw 0x0000		; Current location in Play string
 	dw MK3E			; End of Play string
