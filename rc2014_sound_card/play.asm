@@ -830,8 +830,8 @@ IC_ROT:	rlca			; Rotate activation bit to
 	
 	ld d,a 			; Set initial volume
 	ld e, AY_MAX_VOL	; Maximum volume
-	call WRITE_TO_AY
 	ld (IY + CH_VOL), e	; Also store in channel info
+	;; 	call WRITE_TO_AY
 
 	ld a, 5*0x0c	   	; Set default octave to O5
 	ld (IY + CH_OCT), a
