@@ -809,10 +809,10 @@ INIT_CHANNEL:
 	ld (iy + CH_N),a	; N.B. Bit 7 is reset,
 				; indicating channel is active
 	
-	ld b,a			; Move to B
-	inc b			; Need to complete CH_N+1 rotations to
-				; get channel mask
-	ld a, %01111111		; Mixer mask
+	ld b,a			; Copy channel number to B
+	ld a, %111111110		; Mixer mask
+
+	;; Potential don't need to 'inc b', if set mask to %11111110 ?
 
 IC_ROT:	rlca			; Rotate activation bit to
 	djnz IC_ROT		; correct channel
