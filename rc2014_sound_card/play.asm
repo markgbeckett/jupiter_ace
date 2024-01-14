@@ -44,6 +44,7 @@ START:	di			; Disable interrupts (break-check incl.)
 	
 INIT:	push af			; Store channel number
 	call INIT_CHANNEL	; Initialise channel
+	call INIT_PLAY_QUEUE	; IY set correctly on exit from INIT_CHANNEL
 	pop af			; Retrieve channel number
 
 	inc a			; Next channel
@@ -810,9 +811,7 @@ INIT_CHANNEL:
 				; indicating channel is active
 	
 	ld b,a			; Copy channel number to B
-	ld a, %111111110		; Mixer mask
-
-	;; Potential don't need to 'inc b', if set mask to %11111110 ?
+	ld a, %111111110	; Mixer mask
 
 IC_ROT:	rlca			; Rotate activation bit to
 	djnz IC_ROT		; correct channel
@@ -836,12 +835,6 @@ IC_ROT:	rlca			; Rotate activation bit to
 	ld a, 5*0x0c	   	; Set default octave to O5
 	ld (IY + CH_OCT), a
 	
-	;; Set current posn to start of play string
-	ld a,(iy + CH_STA)		
-	ld (iy + CH_CUR),a		
-	ld a,(iy + CH_STA + 1)
-	ld (iy + CH_CUR + 1),a
-
 	;; Set (duration) counter to zero -- i.e., no note playing
 	ld (iy+CH_CNT), 0x00
 	ld (iy+CH_CNT+1), 0x00
@@ -859,6 +852,16 @@ CH_ADD_TO:
 	ld (iy + CH_DUR+1),h
 	
 	ret			; Done
+
+	;; Reset play queue for channel for which IY points to information
+INIT_PLAY_QUEUE:
+	;; Set current posn to start of play string
+	ld a,(iy + CH_STA)		
+	ld (iy + CH_CUR),a		
+	ld a,(iy + CH_STA + 1)
+	ld (iy + CH_CUR + 1),a
+
+	ret
 
 	;; Mute sound/ noise on all channels
 SND_OFF:
