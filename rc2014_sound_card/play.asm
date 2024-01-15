@@ -93,8 +93,8 @@ CHANNEL_ACTIVE:
 	
 	call NEXT_COMM		; Get next Play string value
 	
-	jr c, NEXT_CHAN	       	; Channel ended
-	jr ACT_CHAN
+	jr c, NEXT_CHAN	       	; Done, if channel has ended
+	jr ACT_CHAN		; Otherwise, not channel is active
 	
 DEC_COUNT:
 	dec de			; Decrement counter and save (T=6)
@@ -503,11 +503,13 @@ NN_CONT:
 	inc (iy + 4)		; Increment high byte
 
 NN_DONE:
-	and a			; Reset carry
+	and a			; Reset carry to indicate new command to
+				; process
 	ret
 
 NN_END_OF_STR:
-	scf
+	scf			; Set carry to indicate end of string
+	
 	ret
 
 	
@@ -757,8 +759,7 @@ GET_CHAN_POINTER:
 	;; -------------------------------------------------------------
 CLOSE_CHANNEL:
 	ld b,a			; Move current channel to B
-	inc b
-	ld a, %10000000		; Mixer mask
+	ld a, %00000001		; Mixer mask
 
 CL_ROT:	rlca			; Rotate activation bit to
 	djnz CL_ROT		; correct channel
