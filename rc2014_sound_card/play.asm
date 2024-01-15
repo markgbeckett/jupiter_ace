@@ -41,7 +41,7 @@ START:	di			; Disable interrupts (break-check incl.)
 
 	;; Initialise each channel
 	xor a			; Start with Channel 0
-	
+
 INIT:	push af			; Store channel number
 	call INIT_CHANNEL	; Initialise channel
 	call INIT_PLAY_QUEUE	; IY set correctly on exit from INIT_CHANNEL
@@ -50,6 +50,13 @@ INIT:	push af			; Store channel number
 	inc a			; Next channel
 	cp AY_MAX_CHANNEL	; Check if done
 	jr nz, INIT		; Loop, if not
+
+	;; Initialise player: assume no channels active and current
+	;; channel is Channel 0
+INIT_PLAYER:
+	xor a
+	ld (CUR_CH),a		; Store for later 
+	ld (ACT_CH),a		; No channels active
 
 	;; Iterative over each channel's Play string, until all are
 	;; done
@@ -678,12 +685,6 @@ MU_LOOP:
 	;; Turn off any active sounds, 
 INIT_AY:
 	call SND_OFF
-
-	xor a			; Start with channel 0
-	ld (CUR_CH),a		; Store for later
-
-	xor a			; Reset active channel count
-	ld (ACT_CH),a
 
 	;; Reset tempo to default
 	ld de,DEF_TEMPO
