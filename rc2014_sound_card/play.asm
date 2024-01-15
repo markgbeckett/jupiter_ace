@@ -813,7 +813,7 @@ INIT_CHANNEL:
 				; indicating channel is active
 	
 	ld b,a			; Copy channel number to B
-	ld a, %111111110	; Mixer mask
+	ld a, %11111110		; Mixer mask
 
 IC_ROT:	rlca			; Rotate activation bit to
 	djnz IC_ROT		; correct channel
@@ -912,10 +912,15 @@ MUTE_CHAN:
 	;;   AF, BC - corrupted
 WRITE_TO_AY:
 	ld a, d			; Retrieve register
+
+	DISPLAY "Set ", $ + 1, " to REG_PORT" 
+
 	ld bc, AY_REG_PORT	; and address of register port
 	out (c),a		; Write it
 
 	ld a,e			; Retrieve data
+	DISPLAY "Set ", $ + 1, " to WRITE_PORT" 
+
 	ld bc, AY_WRITE_PORT	; and address of data port
 	out (c),a		; Write it
 
@@ -930,8 +935,13 @@ WRITE_TO_AY:
 	;;   AF, BC - corrupted
 READ_FROM_AY:
 	ld a, d			; Retrieve register
+
+	DISPLAY "Set ", $ + 1, " to REG_PORT" 
+
 	ld bc, AY_REG_PORT	; and address of register port
 	out (c),a		; Write it
+
+	DISPLAY "Set ", $ + 1, " to READ_PORT" 
 
 	ld bc, AY_READ_PORT	; Select port for reading value
 	in e,(c)		; Retrieve value
