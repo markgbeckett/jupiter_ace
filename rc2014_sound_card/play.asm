@@ -14,7 +14,8 @@ AY_VOL_1:	EQU 0x08
 AY_ENV_P:	EQU 0x0B
 AY_ENV_SH:	EQU 0x0D
 
-AY_MAX_VOL:	EQU 0x0F
+AY_MIN_VOL:	EQU 0x00	; Minimum volume for sound card
+AY_MAX_VOL:	EQU 0x0F	; Maximum volume for sound card
 AY_MAX_CHANNEL:	EQU 0x03	; Three channels
 DEF_TEMPO:	EQU 7920/120	; 120 beats per minute @ 3.5 MHz
 DEF_ENV:	EQU 8000	; Default envelope period
@@ -229,7 +230,7 @@ NEW_NOTE:
 	or l
 	jr nz, NO_REST
 	
-	ld b, 0x00		; Mute channel
+	ld b, AY_MIN_VOL	; Mute channel
 
 NO_REST:
 	push bc			; Save volume
@@ -308,8 +309,8 @@ CHANGE_TEMPO:
 	;; Work out new tempo
 CHANGE_T:
 	ex de, hl		; Put divisor into DE
-	ld a, 0x1e		; Put 7,920d into AC
-	ld c, 0xf0
+	ld a, 0x1E		; Put 7,920d into AC
+	ld c, 0xF0
 	call DIV16		; Divide AC by DE, answer in AC
 	ld b,a			; Move answer into BC
 	ld hl, TEMPO		; Store new tempo
@@ -899,7 +900,7 @@ MUTE_CHAN:
 	add AY_VOL_1
 
 	ld d,a
-	ld e,0
+	ld e,AY_MIN_VOL
 	call WRITE_TO_AY
 	ret
 
