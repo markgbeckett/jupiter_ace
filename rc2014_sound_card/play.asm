@@ -56,22 +56,22 @@ INIT:	push af			; Store channel number
 	;; channel is Channel 0
 INIT_PLAYER:
 	xor a
-	ld (CUR_CH),a		; Store for later 
-	ld (ACT_CH),a		; No channels active
+	ld (ACT_CH),a		; Start with no channels active
+	ld (CUR_CH),a		; and start with Channel 0
 
 	;; Iterative over each channel's Play string, until all are
 	;; done
 LOOP:
-	call GET_CHAN_POINTER	; Set IY to point to channel info (100)
+	call GET_CHAN_POINTER	; Set IY to point to channel info (17+91)
 	
 	;;  Check if channel is active
 	bit 7,(IY + CH_N)	; Bit 7 set indicates inactive (20)
 	jr z, CHANNEL_ACTIVE 	; (T=12/ 7)
 
-	;; Add timing delay here for T=129-7-12=110 T states, to avoid
+	;; Add timing delay here for T=128-7-12=109 T states, to avoid
 	;; noticable change in timing when a channel is not used/
 	;; terminates before others
-	ld b, 0x06		; (T=7)
+	ld b, 0x07		; (T=7)
 NN_WAIT:
 	nop 			; (T=4)
 	djnz NN_WAIT		; (T=13 / 8)
@@ -80,8 +80,8 @@ NN_WAIT:
 
 	;; Check if note being played
 CHANNEL_ACTIVE:
-	ld e,(IY + CH_CNT)	; Retrieve countdown timer (T=19)
-	ld d,(IY + CH_CNT+1)	; (T=19)
+	ld e,(iy + CH_CNT)	; Retrieve countdown timer (T=19)
+	ld d,(iy + CH_CNT+1)	; (T=19)
 	
 	ld a,d			; Check if zero (T=4)
 	or e			; (T=4)
@@ -90,24 +90,25 @@ CHANNEL_ACTIVE:
 
 	;; Retrieve next note (and any preceeding commands)
 	ld a,(CUR_CH)		; Retrieve channel number
-	call MUTE_CHAN
+	call MUTE_CHAN		; Temporarily mute channel to avoid
+				; glitches
 	
 	call NEXT_COMM		; Get next Play string value
 	
 	jr c, NEXT_CHAN	       	; Done, if channel has ended
-	jr ACT_CHAN		; Otherwise, not channel is active
+	jr ACT_CHAN		; Otherwise, note channel is active
 	
 DEC_COUNT:
 	dec de			; Decrement counter and save (T=6)
-	ld (IY + CH_CNT),e	; (T=19)
-	ld (IY + CH_CNT+1),d	; (T=19)
+	ld (iy + CH_CNT),e	; (T=19)
+	ld (iy + CH_CNT+1),d	; (T=19)
 
 ACT_CHAN:
 	ld hl,ACT_CH		; Confirm channel active (T=10)
 	inc (hl)		; (T=11)
 	
 NEXT_CHAN:
-	ld a, (CUR_CH)		; (13)
+	ld a,(CUR_CH)		; (13)
 	inc a			; (4)
 	ld (CUR_CH),a		; (13)
 	
@@ -136,7 +137,7 @@ NEXT_COMM:
 	ld a,(CUR_CH)
 	call CLOSE_CHANNEL
 	
-	set 7,(IY + CH_N)	; Set bit 7 to indicate channel inactive
+	set 7,(iy + CH_N)	; Set bit 7 to indicate channel inactive
 
 	scf			; Done
 	ret			
@@ -171,7 +172,7 @@ PROCESS_COMM:
 	ld hl, NOTE_DURATIONS
 	add hl,de		; Address of duration value
 	
-	ld b,(HL)		; Loop counter
+	ld b,(hl)		; Loop counter
 	
 	ld de, (TEMPO)		; Basic unit of duration
 	ld hl, 0x000		; Reset duration
@@ -180,8 +181,8 @@ ADD_TO_DUR:
 	add hl,de
 	djnz ADD_TO_DUR
 	
-	ld (IY+7),l		; Store new duration
-	ld (IY+8),h
+	ld (iy+7),l		; Store new duration
+	ld (iy+8),h
 	
 	jr NEXT_COMM		; Get next note
 	
@@ -223,7 +224,7 @@ DONE:	call SND_OFF
 NEW_NOTE:
 	call NOTE_TO_FREQ
 
-	ld b,(IY + CH_VOL)
+	ld b,(iy + CH_VOL)
 
 	;; Check for rest
 	ld a,h
@@ -255,7 +256,7 @@ NO_REST:
 	call WRITE_TO_AY
 	
 	;; If needed, reset envelope waveform
-	bit 4,(IY + CH_VOL)
+	bit 4,(iy + CH_VOL)
 	jr z, RESET_COUNT
 
 	ld a,(ENV_SHAPE)
@@ -264,10 +265,10 @@ NO_REST:
 	call WRITE_TO_AY
 
 RESET_COUNT:
-	ld e,(IY+7)		; Reset duration counter
-	ld d,(IY+8)
-	ld (IY+9),e
-	ld (IY+10),d
+	ld e,(iy+7)		; Reset duration counter
+	ld d,(iy+8)
+	ld (iy+9),e
+	ld (iy+10),d
 
 	and a			; Clear carry
 	ret
@@ -371,9 +372,9 @@ CO_LOOP:
 	ret
 	
 ACTIVATE_ENVELOPE:
-	ld a,(IY + CH_VOL)	; Retrieve current volume
+	ld a,(iy + CH_VOL)	; Retrieve current volume
 	or 0x1F			; Set bit 4 to activate envelope
-	ld (IY + CH_VOL),a	; Store
+	ld (iy + CH_VOL),a	; Store
 
 	ld e,a
 	ld a,(CUR_CH)
@@ -455,12 +456,12 @@ PLAY_COMMANDS:
 	dm "OVNTMUWX"		; List of recognised Play commands
 
 PLAY_COMM_JUMPS:
-	dw NEW_NOTE		; Process note
-	dw SET_ENV_P
-	dw CHANGE_WAVEFORM
-	dw ACTIVATE_ENVELOPE	
-	dw CHANGE_MIXER
-	dw CHANGE_TEMPO
+	dw NEW_NOTE		; 'A-G'/'a-g' - Process note
+	dw SET_ENV_P		; 'X' - set envelope period
+	dw CHANGE_WAVEFORM	; 'W' - change waveform
+	dw ACTIVATE_ENVELOPE	; 'U' - activate envelope effect
+	dw CHANGE_MIXER		; 'M' - change mixer
+	dw CHANGE_TEMPO		; 'T' - New tempo
 	dw DUMMY_NOTE		; 'N' - Separator to avoid ambiguity
 	dw CHANGE_VOL		; 'V' - New volume
 	dw CHANGE_OCTAVE	; 'O' - New octave
@@ -576,7 +577,7 @@ LOWER_CASE:
 	add a,c			; Add modifier
 
 	;; Now adjust octave
-	add (IY + CH_OCT)	; Add octave offset
+	add (iy + CH_OCT)	; Add octave offset
 	sub 0x15	; Remove 21 semitones, as Octave 1
 			; contains only three notes
 	jr nc, COMP_OFFSET
@@ -649,7 +650,7 @@ GN_NEXT:
 	jr nc, GN_DONE
 
 	;; Found a digit
-	sub '0'		; Remove ASCII encoding
+	sub '0'			; Remove ASCII encoding
 	
 	call MULT_BY_10		; Multiply number-so-far by 10
 	
@@ -724,16 +725,18 @@ INIT_AY:
 	;; Calculate address of channel's information and store in IY.
 	;;
 	;; On entry:
-	;;   -
+	;;   A - current channel number
 	;;
 	;; On exit:
 	;;   A - current channel number
 	;;   IY - address
 	;;   BC, HL are corrupted
+	;;
+	;; Timing:
+	;;   91 T states
 	;; -------------------------------------------------------------
 GET_CHAN_POINTER:
 	;; Compute address of channel pointer
-	ld a,(CUR_CH)		; Retrieve channel number (13)
 	ld hl, PLAY_INFO	; Start of play info (10)
 	ld c,a			; Move channel number to C (4)
 	sla c			; Multiply C by two to get offset (8)
@@ -832,11 +835,11 @@ IC_ROT:	rlca			; Rotate activation bit to
 	
 	ld d,a 			; Set initial volume
 	ld e, AY_MAX_VOL	; Maximum volume
-	ld (IY + CH_VOL), e	; Also store in channel info
+	ld (iy + CH_VOL), e	; Also store in channel info
 	;; 	call WRITE_TO_AY
 
 	ld a, 5*0x0c	   	; Set default octave to O5
-	ld (IY + CH_OCT), a
+	ld (iy + CH_OCT), a
 	
 	;; Set (duration) counter to zero -- i.e., no note playing
 	ld (iy+CH_CNT), 0x00
