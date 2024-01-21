@@ -131,7 +131,7 @@ NEXT_CHAN:
 	
 NEXT_COMM:
 	call GET_NEXT_NOTE	; Retrieve next note, if available
-	jr nc, PROCESS_COMM	; Carry set, indicates end of channel
+	jr nz, PROCESS_COMM	; Carry set, indicates end of channel
 
 	;;  Close down channel and associated play string
 	ld a,(CUR_CH)
@@ -477,8 +477,8 @@ JUMP_TO_IT:
 	;;   IY = addr of start of channel info
 	;;
 	;; On exit:
-	;;   Carry reset, A = character read (success)
-	;;   Carry set, A corrupted (end of string)
+	;;   Zero reset, A = character read (success)
+	;;   Zero set, A corrupted (end of string)
 	;;   HL corrupted (always)
 GET_NEXT_NOTE:
 	ld l, (iy + 3)		; Retrieve current location
@@ -491,7 +491,7 @@ GET_NEXT_NOTE:
 
 	ld a, h
 	cp (iy + 6)
-	jr z, NN_END_OF_STR
+	ret z
 
 	;; Retrieve character
 NN_CONT:
@@ -505,13 +505,11 @@ NN_CONT:
 	inc (iy + 4)		; Increment high byte
 
 NN_DONE:
-	and a			; Reset carry to indicate new command to
-				; process
-	ret
+	;; Reset zero to indicate success
+	ld h,a
+	or 0x01			; Reset zero flag
+	ld a,h			; Restore read value
 
-NN_END_OF_STR:
-	scf			; Set carry to indicate end of string
-	
 	ret
 
 	
@@ -640,7 +638,7 @@ GN_NEXT:
 	call GET_NEXT_NOTE
 	pop hl
 	
-	jr c, GN_DONE_2		; Carry set means end of string
+	jr z, GN_DONE_2		; Carry set means end of string
 
 	;; Check for number
 	cp '0'			
@@ -967,7 +965,190 @@ SKIP16:	ccf
 	rla
 	ret
 	
+BUFFER_PAGE:	equ 0xD0
+BUFFER_READ_OFFSET:	db 0xFE
+BUFFER_WRITE_OFFSET:	db 0xFE
 
+	;; Reset ring buffer to be empty, with both pointers pointing to
+	;; the start of the page
+	;;
+	;; On entry:
+	;;
+	;; On exit:
+	;;   a - corrupted
+	
+BUFFER_INIT:
+	di			; Should be atomic operation
+	
+	;; Set read offset and write offset to zero
+	xor a
+	ld (BUFFER_READ_OFFSET),a
+	ld (BUFFER_WRITE_OFFSET),a
+
+	ei
+	
+	ret
+
+	;; Write byte to ring buffer (if not full)
+	;;
+	;; On entry:
+	;;   A - byte to write
+	;;
+	;; On exit:
+	;;   Z - reset - okay/ set - buffer full
+BUFFER_WRITE:
+	di
+
+	ld h,a			; Save byte to write
+
+	;; Retrieve write offset
+	ld a,(BUFFER_WRITE_OFFSET)
+	ld l,a
+	
+	;; Check if buffer is full
+	ld a,(BUFFER_READ_OFFSET)
+	dec a
+	cp l
+
+	jr z, BW_DONE
+	
+	ld a,h			; Restore byte to write
+
+	;; Write to buffer
+	ld h,BUFFER_PAGE
+	ld (hl),a
+
+	;; Update write offset
+	inc l
+
+	ld a,l
+	ld (BUFFER_WRITE_OFFSET),a
+
+	;; Reset zero to indicate success
+	or 0x01		; Reset zero flag
+
+BW_DONE:
+	ei
+	
+	ret
+
+	;; Read next byte from ring buffer (if not empty)
+	;;
+	;; On entry:
+	;;
+	;; On exit:
+	;;   Z - reset - okay/ set - buffer empty
+	;;   A - value read
+BUFFER_READ:
+	di
+
+	ld a,(BUFFER_READ_OFFSET)
+	ld l,a
+	
+	;; Check for empty buffer
+	ld a,(BUFFER_WRITE_OFFSET)
+	cp l
+	jr z, BR_DONE
+
+	;; Read from buffer
+	ld h,BUFFER_PAGE
+	ld a,(hl)
+	ld h,a
+	
+	;; Update read offset
+	inc l
+	ld a,l
+	ld (BUFFER_READ_OFFSET),a
+
+	;; Reset zero to indicate success
+	ld h,a
+	or 0x01			; Reset zero flag
+	ld a,h			; Restore read value
+
+BR_DONE:
+	ei
+
+	ret
+	
+	;; Step back to previous buffer entry (if not empty)
+	;; 
+	;; N.B. Use with caution. Programmer is responsible for
+	;; ensuring value has not been overwritten.
+	;; 
+	;; On entry:
+	;;
+	;; On exit:
+	;;   Z - reset - okay/ set - buffer empty
+BUFFER_REWIND:	
+	di
+
+	ld a,(BUFFER_READ_OFFSET)
+	ld l,a
+	
+	;; Check for empty buffer
+	ld a,(BUFFER_WRITE_OFFSET)
+	cp l
+	jr z, BZ_DONE
+
+	;; Rewind pointer by one 
+	dec l
+	ld a,l
+	ld (BUFFER_READ_OFFSET),a
+	
+	;; Reset zero to indicate success
+	ld a,h
+	or 0x01			; Reset zero flag
+	ld a,h			; Restore read value
+
+BZ_DONE:
+	ei
+
+	ret
+	
+FORTH_BW:
+	;; Pop word off of stack into DE
+	rst 0x18
+
+	ld a,e			; Move low byte into A
+
+	call BUFFER_WRITE
+
+	ld de, 0x0000
+
+	jr nz, FBW_DONE
+
+	dec de
+
+FBW_DONE:
+	rst 0x10
+
+	jp (iy)
+
+FORTH_BR:
+	call BUFFER_READ
+
+	jr z, FBR_FAIL
+
+	ld e,a
+	ld d,0x00
+
+	jr FBR_DONE
+	
+FBR_FAIL:	
+	ld de, 0xFFFF
+	
+FBR_DONE:
+	rst 0x10
+
+	jp (iy)
+
+FORTH_BI:
+	call BUFFER_INIT
+
+	jp (iy)
+
+
+	
 IY_SAVE:	dw 0x0000
 SP_SAVE:	dw 0x0000
 NOTE_DURATIONS:
