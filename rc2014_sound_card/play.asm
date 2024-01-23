@@ -62,47 +62,10 @@ INIT_PLAYER:
 	;; Iterative over each channel's Play string, until all are
 	;; done
 LOOP:
-	call GET_CHAN_POINTER	; Set IY to point to channel info (17+91)
-	
-	;;  Check if channel is active
-	bit 7,(IY + CH_N)	; Bit 7 set indicates inactive (20)
-	jr z, CHANNEL_ACTIVE 	; (T=12/ 7)
+	call SERVICE_CHANNEL
 
-	;; Add timing delay here for T=128-7-12=109 T states, to avoid
-	;; noticable change in timing when a channel is not used/
-	;; terminates before others
-	ld b, 0x07		; (T=7)
-NN_WAIT:
-	nop 			; (T=4)
-	djnz NN_WAIT		; (T=13 / 8)
+	jr c, NEXT_CHAN		; Skip forward if channel inactive
 	
-	jr NEXT_CHAN		; (T=12)
-
-	;; Check if note being played
-CHANNEL_ACTIVE:
-	ld e,(iy + CH_CNT)	; Retrieve countdown timer (T=19)
-	ld d,(iy + CH_CNT+1)	; (T=19)
-	
-	ld a,d			; Check if zero (T=4)
-	or e			; (T=4)
-
-	jr nz, DEC_COUNT	; Jump forward, if not (T=12/ 7)
-
-	;; Retrieve next note (and any preceeding commands)
-	ld a,(CUR_CH)		; Retrieve channel number
-	call MUTE_CHAN		; Temporarily mute channel to avoid
-				; glitches
-	
-	call NEXT_COMM		; Get next Play string value
-	
-	jr c, NEXT_CHAN	       	; Done, if channel has ended
-	jr ACT_CHAN		; Otherwise, note channel is active
-	
-DEC_COUNT:
-	dec de			; Decrement counter and save (T=6)
-	ld (iy + CH_CNT),e	; (T=19)
-	ld (iy + CH_CNT+1),d	; (T=19)
-
 ACT_CHAN:
 	ld hl,ACT_CH		; Confirm channel active (T=10)
 	inc (hl)		; (T=11)
@@ -128,7 +91,76 @@ NEXT_CHAN:
 	ld (ACT_CH),a
 	
 	jr LOOP
+
+DONE:	call SND_OFF
+
+	ld iy, (IY_SAVE)	; Recover return address
+	ei
+
+	IFDEF ZXSPECTRUM
+	ret			; Return to BASIC
+	ELSE
+	jp (iy)			; Return to FORTH
+	ENDIF
+
+	;; Service sound channel -- check if active, decrement note
+	;; timer, and -- if necessary -- process next note
+	;;
+	;; On entry:
+	;;   A - channel to service
+	;;
+	;; On exit
+	;;   Carry - channel status (C = ended/ NC = active)
+	;;   Registers -- assume corrupted
+SERVICE_CHANNEL:
+	call GET_CHAN_POINTER	; Set IY to point to channel info, based
+				; on A (17+91)
 	
+	;;  Check if channel is active
+	bit 7,(IY + CH_N)	; Bit 7 set indicates inactive (20)
+	jr z, CHANNEL_ACTIVE 	; (T=12/ 7)
+
+	;; Add timing delay here for T=128-7-12=109 T states, to avoid
+	;; noticable change in timing when a channel is not used/
+	;; terminates before others
+	ld b, 0x07		; (T=7)
+NN_WAIT:
+	nop 			; (T=4)
+	djnz NN_WAIT		; (T=13 / 8)
+	
+	scf			; Indicate channel inactive
+
+	ret			; Done
+
+	;; Check if note being played
+CHANNEL_ACTIVE:
+	ld e,(iy + CH_CNT)	; Retrieve countdown timer (T=19)
+	ld d,(iy + CH_CNT+1)	; (T=19)
+	
+	ld a,d			; Check if zero (T=4)
+	or e			; (T=4)
+
+	jr nz, DEC_COUNT	; Jump forward, if not (T=12/ 7)
+
+	;; Retrieve next note (and any preceeding commands)
+	ld a,(CUR_CH)		; Retrieve channel number
+	call MUTE_CHAN		; Temporarily mute channel to avoid
+				; glitches
+	
+	call NEXT_COMM		; Get next Play string value
+	
+	ret			; Carry value from NEXT_COMM
+	
+DEC_COUNT:
+	dec de			; Decrement counter and save (T=6)
+	ld (iy + CH_CNT),e	; (T=19)
+	ld (iy + CH_CNT+1),d	; (T=19)
+
+	and a 			; Reset carry flag
+
+	ret
+
+
 NEXT_COMM:
 	call GET_NEXT_NOTE	; Retrieve next note, if available
 	jr nz, PROCESS_COMM	; Carry set, indicates end of channel
@@ -207,18 +239,6 @@ NOT_NUM:
 
 	ret nc			; Return if new note set.
  	jr NEXT_COMM		; Otherwise process next command
-
-DONE:	call SND_OFF
-
-	ld iy, (IY_SAVE)	; Recover return address
-	ei
-
-	
-	IFDEF ZXSPECTRUM
-	ret			; Return to BASIC
-	ELSE
-	jp (iy)			; Return to FORTH
-	ENDIF
 
 	
 NEW_NOTE:
