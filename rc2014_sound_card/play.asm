@@ -986,8 +986,8 @@ SKIP16:	ccf
 	ret
 	
 BUFFER_PAGE:	equ 0xD0
-BUFFER_READ_OFFSET:	db 0xFE
-BUFFER_WRITE_OFFSET:	db 0xFE
+BUFFER_READ_OFFSET:	ds 0x03
+BUFFER_WRITE_OFFSET:	db 0x03
 
 	;; Reset ring buffer to be empty, with both pointers pointing to
 	;; the start of the page
@@ -1001,10 +1001,12 @@ BUFFER_INIT:
 	di			; Should be atomic operation
 	
 	;; Set read offset and write offset to zero
-	xor a
-	ld (BUFFER_READ_OFFSET),a
-	ld (BUFFER_WRITE_OFFSET),a
-
+	ld hl, BUFFER_READ_OFFSET
+	ld (hl),0x00
+	ld de, BUFFER_READ_OFFSET+1
+	ld bc, 0x05
+	ldir
+	
 	ei
 	
 	ret
@@ -1013,36 +1015,49 @@ BUFFER_INIT:
 	;;
 	;; On entry:
 	;;   A - byte to write
-	;;
+	;;   E - buffer number
+	;; 
 	;; On exit:
 	;;   Z - reset - okay/ set - buffer full
 BUFFER_WRITE:
 	di
 
-	ld h,a			; Save byte to write
-
-	;; Retrieve write offset
-	ld a,(BUFFER_WRITE_OFFSET)
-	ld l,a
+	ld b,a			; Store value to write
+	ld c,e			; Store buffer number
 	
-	;; Check if buffer is full
-	ld a,(BUFFER_READ_OFFSET)
+	sla e			; Multiply channel id by 2 to work out offset
+	ld d,0x00		; Set DE to offset
+
+	;; Find read offset
+	ld hl,BUFFER_READ_OFFSET
+	add hl,de
+	ld a,(hl)
+	inc hl
+
 	dec a
-	cp l
-
+	cp (hl)
 	jr z, BW_DONE
+
+	;; Save write-offset store to DE
+	ld d,h
+	ld e,l
 	
-	ld a,h			; Restore byte to write
+	ld l,(hl)		; Work out write pointer
+	ld a, BUFFER_PAGE
+	add a,c			; Add buffer number
+	ld h,a
+	
+	ld a,b			; Restore byte to write
 
 	;; Write to buffer
-	ld h,BUFFER_PAGE
 	ld (hl),a
 
 	;; Update write offset
 	inc l
 
-	ld a,l
-	ld (BUFFER_WRITE_OFFSET),a
+	ex de,hl
+	
+	ld (hl),e
 
 	;; Reset zero to indicate success
 	or 0x01		; Reset zero flag
@@ -1055,33 +1070,49 @@ BW_DONE:
 	;; Read next byte from ring buffer (if not empty)
 	;;
 	;; On entry:
-	;;
+	;;   E - buffer number
+	;; 
 	;; On exit:
 	;;   Z - reset - okay/ set - buffer empty
 	;;   A - value read
 BUFFER_READ:
 	di
 
-	ld a,(BUFFER_READ_OFFSET)
-	ld l,a
-	
+	ld c,e			; Save buffer number
+
+	;; Work out offset to buffer pointers
+	sla e			; Multiply buffer number by 2
+	ld d, 0x00		; Set DE to offset
+	ld hl, BUFFER_READ_OFFSET
+	add hl,de
+
 	;; Check for empty buffer
-	ld a,(BUFFER_WRITE_OFFSET)
-	cp l
-	jr z, BR_DONE
+	inc hl			; Point to write offset
+	ld a,(hl)		; Retrieve write offset
+	dec hl			; Point to read offset
+
+	cp (hl)			; If read offset = write offset,
+	jr z, BR_DONE		; buffer is empty
+
+	;; Save pointer to read-offset
+	ld d,h
+	ld e,l
+
+	ld l,(hl)		; Retrieve read offset
+	ld a, BUFFER_PAGE	; Work out correct page
+	add a,c			; Add buffer number
+	ld h,a
 
 	;; Read from buffer
-	ld h,BUFFER_PAGE
 	ld a,(hl)
-	ld h,a
-	
-	;; Update read offset
-	inc l
-	ld a,l
-	ld (BUFFER_READ_OFFSET),a
 
-	;; Reset zero to indicate success
-	ld h,a
+	;; Store new read offset
+	inc l
+	ex de,hl		; DE help pointer to offset
+	ld (hl),e
+
+	;; Reset zero flag, to cofirm successful read
+	ld h,a			; Save read value
 	or 0x01			; Reset zero flag
 	ld a,h			; Restore read value
 
@@ -1126,11 +1157,13 @@ BZ_DONE:
 	ret
 	
 FORTH_BW:
-	;; Pop word off of stack into DE
+	;; Pop value to write off of stack into DE
 	rst 0x18
 
 	ld a,e			; Move low byte into A
 
+	rst 0x18		; Retrieve buffer number
+	
 	call BUFFER_WRITE
 
 	ld de, 0x0000
@@ -1145,6 +1178,9 @@ FBW_DONE:
 	jp (iy)
 
 FORTH_BR:
+	;; Retrieve buffer number
+	rst 0x18
+
 	call BUFFER_READ
 
 	jr z, FBR_FAIL
