@@ -996,7 +996,6 @@ BUFFER_WRITE_OFFSET:	db 0x03
 	;;
 	;; On exit:
 	;;   a - corrupted
-	
 BUFFER_INIT:
 	di			; Should be atomic operation
 	
@@ -1127,35 +1126,45 @@ BR_DONE:
 	;; ensuring value has not been overwritten.
 	;; 
 	;; On entry:
+	;;   E - buffer number
 	;;
 	;; On exit:
 	;;   Z - reset - okay/ set - buffer empty
 BUFFER_REWIND:	
 	di
 
-	ld a,(BUFFER_READ_OFFSET)
-	ld l,a
-	
-	;; Check for empty buffer
-	ld a,(BUFFER_WRITE_OFFSET)
-	cp l
-	jr z, BZ_DONE
+	ld c,e			; Save buffer number
 
-	;; Rewind pointer by one 
-	dec l
-	ld a,l
-	ld (BUFFER_READ_OFFSET),a
+	;; Work out offset to buffer pointers
+	sla e			; Multiply buffer number by two
+	ld d, 0x00		; Set DE to offset
+	ld hl, BUFFER_READ_OFFSET
+	add hl,de
+	
+	inc hl			; Point to buffer write offset
+	ld a,(hl)		; Retrieve offset
+	inc a			; Check for rewind overflow
+	dec hl			; Point to buffer read offset
+
+	cp (hl)			; Check for buffer empty
+	jr z, BZ_DONE		; Done if so
+	
+	;; Rewind pointer by one by decrementing read offset
+	dec (hl)
 	
 	;; Reset zero to indicate success
-	ld a,h
 	or 0x01			; Reset zero flag
-	ld a,h			; Restore read value
 
 BZ_DONE:
 	ei
 
 	ret
+
+	;;
+	;; FORTH wrappers
+	;;
 	
+	DISPLAY "FORTH_BW ", $
 FORTH_BW:
 	;; Pop value to write off of stack into DE
 	rst 0x18
@@ -1177,6 +1186,7 @@ FBW_DONE:
 
 	jp (iy)
 
+	DISPLAY "FORTH_BR ", $
 FORTH_BR:
 	;; Retrieve buffer number
 	rst 0x18
@@ -1198,12 +1208,29 @@ FBR_DONE:
 
 	jp (iy)
 
+	DISPLAY "FORTH_BI ", $
 FORTH_BI:
 	call BUFFER_INIT
 
 	jp (iy)
 
 
+	DISPLAY "FORTH_BZ ", $
+FORTH_BZ:
+	rst 0x18
+	
+	call BUFFER_REWIND
+
+	ld de, 0x0000
+
+	jr nz, FBZ_DONE
+
+	dec de
+
+FBZ_DONE:
+	rst 0x10
+
+	jp (iy)
 	
 IY_SAVE:	dw 0x0000
 SP_SAVE:	dw 0x0000
