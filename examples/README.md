@@ -34,7 +34,7 @@ Alternatively, if you have a Minstrel 4th with a USB Keyboard Interface or a Min
 
 ## Scroll
 
-A Jupiter Ace (machine-mode) implementation of the popular Commodore
+A Jupiter Ace (machine-code) implementation of the popular Commodore
 scrolling-maze example.
 
 A ready-to-run version is included in [scroll.tap](scroll.tap), which can be run using:
