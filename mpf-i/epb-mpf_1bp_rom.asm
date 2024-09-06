@@ -1,9 +1,14 @@
 ; z80dasm 1.1.6
-; command line: z80dasm -a -l -g 36864 -o mpf1_1pb_rom.asm 2732 EPB-MPF-1BP.bin
+; command line: z80dasm -a -l -g 36864 -o mpf1_1pb_rom.asm EPB-MPF-1BP.bin
 
 	;; Entry point for MPF1 (as opposed to MPF1P) is $9800 (labelled
 	;; MPF1_START)
 
+
+	;; MPF1 Key mapping
+	;; REG  = READ = $1B
+	;; GO   = GO   = $12
+	;; LIST = CBR  = $1A 
 	include "mpf1_monitor.sym"
 
 EPB_VAR: equ SYSVARS-$0100 ; Location of system variables
@@ -1314,10 +1319,10 @@ l97e8h:
 MPF1_START:
 	ld sp,03f80h 	;; ld sp,01f00h		;9800
 
-EPB_01F20_B: equ EPB_VAR 	; 01f20h
+EPB_EPROM_MODEL: equ EPB_VAR 	; 01f20h - EPROM model number
 EPB_01F21_B: equ EPB_VAR+$01	; 01f21h
 EPB_01F22_B: equ EPB_VAR+$02	; 01f22h
-EPB_01F23_W: equ EPB_VAR+$03 	; 01f23h
+EPB_01F23_W: equ EPB_VAR+$03 	; 01f23h - Store for EPROM model string
 EPB_01F29_B: equ EPB_VAR+$09	; 01f29h
 EPB_01F2A_W: equ EPB_VAR+$0A	; 01f2ah
 EPB_01F2C_W: equ EPB_VAR+$0C	; 01f2ch
@@ -1331,10 +1336,13 @@ EPB_01F3B_B: equ EPB_VAR+$1B	; 01f3bh
 EPB_01F3C_B: equ EPB_VAR+$1C	; 01f3ch	
 EPB_01F3D_B: equ EPB_VAR+$1D	; 01f3dh	
 EPB_01F3E_B: equ EPB_VAR+$1E	; 01f3eh	
-EPB_01F45_W: equ EPB_VAR+$25 	; 01f45h	
-EPB_01F46_W: equ EPB_VAR+$26	; 01f46h *** MAYBE SHOULD BE 01F47 ***
-EPB_01F49_W: equ EPB_VAR+$29	; 01f49h	
-EPB_01F4B_W: equ EPB_VAR+$2B	; 01f4bh
+EPB_01F45_B: equ EPB_VAR+$25 	; 01f45h - EPROM model (2758=0; 2508=1;
+				;          2716=2; 2516=3; 2732=4; 2532=5;
+				;          2764=6; 2564=7)
+EPB_01F46_W: equ EPB_VAR+$26	; 01f46h - EPROM memory (no 2K blocks) -
+				;          little endian
+EPB_EPROM_READ: equ EPB_VAR+$29	; 01f49h - Address of EPROM read routine?
+EPB_EPROM_WRITE: equ EPB_VAR+$2B	; 01f4bh - Address of EPROM write routine?
 
 	;; Check RAM (D800--D8FF)
 	ld hl,0d800h		;9803 (start of EPROM RAM)
@@ -1402,8 +1410,8 @@ l9866h:
 	call sub_9e17h		;9869
 	jr l988ah		;986c
 
-	;; Reset EPB_01F3C_B
 l986eh:
+	;; Reset EPB_01F3C_B
 	xor a			;986e
 	ld (EPB_01F3C_B),a	;986f
 
@@ -1425,22 +1433,25 @@ l9872h:
 	;; Set state = 1
 	ld a,001h		;9885
 	ld (STATE),a		;9887
-	
+
+	;; Main loop
 l988ah:
 	ld ix,DISPBF		;988a
 	call SCAN		;988e - Read keyboard
 	call EPB_BEEP		;9891 - Beep
-	call sub_989fh		;9894 - Process key
+	call EPB_PROCESS_KEY	;9894 - Process key
 
 	ld a,(EPB_01F3C_B)	;9897
 	and a			;989a
 	jr nz,l986eh		;989b
+
 	jr l988ah		;989d
+
 	
 	;; Process keypress.
 	;;
 	;; On entry, A contains keypress read by SCAN
-sub_989fh:
+EPB_PROCESS_KEY:
 	cp 010h			;989f - Jump forward if
 	jr c,l98e2h		;98a1 - hex digit
 
@@ -1463,7 +1474,7 @@ l98bbh: 			; Key press is one of 15 'SBR', 1A
 				; 'CBR', 1B 'REG', 1C 'MOVE', 1E 'TPWR',
 				; 1F 'TPRD'
 	;; Work out new STATE
-	;; 15 = '4'; 
+	;; 15 = '4'; LIST='6'
 	sub 014h		;98bb
 	ld hl,l9fc9h		;98bd
 	add a,l			;98c0
@@ -1475,13 +1486,13 @@ l98bbh: 			; Key press is one of 15 'SBR', 1A
 
 	;;  Work out branch based on EPB_01F21_B
 l98cah:
-	ld a,(EPB_01F21_B)	;98ca
+	ld a,(EPB_01F21_B)	;98ca - Retrieve keypress
 	cp 012h			;98cd
-	jr z,l98dah		;98cf - Skip forward if (01F2) = $12
+	jr z,l98dah		;98cf - Skip forward if key is 'GO'
 	push af			;98d1
 	xor a			;98d2
-	ld (EPB_01F3D_B),a		;98d3
-	ld (EPB_01F3E_B),a		;98d6
+	ld (EPB_01F3D_B),a	;98d3
+	ld (EPB_01F3E_B),a	;98d6
 	pop af			;98d9
 l98dah:
 	sub 010h		;98da
@@ -1489,45 +1500,65 @@ l98dah:
 	jp BRANCH		;98df
 
 	;; Deal with hex digits (based on STATE)
-l98e2h:
-	ld c,a			;98e2 - Save A
+l98e2h:	ld c,a			;98e2 - Save A
 	ld hl,l9f67h		;98e3
 l98e6h:
 	ld a,(STATE)		;98e6
 	jp BRANCH		;98e9
 
-	
+
+	;; Process '+'
 	ld hl,l9f72h		;98ec
 	jr l98e6h		;98ef
+
+	;; Process '-'
 	ld hl,09f7dh		;98f1
 	jr l98e6h		;98f4
+
+	;; Process 'GO'
 	ld hl,09f88h		;98f6
 	jr l98e6h		;98f9
+
 	ld a,055h		;98fb
 	ld (EPB_01F3C_B),a		;98fd
 	ret			;9900
 
+	;; Process 'GO' (STATE=5)
 l9901h:
 	ld a,(STATE)		;9901
 	cp 005h		;9904
 	jr z,l990ch		;9906
+
 	call 003bbh		;9908
 	ret			;990b
+
+	;; Processing LIST
 l990ch:
 	ld a,002h		;990c
-	ld (EPB_01F29_B),a		;990e
+	ld (EPB_01F29_B),a	;990e
+
 	call sub_9e27h		;9911
+
 	ret			;9914
+
+	;; Handle 'ADDR'
 	ld a,(STATE)		;9915
-	cp 005h		;9918
+	
+	cp 005h			;9918 - Check if LIST mde
 	jr z,l9920h		;991a
-	call 003bbh		;991c
+	
+	call IGNORE		;991c Otherwise do nothing
+
 	ret			;991f
+	
 l9920h:
 	xor a			;9920
-	ld (EPB_01F29_B),a		;9921
+	ld (EPB_01F29_B),a	;9921
+
 	call sub_9e20h		;9924
+
 	ret			;9927
+	
 	ld a,(STATE)		;9928
 	cp 005h		;992b
 	jr z,l9933h		;992d
@@ -1560,51 +1591,68 @@ l995dh:
 	inc hl			;9967
 	ld (EPB_01F2F_W),hl		;9968
 	jr l9941h		;996b
+
+	;; Process READ
 	call sub_9976h		;996d
 l9970h:
 	ld a,003h		;9970
 	ld (STATE),a		;9972
 	ret			;9975
+
 sub_9976h:
+	;; Set start address for read to 0000h
 	ld hl,00000h		;9976
 	ld (STEPBF),hl		;9979
-	ld a,(EPB_01F20_B)		;997c
+	
+	;; Set end address to size of EPROM
+	;; Branch based on EPROM model
+	ld a,(EPB_EPROM_MODEL)		;997c
 	cp 002h		;997f
-	jr c,l998dh		;9981
+	jr c,l998dh	;9981 - Branch if EPROM type 0 or 1 (1k)
 	cp 004h		;9983
-	jr c,l9995h		;9985
+	jr c,l9995h	;9985 - Branch if EPROM type 2 or 3 (2k)
 	cp 006h		;9987
-	jr c,l999dh		;9989
-	jr l99a3h		;998b
-l998dh:
+	jr c,l999dh	;9989 - Branch if EPROM type 4 or 5 (4k)
+	jr l99a3h	;998b - Assume is type 6 or 7 (8k)
+
+l998dh: 			; EPROM type 0 or 1
 	ld hl,003ffh		;998d
 	ld (STEPBF+2),hl		;9990
 	jr l99a9h		;9993
-l9995h:
+l9995h: 			; EPROM type 2 or 3
 	ld hl,007ffh		;9995
 	ld (STEPBF+2),hl		;9998
 	jr l99a9h		;999b
-l999dh:
-	ld hl,00fffh		;999d
+l999dh: 			; EPROM type 4 or 5
+	ld hl,00fffh		;999d *** should this be 00afff ***
 	ld (STEPBF+2),hl		;99a0
-l99a3h:
+	;; *** Should there not be a branch here ***
+l99a3h: 			; EPROM type 6 or 7
 	ld hl,00fffh		;99a3
-	ld (STEPBF+2),hl		;99a6
+	ld (STEPBF+2),hl	;99a6
+	
 l99a9h:
-	ld a,005h		;99a9
+	;; Retrieve input parameters
+	ld a,005h		;99a9 - Set state to 5 for retrieving params
 	ld (STATE),a		;99ab
-	call 0043ah		;99ae
+	call STEPDP		;99ae
+	
 	ld a,008h		;99b1
 	ld (STATE),a		;99b3
 	ret			;99b6
-	ld hl,EPB_01F23_W		;99b7
+
+	ld hl,EPB_01F23_W	;99b7
 	jp sub_9e17h		;99ba
+
 	call 003bbh		;99bd
 	ret			;99c0
+
+	;; Handle 'LIST' key press
 	ld hl,l9fb7h		;99c1
 	jp sub_9e17h		;99c4
+	
 	xor a			;99c7
-	ld (EPB_01F3B_B),a		;99c8
+	ld (EPB_01F3B_B),a	;99c8
 	call 0043ah		;99cb
 	ret			;99ce
 
@@ -1619,55 +1667,71 @@ l99a9h:
 
 	;; Done
 	ret			;99dc
+
 	
-	ld a,(EPB_01F29_B)		;99dd
+	;; Process hex digit in STATE=5 (LIST)
+	ld a,(EPB_01F29_B)	;99dd - Check if address mode?
 	and a			;99e0
 	jr z,l99fah		;99e1
+	
 	ld hl,(ADSAVE)		;99e3
 	ld de,0d800h		;99e6
 	add hl,de			;99e9
 	call RAMCHK		;99ea
-	jp nz,003bbh		;99ed
-	call 003eeh		;99f0
+	jp nz,IGNORE		;99ed
+	call PRECL1		;99f0
 	ld a,c			;99f3
 	rld		;99f4
 	call sub_9e27h		;99f6
+
 	ret			;99f9
+
 l99fah:
 	ld hl,ADSAVE		;99fa
-	call 003fah		;99fd
+	call PRECL2		;99fd
 	ld a,c			;9a00
 	rld		;9a01
 	inc hl			;9a03
 	rld		;9a04
 	call sub_9e20h		;9a06
+
 	ret			;9a09
-	call 00220h		;9a0a
+
+	;; Process hex digit in STATE=3 (READ)
+	call HMV		;9a0a - GOT THIS FAR
 	ld a,(STMINOR)		;9a0d
 	and a			;9a10
 	jr nz,l9a19h		;9a11
-	ld a,0aeh		;9a13
+	ld a,0aeh		;9a13 - 'S'
 	ld (DISPBF),a		;9a15
 	ret			;9a18
+
 l9a19h:
-	ld a,08fh		;9a19
-	ld (DISPBF),a		;9a1b
+	ld a,08fh		;9a19 - 'E'
+	ld (DISPBF),a		;9a1b 
 	ret			;9a1e
-	call 00220h		;9a1f
+
+
+	call HMV		;9a1f
 	ret			;9a22
-	ld hl,(ADSAVE)		;9a23
+
+	;; Handle '+' for STATE=1
+	ld hl,(ADSAVE)		;9a23 - though ADSAVE looks to have EPROM number
 	inc hl			;9a26
 	ld (ADSAVE),hl		;9a27
 	ld a,002h		;9a2a
 	ld (EPB_01F29_B),a		;9a2c
 	call sub_9e27h		;9a2f
 	ret			;9a32
+
+	;; Handle '+' for STATE=3
 	call sub_9a39h		;9a33
-	jp l9970h		;9a36
+	jp l9970h		;9a36 - Restore STATE=3 and done
+
 sub_9a39h:
 	ld a,005h		;9a39
 	ld (STATE),a		;9a3b
-	call 0024bh		;9a3e
+	call IMV		;9a3e
 	ld a,008h		;9a41
 	ld (STATE),a		;9a43
 	ld a,08fh		;9a46
@@ -1682,24 +1746,37 @@ sub_9a39h:
 	ld (EPB_01F29_B),a		;9a59
 	call sub_9e27h		;9a5c
 	ret			;9a5f
+
+	;; Handle '-' for STATE=3
 	call sub_9a66h		;9a60
-	jp l9970h		;9a63
+	jp l9970h		;9a63 - Restore STATE=3 and done
+
 sub_9a66h:
 	ld a,005h		;9a66
 	ld (STATE),a		;9a68
-	call 00279h		;9a6b
+	call DMV		;9a6b
 	ld a,008h		;9a6e
 	ld (STATE),a		;9a70
 	ret			;9a73
-	call 00279h		;9a74
+	
+	call DMV		;9a74
 	ret			;9a77
-	call sub_9e03h		;9a78
-	call sub_9efeh		;9a7b
-	call sub_9b9bh		;9a7e
+
+	;; Handle 'GO' for STATE=0, 1, 2
+	call sub_9e03h		;9a78 - De-highlight text on display
+	call sub_9efeh		;9a7b - Check if valid EPROM model
+	call sub_9b9bh		;9a7e - Populate system variables based
+				;       on model information
+	
 	ret			;9a81
-	ld de,00000h		;9a82
+
+	;; Handle 'GO' for STATE=5 (i.e., LIST)
+	ld de,00000h		;9a82 - Set start address to zero
 	ld (ADSAVE),de		;9a85
+
 	jp l9901h		;9a89
+
+	
 	ld hl,(STEPBF+2)		;9a8c
 	ld de,0d800h		;9a8f
 	add hl,de			;9a92
@@ -1724,7 +1801,7 @@ sub_9a66h:
 	and a			;9ac0
 	sbc hl,de		;9ac1
 	jp c,l9e49h		;9ac3
-	ld a,(EPB_01F20_B)		;9ac6
+	ld a,(EPB_EPROM_MODEL)		;9ac6
 	call sub_9eabh		;9ac9
 	ld hl,0d800h		;9acc
 	ld de,(STEPBF)		;9acf
@@ -1744,44 +1821,64 @@ l9adah:
 	jp sub_9e17h		;9ae9
 	ld ix,EPB_01F22_B		;9aec
 	jp 003b0h		;9af0
-	ld hl,(STEPBF+2)		;9af3
-	ld de,(STEPBF)		;9af6
-	and a			;9afa
-	sbc hl,de		;9afb
-	jp c,l9e49h		;9afd
-	ld a,(EPB_01F20_B)		;9b00
-	call sub_9eabh		;9b03
-	ld hl,0d800h		;9b06
-	ld de,(STEPBF)		;9b09
-	push de			;9b0d
+
+	;; Handle 'GO' on STATE=3
+	ld hl,(STEPBF+2)	;9af3 - Parameter "E"
+	ld de,(STEPBF)		;9af6 - Parameter "S"
+	and a			;9afa - Work out length of read op
+	sbc hl,de		;9afb 
+	jp c,l9e49h		;9afd - Branch if S > E (i.e., error)
+
+	ld a,(EPB_EPROM_MODEL)	;9b00 - Retrieve EPROM model code
+
+	call sub_9eabh		;9b03 - BC = length_of_read_op + 1
+
+	ld hl,0d800h		;9b06 - Start of memory buffer
+	ld de,(STEPBF)		;9b09 - Parameter "S"
+
+	;; Adjust HL based on read offset
+	push de			;9b0d 
 	ld a,d			;9b0e
-	and 00fh		;9b0f
+	and 00fh		;9b0f - Max 4k offset
 	ld d,a			;9b11
-	add hl,de			;9b12
+	add hl,de		;9b12
 	pop de			;9b13
+
+	;; At this point, DE is 'S', HL points to start of destination
+	;; buffer in memory and BC = length+1 of read
 l9b14h:
 	call sub_9c86h		;9b14
-	ld (hl),a			;9b17
+
+	;; Store byte read
+	ld (hl),a		;9b17
+
+	;; Advance buffers for next byte read
 	inc de			;9b18
 	inc hl			;9b19
 	dec bc			;9b1a
-	ld a,b			;9b1b
+	
+	ld a,b			;9b1b - Check if done
 	or c			;9b1c
-	jr nz,l9b14h		;9b1d
-	ld hl,l9fbdh		;9b1f
-	jp sub_9e17h		;9b22
+	jr nz,l9b14h		;9b1d - Repeat if not
+
+	ld hl,l9fbdh		;9b1f - PASS message
+	jp sub_9e17h		;9b22 - Done
+
 	ld ix,EPB_01F22_B		;9b25
 	jp 003b0h		;9b29
-	ld a,(EPB_01F3B_B)		;9b2c
-	cp 065h		;9b2f
+
+	;; Handle 'GO' on STATE=5
+	ld a,(EPB_01F3B_B)	;9b2c
+	cp 065h			;9b2f
 	jr nz,l9b3ch		;9b31
 	call sub_9dech		;9b33
 	call sub_9c47h		;9b36
 	jp l9b82h		;9b39
+
 l9b3ch:
 	ld a,002h		;9b3c
 	ld (EPB_01F3A_B),a		;9b3e
-	ld a,(EPB_01F20_B)		;9b41
+	ld a,(EPB_EPROM_MODEL)		;9b41
 	ld ix,EPB_01F2E_B		;9b44
 	cp 002h		;9b48
 	jr c,l9b56h		;9b4a
@@ -1812,6 +1909,7 @@ l9b68h:
 	ld a,(EPB_01F3A_B)		;9b7b
 	and a			;9b7e
 	jp z,l9e4eh		;9b7f
+
 l9b82h:
 	ld a,(hl)			;9b82
 	push hl			;9b83
@@ -1829,87 +1927,135 @@ l9b82h:
 	cpi		;9b95
 	jp pe,l9b82h		;9b97
 	ret			;9b9a
+
 sub_9b9bh:
-	ld hl,(ADSAVE)		;9b9b
-	ld a,h			;9b9e
-	cp 025h		;9b9f
-	jr nz,l9bcah		;9ba1
+	ld hl,(ADSAVE)		;9b9b - Retrieve model number
+
+	ld a,h			;9b9e - Check if 25XX
+	cp 025h			;9b9f
+	jr nz,l9bcah		;9ba1 - Jump if not 25XX
+
 	ld a,l			;9ba3
-	ld hl,EPB_01F45_W		;9ba4
-	cp 008h		;9ba7
-	jr nz,l9bafh		;9ba9
+	ld hl,EPB_01F45_B	;9ba4 - 
+
+	cp 008h			;9ba7 - Check if 2508
+	jr nz,l9bafh		;9ba9 - Jump if not
+	
 	ld (hl),001h		;9bab
+
 	jr l9bf2h		;9bad
+
 l9bafh:
-	cp 016h		;9baf
-	jr nz,l9bb7h		;9bb1
+	cp 016h			;9baf - Check if 2516
+	jr nz,l9bb7h		;9bb1 - Jump if not
+	
 	ld (hl),003h		;9bb3
+	
 	jr l9bf2h		;9bb5
+	
 l9bb7h:
-	cp 032h		;9bb7
-	jr nz,l9bbfh		;9bb9
+	cp 032h			;9bb7 - Check if 2532
+	jr nz,l9bbfh		;9bb9 - Jump if not
+
 	ld (hl),005h		;9bbb
+
 	jr l9bf2h		;9bbd
+
 l9bbfh:
-	cp 064h		;9bbf
-	jr nz,l9bc7h		;9bc1
+	cp 064h			;9bbf - Check if 2564
+	jr nz,l9bc7h		;9bc1 - Error if not
+	
 	ld (hl),007h		;9bc3
+
 	jr l9bf2h		;9bc5
+
+	;; Handle error in model number specification (possibly should
+	;; never be reached, as model number checked previously).
+	;; *** Looks to be an infinite loop ***
 l9bc7h:
 	scf			;9bc7
-	jr sub_9b9bh		;9bc8
+	jr sub_9b9bh		;9bc8 - Revalidate EPROM model
+
 l9bcah:
-	cp 027h		;9bca
-	jr nz,l9bc7h		;9bcc
-	ld a,l			;9bce
-	ld hl,EPB_01F45_W		;9bcf
-	cp 058h		;9bd2
+	cp 027h			;9bca - Check if 27xx
+	jr nz,l9bc7h		;9bcc - Error if not
+
+	ld a,l			;9bce - retrieve low digits
+	ld hl,EPB_01F45_B	;9bcf
+
+	cp 058h			;9bd2 - Check if 2758
 	jr nz,l9bdah		;9bd4
+
 	ld (hl),000h		;9bd6
+
 	jr l9bf2h		;9bd8
+
 l9bdah:
-	cp 016h		;9bda
-	jr nz,l9be2h		;9bdc
+	cp 016h			;9bda - Check if 2716
+	jr nz,l9be2h		;9bdc - Jump if not
+	
 	ld (hl),002h		;9bde
+
 	jr l9bf2h		;9be0
+
 l9be2h:
-	cp 032h		;9be2
-	jr nz,l9beah		;9be4
+	cp 032h			;9be2 - Check if 2732
+	jr nz,l9beah		;9be4 - Jumo if not
+	
 	ld (hl),004h		;9be6
+	
 	jr l9bf2h		;9be8
+	
 l9beah:
-	cp 064h		;9bea
-	jr nz,l9bc7h		;9bec
+	cp 064h			;9bea - Check if 2764
+	jr nz,l9bc7h		;9bec - Error if not
+
 	ld (hl),006h		;9bee
+
 	jr l9bf2h		;9bf0
+
 l9bf2h:
-	ld a,(hl)			;9bf2
-	ld hl,l9f2dh		;9bf3
-	bit 0,a		;9bf6
+	ld a,(hl)		;9bf2 - Retrieve model code from
+				;       EPB_01F45_B
+	ld hl,l9f2dh		;9bf3 - Store for memory information
+
+	;; Zero bit 0 of model code
+	bit 0,a			;9bf6 - Could replace with "AND $FE"?
 	jr z,l9bfch		;9bf8
 	sub 001h		;9bfa
+	
 l9bfch:
 	add a,l			;9bfc
 	ld l,a			;9bfd
-	ld de,EPB_01F46_W		;9bfe *** MAYBE SHOULD 01f47h?
+
+	;; Copy memory info into EPB_01F46_W
+	ld de,EPB_01F46_W	;9bfe
 	ld bc,00002h		;9c01
-	ldir		;9c04
-	ld hl,l9f34h+1		;9c06
+	ldir			;9c04
+
+	;; Work out address of read routine
+	ld hl,l9f35h		;9c06
 	call sub_9c19h		;9c09
-	ld (EPB_01F49_W),hl		;9c0c
+	ld (EPB_EPROM_READ),hl	;9c0c - Store it
+
+	;; Work out address of write route 
 	ld hl,09f45h		;9c0f
 	call sub_9c19h		;9c12
-	ld (EPB_01F4B_W),hl		;9c15
+	ld (EPB_EPROM_WRITE),hl	;9c15 - Store it
+	
 	ret			;9c18
+
+	;; Retrieve address of read routine for specific EPROM model
 sub_9c19h:
-	ld a,(EPB_01F45_W)		;9c19
-	add a,a			;9c1c
-	add a,l			;9c1d
+	ld a,(EPB_01F45_B)	;9c19 - Retrive model code
+	add a,a			;9c1c - Multply by 2
+	add a,l			;9c1d - Compute offset into buffer
 	ld l,a			;9c1e
-	ld a,(hl)			;9c1f
+	ld a,(hl)		;9c1f
 	inc hl			;9c20
-	ld h,(hl)			;9c21
+	ld h,(hl)		;9c21
 	ld l,a			;9c22
+	
 	ret			;9c23
 l9c24h:
 	pop hl			;9c24
@@ -1980,25 +2126,39 @@ l9c7dh:
 	pop bc			;9c83
 	pop de			;9c84
 	ret			;9c85
+
+	;; Read byte from EPROM
+	;; DE=address of byte to read from eprom
+	;; a=EPROM model
+	;; BC and HL should be preserved
 sub_9c86h:
 	push hl			;9c86
+
 	ld a,090h		;9c87
 	out (07fh),a		;9c89
-	ld hl,(EPB_01F49_W)		;9c8b
+	
+	ld hl,(EPB_EPROM_READ)	;9c8b - Retrieve address of
+				;model-specific code (see table at $9F35
+				;for addresses)
+	
 	jp (hl)			;9c8e
+
+	;; Read byte from EPROM (model 4 and 6)
+	;; Om entry, DE=address to read from
+	;; On exit, A=byte read
 	ld a,e			;9c8f
 	out (07dh),a		;9c90
 	ld a,d			;9c92
 	and 017h		;9c93
-	or 020h		;9c95
+	or 020h			;9c95
 	out (07eh),a		;9c97
-	bit 3,d		;9c99
+	bit 3,d			;9c99
 	jr z,$+7		;9c9b
 	ld a,008h		;9c9d
-	jr $+5		;9c9f
+	jr $+5			;9c9f
 	ld a,03eh		;9ca1
 	jr z,$-43		;9ca3
-	ld (hl),b			;9ca5
+	ld (hl),b		;9ca5
 	nop			;9ca6
 	in a,(07ch)		;9ca7
 	push af			;9ca9
@@ -2009,6 +2169,10 @@ sub_9c86h:
 	pop af			;9cb1
 	pop hl			;9cb2
 	ret			;9cb3
+
+	;; Read byte from EPROM (model 0,1,2,3,5)
+	;; Om entry, DE=address to read from
+	;; On exit, A=byte read
 	ld a,e			;9cb4
 	out (07dh),a		;9cb5
 	ld a,d			;9cb7
@@ -2024,13 +2188,17 @@ sub_9c86h:
 	pop af			;9cc7
 	pop hl			;9cc8
 	ret			;9cc9
+
+	;; Read byte from EPROM (model 7)
+	;; Om entry, DE=address to read from
+	;; On exit, A=byte read
 	ld a,e			;9cca
 	out (07dh),a		;9ccb
 	ld a,d			;9ccd
 	and 00fh		;9cce
-	or 030h		;9cd0
+	or 030h			;9cd0
 	out (07eh),a		;9cd2
-	bit 4,d		;9cd4
+	bit 4,d			;9cd4
 	jr z,l9cdch		;9cd6
 	ld a,008h		;9cd8
 	jr l9cdeh		;9cda
@@ -2049,13 +2217,15 @@ l9cdeh:
 	pop af			;9cec
 	pop hl			;9ced
 	ret			;9cee
+
+	
 sub_9cefh:
 	push af			;9cef
 	push hl			;9cf0
 	push af			;9cf1
 	ld a,080h		;9cf2
 	out (07fh),a		;9cf4
-	ld hl,(EPB_01F4B_W)		;9cf6
+	ld hl,(EPB_EPROM_WRITE)	;9cf6
 	jp (hl)			;9cf9
 	ld a,0f1h		;9cfa
 	pop hl			;9cfc
@@ -2068,7 +2238,7 @@ sub_9cefh:
 	out (07dh),a		;9d07
 	ld a,d			;9d09
 	and 007h		;9d0a
-	or 008h		;9d0c
+	or 008h			;9d0c
 	out (07eh),a		;9d0e
 	pop af			;9d10
 	call sub_9dd2h		;9d11
@@ -2099,6 +2269,7 @@ l9d19h:
 l9d3ah:
 	djnz l9d3ah		;9d3a
 	ret			;9d3c
+
 	pop af			;9d3d
 	pop hl			;9d3e
 	out (07ch),a		;9d3f
@@ -2220,6 +2391,8 @@ sub_9dech:
 	ld hl,(STEPBF+4)		;9dfb
 	ld bc,(EPB_01F2C_W)		;9dfe
 	ret			;9e02
+
+	;; De-highlight text on display
 sub_9e03h:
 	ld b,006h		;9e03
 	ld hl,DISPBF		;9e05
@@ -2228,6 +2401,7 @@ l9e08h:
 	inc hl			;9e0a
 	djnz l9e08h		;9e0b
 	ret			;9e0d
+
 	ld a,090h		;9e0e
 	out (0cfh),a		;9e10
 	ld a,0d0h		;9e12
@@ -2238,33 +2412,47 @@ l9e08h:
 sub_9e17h:
 	ld bc,00006h		;9e17
 	ld de,DISPBF		;9e1a
-	ldir		;9e1d
+	ldir			;9e1d
 	ret			;9e1f
+
+	;; Refresh address field
 sub_9e20h:
 	ld b,004h		;9e20
 	ld hl,DISPBF+2		;9e22
 	jr l9e2ch		;9e25
+
+	;; Refresh data field
 sub_9e27h:
 	ld b,002h		;9e27
 	ld hl,DISPBF		;9e29
 l9e2ch:
 	exx			;9e2c
 	ld de,(ADSAVE)		;9e2d
-	call 00665h		;9e31
+	call ADDRDP		;9e31
+
+	;; Work out actual memory address by adding base to relative
+	;; address
 	ld hl,(ADSAVE)		;9e34
 	ld de,0d800h		;9e37
-	add hl,de			;9e3a
-	ld a,(hl)			;9e3b
-	call 00671h		;9e3c
+	add hl,de		;9e3a
+
+	;; Retrieve value
+	ld a,(hl)		;9e3b
+	call DATADP		;9e3c
+	
 	exx			;9e3f
-	call 00434h		;9e40
+	call SETPT		;9e40
+
 	ret			;9e43
+	
 l9e44h:
 	ld a,002h		;9e44
 	ld (EPB_01F3A_B),a		;9e46
+
 l9e49h:
-	ld hl,007a9h		;9e49
-	jr sub_9e17h		;9e4c
+	ld hl,ERR_		;9e49 - Error message
+	jr sub_9e17h		;9e4c - Copy to display and return
+
 l9e4eh:
 	ld a,002h		;9e4e
 	ld (EPB_01F3A_B),a		;9e50
@@ -2318,16 +2506,21 @@ l9e8fh:
 	ld a,002h		;9ea5
 	ld (EPB_01F29_B),a		;9ea7
 	ret			;9eaa
+
+	;; Subroutine of 'READ' - called from $9B03
 sub_9eabh:
-	ld hl,(STEPBF+2)		;9eab
-	ld de,(STEPBF)		;9eae
-	and a			;9eb2
+	ld hl,(STEPBF+2)	;9eab - End of buffer
+	ld de,(STEPBF)		;9eae - Start of buffer 'S'
+	and a			;9eb2 - Work out length 'E'
 	sbc hl,de		;9eb3
-	jp c,l9e49h		;9eb5
-	inc hl			;9eb8
-	push hl			;9eb9
+	jp c,l9e49h		;9eb5 - Error if S > E
+
+	inc hl			;9eb8 - Increase length and 
+	push hl			;9eb9   put in BC
 	pop bc			;9eba
+
 	ret			;9ebb
+	
 l9ebch:
 	push af			;9ebc
 	dec hl			;9ebd
@@ -2361,122 +2554,130 @@ l9eeah:
 	pop af			;9ef9
 	call HEX7SG		;9efa
 	ret			;9efd
+
+	;; Check if user has entered a valid EPROM model number
+	;;
+	;; Some issues in here:
+	;; - First command `xor b` looks to be unnecessary
+	;; - Counter, C, and pointer, HL, point at mid-point of a model
+	;;   number
 sub_9efeh:
-	xor b			;9efe
-	ld hl,l9fd5h		;9eff
-	ld c,011h		;9f02
+	xor b			;9efe - B=0 (because of subroutine at
+				;9e03 and A is the low byte of the
+				;offset of previous BRANCH
+				;command)). Not sure what this is for
+	ld hl,EPB_EPROM_MODELS	; 9eff - Table of supported EPROM models
+	ld c,011h		;9f02 - 2*no models + 1
 l9f04h:
-	ld de,(ADSAVE)		;9f04
+	ld de,(ADSAVE)		;9f04 - Points to word containing
+				;candidate EPROM model
+
+	;; Check if C is negative (i.e., have checked all models)
+	;; Return to model entry, if so.
 	ld a,c			;9f08
 	and a			;9f09
 	jp m,l986eh		;9f0a
-	ld a,d			;9f0d
-	cpi		;9f0e
-	jr nz,l9f18h		;9f10
+
+	;; Check high byte of EPROM model
+	ld a,d			;9f0d - Retrieve high byte of EPROM model
+	cpi			;9f0e - Comp A to (HL), dec BC, inc HL
+	jr nz,l9f18h		;9f10 Skip if not a match
+
+	;; Check low byte of EPROM model
 	ld a,e			;9f12
-	cpi		;9f13
-	dec hl			;9f15
-	jr z,l9f1ch		;9f16
+	cpi			;9f13
+	dec hl			;9f15 - Restore HL (does not affect Z)
+	jr z,l9f1ch		;9f16 - Jump forward if match
+	;; Not a match
 l9f18h:
-	inc b			;9f18
+	inc b			;9f18 - Advance to next candidate model
 	inc hl			;9f19
-	jr l9f04h		;9f1a
+	jr l9f04h		;9f1a - Repeat
+
+	;; Match made
 l9f1ch:
-	ld a,b			;9f1c
-	ld (EPB_01F20_B),a		;9f1d
-	ld hl,DISPBF		;9f20
-	ld de,EPB_01F23_W		;9f23
-	ld bc,00006h		;9f26
-	ldir		;9f29
+	ld a,b			; 9f1c - Retrieve EPROM model
+	ld (EPB_EPROM_MODEL),a	; 9f1d - Store
+
+	;; Copy model string into buffer
+	ld hl,DISPBF		; 9f20
+	ld de,EPB_01F23_W	; 9f23
+	ld bc,00006h		; 9f26
+	ldir			; 9f29
+	
 	ret			;9f2b
-	ld c,(hl)			;9f2c
+
+	
+	ld c,(hl)		;9f2c
+
+	;; EPROM model memory information (number of 2k blocks, little
+	;; endian)
 l9f2dh:
-	nop			;9f2d
-	inc b			;9f2e
-	nop			;9f2f
-	ex af,af'			;9f30
-	nop			;9f31
-	djnz l9f34h		;9f32
-l9f34h:
-	jr nz,l9eeah		;9f34
-	sbc a,h			;9f36
-	or h			;9f37
-	sbc a,h			;9f38
-	or h			;9f39
-	sbc a,h			;9f3a
-	or h			;9f3b
-	sbc a,h			;9f3c
-	adc a,a			;9f3d
-	sbc a,h			;9f3e
-	or h			;9f3f
-	sbc a,h			;9f40
-	adc a,a			;9f41
-	sbc a,h			;9f42
-	jp z,0fb9ch		;9f43
-	sbc a,h			;9f46
-	ei			;9f47
-	sbc a,h			;9f48
-	ei			;9f49
-	sbc a,h			;9f4a
-	ei			;9f4b
-	sbc a,h			;9f4c
-	dec a			;9f4d
-	sbc a,l			;9f4e
-	inc e			;9f4f
-	sbc a,l			;9f50
-	sbc a,e			;9f51
-	sbc a,l			;9f52
-	ld l,(hl)			;9f53
-	sbc a,l			;9f54
-	;; BRANCH table for STATE 1
-l9f55h:
-	call pe,00098h		;9f55
-	dec b			;9f58
-	ld a,(bc)			;9f59
-	rrca			;9f5a
-	dec d			;9f5b
-	in a,(03ch)		;9f5c
-	ld h,(hl)			;9f5e
-	adc a,d			;9f5f
-	add hl,hl			;9f60
-	push de			;9f61
-	add a,c			;9f62
-	set 2,c		;9f63
+	db $00, $04
+	db $00, $08
+	db $00, $10
+	db $00, $20
+
+	;; Table of read routines for different EPROM models
+l9f35h:	dw $9CB4
+	dw $9CB4
+	dw $9CB4
+	dw $9CB4
+	dw $9C8F
+	dw $9CB4
+	dw $9C8F
+	dw $9CCA
+
+	
+	;; Table of write routines for different EPROM models
+l9f45h:	dw $9CFB
+	dw $9CFB
+	dw $9CFB
+	dw $9CFB
+	dw $9D3D
+	dw $9D1C
+	dw $9D9B
+	dw $9D6E
+
+	;; BRANCH table for various main-loop functions
+l9f55h: dw $98EC
+	db $00, $05, $0A, $0F, $15, $DB, $3C, $66
+	db $8A, $29, $D5, $81, $CB, $D1
+
 	rst 18h			;9f65
 	rst 18h			;9f66
 
-	;; BRANCH table for STATE 1 hex digits
+	;; BRANCH table for hex digits
 l9f67h:
-	db $CF, $99, $00, $00, $00, $4B, $50, $0E
-	db $50, $50, $3B
-l9f72h:	db $23, $9a, $00, $00, $00
+	dw $99CF
+	db $00, $00, $00, $3B, $50, $0E, $50, $50
+	db $3B
+
+	;; Branch table for '+'
+l9f72h:	dw $9a23
+	db $00, $00, $00
 
 	djnz l9f72h		;9f77
 	nop			;9f79
 	add hl,hl			;9f7a
 	add hl,hl			;9f7b
-	ld d,050h		;9f7c
-	sbc a,d			;9f7e
-	nop			;9f7f
-	nop			;9f80
-	nop			;9f81
-	djnz l9fa5h		;9f82
-	nop			;9f84
+	db $16
+
+	;; Branch table for '-'
+l9f7dh:	dw $9a50
+db $00, $00, $00, $10, $21, $00
 	inc h			;9f85
 	inc h			;9f86
-	ld d,078h		;9f87
-	sbc a,d			;9f89
-	nop			;9f8a
-	nop			;9f8b
-	nop			;9f8c
-	ld a,e			;9f8d
-	or h			;9f8e
-	ld a,(bc)			;9f8f
-	inc d			;9f90
-	inc sp			;9f91
-	ld b,c			;9f92
+	db $16			;9f87
+
+l09f88h:	; Branch table for 'GO' (based on STATE)
+	dw $9a78
+	db $00, $00, $00, $7B, $B4, $0A, $14, $33
+	db $41
+
 l9f93h: ; Message - "E-0000"
 	db $8F, $02, $BD, $BD, $BD, $BD 
+
 L9f99h:	; Error message for RAM - "50-UdAb"
 	db $AE, $BD, $B5, $B3, $3F, $A7
 
@@ -2499,25 +2700,18 @@ l9fabh:
 	ccf			;9fb4
 	adc a,a			;9fb5
 	inc bc			;9fb6
-l9fb7h:
-	nop			;9fb7
-	nop			;9fb8
-	add a,a			;9fb9
-	xor (hl)			;9fba
-	adc a,c			;9fbb
-	add a,l			;9fbc
-l9fbdh:
-	inc bc			;9fbd
-	ld (bc),a			;9fbe
-	xor (hl)			;9fbf
-	xor (hl)			;9fc0
-	ccf			;9fc1
-	rra			;9fc2
+
+	;; List message "00T5IL"
+l9fb7h:	db $00, $00, $87, $AE, $89, $85
+
+	;; Pass message "R-SSAP"
+l9fbdh:	db $03, $02, $AE, $AE, $3F, $1F
+
 l9fc3h:
 	or a			;9fc3
-	ld (bc),a			;9fc4
-	xor (hl)			;9fc5
-	xor (hl)			;9fc6
+	ld (bc),a		;9fc4
+	xor (hl)		;9fc5
+	xor (hl)		;9fc6
 	ccf			;9fc7
 	rra			;9fc8
 
@@ -2525,19 +2719,16 @@ l9fc9h: 			; Jump table for commands
 	db $02, $04, $00, $00, $08, $01, $05, $03
 	db $00, $00, $06, $07
 
-l9fd5h:
-	daa			;9fd5
-	ld e,b			;9fd6
-	dec h			;9fd7
-	ex af,af'			;9fd8
-	dec h			;9fd9
-	ld d,027h		;9fda
-	ld d,025h		;9fdc
-	ld (03227h),a		;9fde
-	dec h			;9fe1
-	ld h,h			;9fe2
-	daa			;9fe3
-	ld h,h			;9fe4
+EPB_EPROM_MODELS:
+	db $27, $58 		; Model 0
+	db $25, $08		; Model 1
+	db $25, $16		; Model 2
+	db $27, $16		; Model 3
+	db $25, $32		; Model 4
+	db $27, $32		; Model 5
+	db $25, $64		; Model 6
+	db $27, $64		; Model 7
+
 	rst 38h			;9fe5
 	rst 38h			;9fe6
 	rst 38h			;9fe7
