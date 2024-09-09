@@ -5,13 +5,20 @@
 	;; MPF1_START)
 
 	;; MPF1 to EPB Key mapping
-	;; REG  	= READ 		= $1B
+	;; +		= +		= $10
+	;; -		= -		= $11
 	;; GO   	= GO   		= $12
+	;; STEP		= undefined	= $13
+	;; DATA		= DATA		= $14
 	;; SBR  	= PROGRAM 	= $15
 	;; INS          = INS		= $16
 	;; DEL		= DEL		= $17
 	;; PC		= VERIFY	= $18
+	;; ADDR		= ADDR		= $19
 	;; CBR		= LIST 		= $1A
+	;; REG  	= READ 		= $1B
+	;; MOVE		= undefined	= $1C
+	;; RELA		= undefined	= $1D
 	;; TAPE_WRITE	= TAPE_WRITE	= $1E
 	;; TAPE_READ	= TAPE_READ	= $1F
 	
@@ -1322,13 +1329,10 @@ l97e8h:
 	;;  9800-9FFF - Programmer ROM (MPF-1 version)
 	;;  D800-EFFF - Programmer RAM (MPF-1 version)
 	;;  D800-F7FF - Available RAM (MPF-1P version)
-MPF1_START:
-	ld sp,03f80h 	;; was ld sp,01f00h ;9800
-
 EPB_EPROM_MODEL: equ EPB_VAR 	; 01f20h - EPROM model number
 EBP_KEY_SAVE: equ EPB_VAR+$01	; 01f21h - Temporary store for key press
 EPB_01F22_W: equ EPB_VAR+$02	; 01f22h - Not used?
-EPB_01F23_W: equ EPB_VAR+$04 	; 01f24h - Store for EPROM model string
+EPB_MODEL_STR: equ EPB_VAR+$04 	; 01f24h - Store for EPROM model string
 EPB_DISP_MODE: equ EPB_VAR+$0A	; 01f2ah - ADDR/ DATA mode
 EPB_EPROM_CAPACITY: equ EPB_VAR+$0B	; 01f2bh
 EPB_BUFFER_ADDR: equ EPB_VAR+$0D	; 01f2dh
@@ -1349,9 +1353,13 @@ EPB_01F45_B: equ EPB_VAR+$26 	; 01f46h - EPROM model (2758=0; 2508=1;
 EPB_01F46_W: equ EPB_VAR+$27	; 01f47h - EPROM memory (no 2K blocks) -
 				;          little endian
 EPB_EPROM_READ: equ EPB_VAR+$2A	; 01f4ah - Address of EPROM read routine?
-EPB_EPROM_WRITE: equ EPB_VAR+$2C	; 01f4ch - Address of EPROM write routine?
+EPB_EPROM_WRITE: equ EPB_VAR+$2C	; 01f4ch - Address of EPROM
+					; write routine?
 
-	;; Check RAM (D800--D8FF)
+MPF1_START:
+	ld sp,03f80h 	;; was ld sp,01f00h ;9800
+
+	;; Check U5 RAM (D800--D8FF)
 	ld hl,0d800h		;9803 (start of EPROM RAM)
 	ld bc,00800h		;9806 2 kilobytes
 U5_RAM_CHK:
@@ -1378,7 +1386,7 @@ l981ch:
 	cp 012h			;9826 - Check for 'GO'
 	jp nz,l981ch		;9828 - Loop if not 
 
-	;; Check RAM (E000--E7FF)
+	;; Check U6 RAM (E000--E7FF)
 l982bh: ld hl,0e000h		;982b - Start of RAM
 	ld bc,00800h		;982e - 2 kilobytes
 l9831h:
@@ -1389,7 +1397,8 @@ l9831h:
 
 	;; At this point, second 2K of RAM tested successfully
 	jr l9853h		;983b 
-	adc a,(hl)		;983d - Not used
+
+	db $8E			;983d - Not used
 
 l983eh:
 	ld hl,l9f9fh		;983e Error message 'BADU6'
@@ -1401,16 +1410,17 @@ l9844h:
 	cp 012h			;984e
 	jp nz,l9844h		;9850
 
-	;; Check RAM (E800--EFFF)
+	;; Check U7 RAM (E800--EFFF)
 l9853h:	ld hl,0e800h		;9853
 	ld bc,00800h		;9856
 l9859h:
-	call RAMCHK		;9859 - RAMCHK
+	call RAMCHK		;9859 
 	jr nz,l9866h		;985c
 	cpi		;985e
 	jp pe,l9859h		;9860
+
 	jr l9872h		;9863
-	db $28		;9865
+	db $28			;9865 - Not used
 	
 l9866h: 
 	ld hl,$9FA5		;9867 Error message 'BADU07'
@@ -1528,15 +1538,15 @@ l98e6h:
 	ld hl,09f88h		;98f6
 	jr l98e6h		;98f9
 
-	;; Process 'DATA'
+	;; Process 'STEP' (undefined key)
 	ld a,055h		;98fb
 	ld (EPB_01F3C_B),a	;98fd
 	ret			;9900
 
-	;; Process 'GO' (STATE=5) and 'DATA'
+	;; Process 'DATA'
 l9901h:
 	ld a,(STATE)		;9901
-	cp 005h		;9904
+	cp 005h			;9904
 	jr z,l990ch		;9906
 
 	call IGNORE		;9908
@@ -1667,21 +1677,23 @@ l99a9h:
 	ld (STATE),a		;99b3
 	ret			;99b6
 
-	ld hl,EPB_01F23_W	;99b7
+	;; Handle 'MOVE'
+	ld hl,EPB_MODEL_STR	;99b7
 	jp sub_9e17h		;99ba
 
-	call 003bbh		;99bd
+	;; Handle 'RELA'
+	call IGNORE		;99bd
 	ret			;99c0
 
 	;; Handle 'LIST' key press
 	ld hl,l9fb7h		;99c1
 	jp sub_9e17h		;99c4
 
-	;; Handle PROGRAM
+	;; Handle 'PROGRAM'
 	xor a			;99c7
 	ld (EPB_01F3B_B),a	;99c8
 
-	;; Handle TP_RD and TP_WR
+	;; Handle 'TP_RD' and 'TP_WR'
 	call STEPDP		;99cb
 
 	ret			;99ce
@@ -2774,12 +2786,11 @@ l9f1ch:
 
 	;; Copy model string into buffer
 	ld hl,DISPBF		; 9f20
-	ld de,EPB_01F23_W	; 9f23
+	ld de,EPB_MODEL_STR	; 9f23
 	ld bc,00006h		; 9f26
 	ldir			; 9f29
 	
 	ret			;9f2b
-
 	
 	ld c,(hl)		;9f2c
 
@@ -2819,7 +2830,7 @@ l9f55h: dw $98EC
 
 	;; BRANCH table for hex digits
 l9f67h:
-	dw $99CF
+	dw $99cf
 	db $00, $00, $00, $3B, $50, $0E, $50, $50
 	db $3B
 
@@ -2850,21 +2861,13 @@ l9f9fh: ; Error message for RAM - "60-UdAb"
 l9fa5h:	; Error message for RAM - "60-UdAb"
 	db $38, $BD, $B5, $B3, $3F, $A7
 
-l9fabh:
-	nop			;9fab
-	nop			;9fac
-	add a,l			;9fad
-	add a,l			;9fae
-	or l			;9faf
-	rrca			;9fb0
-	nop			;9fb1
-	nop			;9fb2
-	or e			;9fb3
-	ccf			;9fb4
-	adc a,a			;9fb5
-	inc bc			;9fb6
+l9fabh: ; Message - "  -LLUF" 
+	db $00, $00, $85, $85, $B5, $0F
 
-	;; List message "00T5IL"
+l9fb1h:	;; Message - "  dAER" (not used)
+	db $00, $00, $B3, $3F, $8F, $03
+
+	;; List message "  -T5IL"
 l9fb7h:	db $00, $00, $87, $AE, $89, $85
 
 	;; Pass message "R-SSAP"
