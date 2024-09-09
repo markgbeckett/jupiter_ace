@@ -1323,33 +1323,33 @@ l97e8h:
 	;;  D800-EFFF - Programmer RAM (MPF-1 version)
 	;;  D800-F7FF - Available RAM (MPF-1P version)
 MPF1_START:
-	ld sp,03f80h 	;; ld sp,01f00h		;9800
+	ld sp,03f80h 	;; was ld sp,01f00h ;9800
 
 EPB_EPROM_MODEL: equ EPB_VAR 	; 01f20h - EPROM model number
-EBP_KEY_SAVE: equ EPB_VAR+$01	; 01f21h
-EPB_01F22_B: equ EPB_VAR+$02	; 01f22h
-EPB_01F23_W: equ EPB_VAR+$03 	; 01f23h - Store for EPROM model string
-EPB_DISP_MODE: equ EPB_VAR+$09	; 01f29h - ADDR/ DATA mode
-EPB_EPROM_CAPACITY: equ EPB_VAR+$0A	; 01f2ah
-EPB_01F2C_W: equ EPB_VAR+$0C	; 01f2ch
-EPB_01F2E_B: equ EPB_VAR+$0E 	; 01f2eh
-EPB_ADSAVE_1: equ EPB_VAR+$0F	; 01f2fh
-EPB_ADSAVE_2: equ EPB_VAR+$11	; 01f31h
-EPB_ADSAVE_3: equ EPB_VAR+$13	; 01f33h
-EPB_01F36_B: equ EPB_VAR+$16	; 01f36h
-EPB_WRITE_STATUS: equ EPB_VAR+$1A	; 01f3ah - Write status (2 -
+EBP_KEY_SAVE: equ EPB_VAR+$01	; 01f21h - Temporary store for key press
+EPB_01F22_W: equ EPB_VAR+$02	; 01f22h - Not used?
+EPB_01F23_W: equ EPB_VAR+$04 	; 01f24h - Store for EPROM model string
+EPB_DISP_MODE: equ EPB_VAR+$0A	; 01f2ah - ADDR/ DATA mode
+EPB_EPROM_CAPACITY: equ EPB_VAR+$0B	; 01f2bh
+EPB_BUFFER_ADDR: equ EPB_VAR+$0D	; 01f2dh
+EPB_01F2E_B: equ EPB_VAR+$0F 	; 01f2fh
+EPB_ADSAVE_1: equ EPB_VAR+$10	; 01f30h
+EPB_ADSAVE_2: equ EPB_VAR+$12	; 01f32h
+EPB_ADSAVE_3: equ EPB_VAR+$14	; 01f34h
+EPB_01F36_B: equ EPB_VAR+$17	; 01f37h
+EPB_WRITE_STATUS: equ EPB_VAR+$1B	; 01f3bh - Write status (2 -
 					; good; 0 - err)
-EPB_01F3B_B: equ EPB_VAR+$1B	; 01f3bh
-EPB_01F3C_B: equ EPB_VAR+$1C	; 01f3ch	
-EPB_01F3D_B: equ EPB_VAR+$1D	; 01f3dh	
-EPB_01F3E_B: equ EPB_VAR+$1E	; 01f3eh	
-EPB_01F45_B: equ EPB_VAR+$25 	; 01f45h - EPROM model (2758=0; 2508=1;
+EPB_01F3B_B: equ EPB_VAR+$1C	; 01f3ch
+EPB_01F3C_B: equ EPB_VAR+$1D	; 01f3dh	
+EPB_01F3D_B: equ EPB_VAR+$1E	; 01f3eh	
+EPB_01F3E_B: equ EPB_VAR+$1F	; 01f3fh	
+EPB_01F45_B: equ EPB_VAR+$26 	; 01f46h - EPROM model (2758=0; 2508=1;
 				;          2716=2; 2516=3; 2732=4; 2532=5;
 				;          2764=6; 2564=7)
-EPB_01F46_W: equ EPB_VAR+$26	; 01f46h - EPROM memory (no 2K blocks) -
+EPB_01F46_W: equ EPB_VAR+$27	; 01f47h - EPROM memory (no 2K blocks) -
 				;          little endian
-EPB_EPROM_READ: equ EPB_VAR+$29	; 01f49h - Address of EPROM read routine?
-EPB_EPROM_WRITE: equ EPB_VAR+$2B	; 01f4bh - Address of EPROM write routine?
+EPB_EPROM_READ: equ EPB_VAR+$2A	; 01f4ah - Address of EPROM read routine?
+EPB_EPROM_WRITE: equ EPB_VAR+$2C	; 01f4ch - Address of EPROM write routine?
 
 	;; Check RAM (D800--D8FF)
 	ld hl,0d800h		;9803 (start of EPROM RAM)
@@ -1873,8 +1873,9 @@ l9adah:	call sub_9c86h		;9ada - Read byte
 
 	ld hl,l9fc3h		;9ae6 - Pointer to "PASS V" message
 	jp sub_9e17h		;9ae9 - Display message and done
-	
-	ld ix,EPB_01F22_B	;9aec
+
+	;; Not used?
+	ld ix,EPB_01F22_W	;9aec
 	jp BRANCH		;9af0
 
 	;; Handle 'GO' on STATE=3
@@ -1919,10 +1920,9 @@ l9b14h:
 	ld hl,l9fbdh		;9b1f - PASS message
 	jp sub_9e17h		;9b22 - Done
 
-	
-	ld ix,EPB_01F22_B	;9b25
+	;; Not used?
+	ld ix,EPB_01F22_W	;9b25
 	jp BRANCH		;9b29
-
 	
 	;; Handle 'GO' on STATE=5 (PROGRAM)
 	ld a,(EPB_01F3B_B)	;9b2c
@@ -1936,7 +1936,7 @@ l9b3ch:
 	ld a,002h		;9b3c
 	ld (EPB_WRITE_STATUS),a	;9b3e
 	ld a,(EPB_EPROM_MODEL)	;9b41
-	ld ix,EPB_01F2E_B	;9b44
+	ld ix,EPB_01F2E_B	;9b44 ???
 
 	;; Branch based on model (in A)
 	cp 002h		;9b48
@@ -2540,14 +2540,14 @@ sub_9dech:
 	ld hl,(STEPBF)		;9dec - Parameter 'S'
 	ld de,0d800h		;9def - Start of RAM used for EPROM data
 	add hl,de		;9df2
-	ld (EPB_01F2C_W),hl	;9df3
+	ld (EPB_BUFFER_ADDR),hl	;9df3 - Store buffer start
 
 	ld hl,(STEPBF+2)	;9df6 - Parameter 'E'
 	add hl,de		;9df9 - 
 	ex de,hl		;9dfa - DE holds end of RAM to be written
 
 	ld hl,(STEPBF+4)	;9dfb - 'D' (offset)
-	ld bc,(EPB_01F2C_W)	;9dfe - Start of RAM to be written
+	ld bc,(EPB_BUFFER_ADDR)	;9dfe - Start of RAM to be written
 	
 	ret			;9e02
 
