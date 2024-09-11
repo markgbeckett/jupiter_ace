@@ -1329,6 +1329,12 @@ l97e8h:
 	;;  9800-9FFF - Programmer ROM (MPF-1 version)
 	;;  D800-EFFF - Programmer RAM (MPF-1 version)
 	;;  D800-F7FF - Available RAM (MPF-1P version)
+EPB_8255_LATCH:	equ $70		; Latch on 8255
+EPB_8255_PORTA:	equ $7C		; Port A on 8255
+EPB_8255_PORTB:	equ $7D		; Port B on 8255
+EPB_8255_PORTC:	equ $7E		; Port C on 8255
+EPB_8255_CONTROL: equ $7F	; Control register on 8255
+
 EPB_EPROM_MODEL: equ EPB_VAR 	; 01f20h - EPROM model number
 EBP_KEY_SAVE: equ EPB_VAR+$01	; 01f21h - Temporary store for key press
 EPB_01F22_W: equ EPB_VAR+$02	; 01f22h - Not used?
@@ -1357,42 +1363,49 @@ EPB_EPROM_WRITE: equ EPB_VAR+$2C	; 01f4ch - Address of EPROM
 					; write routine?
 
 MPF1_START:
+	;;  Relocate stack away from user memory ($4000--), system
+	;;  variables ($3D00--$3EFF), and system stack ($3F80--$3FFF)
 	ld sp,03f80h 	;; was ld sp,01f00h ;9800
 
-	;; Check U5 RAM (D800--D8FF)
-	ld hl,0d800h		;9803 (start of EPROM RAM)
-	ld bc,00800h		;9806 2 kilobytes
+	;; EPB board has 6K of RAM across three, 2K chips in socket U5,
+	;; U6, and U7. Start by testing each memory chip in turn.
+
+	;; Check U5 RAM (mapped to D800--D8FF)
+	ld hl,0d800h		; 9803 - Start of first 2k RAM
+	ld bc,00800h		; 9806 - 2 kilobytes
 U5_RAM_CHK:
-	call RAMCHK		;9809 RAMCHK (Z set for RAM; reset for ROM)
-	jr nz,U5_RAM_FAIL	;980c Jump forward if not RAM
-	cpi			;980e Inc HL, Dec BC, compute A-(HL) - not used
-	jp pe,U5_RAM_CHK	;9810 Repeat if BC non-zero
+	call RAMCHK		; 9809 - RAMCHK (Z set, if succeeds)
+	jr nz,U5_RAM_FAIL	; 980c - Jump forward, if RAMCHK fails
+	cpi			; 980e - Inc HL, Dec BC, compute A-(HL) 
+				;       (not used)
+	jp pe,U5_RAM_CHK	; 9810 - Repeat if BC non-zero
 
 	;; At this point, first 2K of RAM tested successfully
-	jr l982bh		;9813 Jump forward to next test
+	jr l982bh		; 9813 - Jump forward to next test
 
 	db $08			; Not used
 
 U5_RAM_FAIL:
 	ld hl,$9F99	        ; Error message 'BADU05'
-	call sub_9e17h		; 9819 Write error message to display buffer
+	call WRITE_TO_DISP		; 9819 - Write error message to display
+				;        buffer
 	
-l981ch:
-	ld ix,DISPBF		;981c IX = display buffer
-	call SCAN		;9820 'SCAN' - wait for keypress
-				;(returned in A)
+l981ch:	ld ix,DISPBF		;981c - Point to display buffer
+	call SCAN		;9820 - Wait for keypress (returned in
+				;       A)
 
 	call EPB_BEEP		;9823 - Sound beeper
 	cp 012h			;9826 - Check for 'GO'
 	jp nz,l981ch		;9828 - Loop if not 
 
-	;; Check U6 RAM (E000--E7FF)
-l982bh: ld hl,0e000h		;982b - Start of RAM
+	;; Check U6 RAM (mapped to E000--E7FF)
+l982bh: ld hl,0e000h		;982b - Start second block of RAM
 	ld bc,00800h		;982e - 2 kilobytes
 l9831h:
-	call RAMCHK		;9831 - RAMCHECK
-	jr nz,l983eh		;9834 
+	call RAMCHK		;9831 - Test if RAM
+	jr nz,U6_RAM_FAIL	;9834 - Jump if test fails
 	cpi			;9836 - Inc HL, Dec BC, compute A-(HL)
+				;       (not used)
 	jp pe,l9831h		;9838 - Repeat, if BC non-zero
 
 	;; At this point, second 2K of RAM tested successfully
@@ -1400,32 +1413,35 @@ l9831h:
 
 	db $8E			;983d - Not used
 
-l983eh:
-	ld hl,l9f9fh		;983e Error message 'BADU6'
-	call sub_9e17h		;9841 Copy message to display buffer
+U6_RAM_FAIL:
+	ld hl,l9f9fh		;983e - Error message 'BADU6'
+	call WRITE_TO_DISP		;9841 - Copy message to display buffer
 l9844h:
-	ld ix,DISPBF		;9844
-	call SCAN		;9848
-	call EPB_BEEP		;984b
-	cp 012h			;984e
-	jp nz,l9844h		;9850
+	ld ix,DISPBF		;9844 - Display buffer
+	call SCAN		;9848 - Wait for key press
+	call EPB_BEEP		;984b - Sound beeper
+	cp 012h			;984e - Test for 'GO'
+	jp nz,l9844h		;9850 - Loop back if not
 
-	;; Check U7 RAM (E800--EFFF)
-l9853h:	ld hl,0e800h		;9853
-	ld bc,00800h		;9856
+	;; Check U7 RAM (mapped to E800--EFFF)
+l9853h:	ld hl,0e800h		;9853 - Start of third RAM chip
+	ld bc,00800h		;9856 - 2 kb
 l9859h:
-	call RAMCHK		;9859 
-	jr nz,l9866h		;985c
-	cpi		;985e
-	jp pe,l9859h		;9860
+	call RAMCHK		;9859 - Check if RAM
+	jr nz,U7_RAM_FAIL	;985c - Jump forward, if not
+	cpi			;985e - Inc HL, Dec BC, compute A-(HL)
+				;       (not used)
+	jp pe,l9859h		;9860 - Repeat, if BC non-zero
 
-	jr l9872h		;9863
+	;; At this point, third 2K of RAM tested successfully
+	jr l9872h		;9863 - Progress to main loop
+
 	db $28			;9865 - Not used
 	
-l9866h: 
-	ld hl,$9FA5		;9867 Error message 'BADU07'
-	call sub_9e17h		;9869
-	jr l988ah		;986c
+U7_RAM_FAIL: 
+	ld hl,$9FA5		;9867 - Error message 'BADU07'
+	call WRITE_TO_DISP		;9869 - Copy to display buffer
+	jr l988ah		;986c - Continue to main loop
 
 l986eh:
 	;; Reset EPB_01F3C_B
@@ -1436,7 +1452,7 @@ l986eh:
 	;; doesn't seem to keep a note of any memory issues, other than
 	;; flagging to the user.
 l9872h:
-	;; Initialise display message
+	;; Initialise display message (could use WRITE_TO_DISP)
 	ld bc,00006h		;9872 - six characters
 	ld hl,l9f93h		;9875 - Message "0000-E"
 	ld de,DISPBF		;9878
@@ -1453,48 +1469,53 @@ l9872h:
 
 	;; Main loop
 l988ah:
-	ld ix,DISPBF		;988a
-	call SCAN		;988e - Read keyboard
+	ld ix,DISPBF		;988a - Display buffer
+	call SCAN		;988e - Wait for keypress
 	call EPB_BEEP		;9891 - Beep
 	call EPB_PROCESS_KEY	;9894 - Process key
 
+	;; Check for non-zero EPB_01F3C_B (when user has pressed 'STEP')
 	ld a,(EPB_01F3C_B)	;9897
 	and a			;989a
 	jr nz,l986eh		;989b
 
-	jr l988ah		;989d
-
+	jr l988ah		;989d - Back to start of main loop
 	
 	;; Process keypress.
 	;;
 	;; On entry, A contains keypress read by SCAN
 EPB_PROCESS_KEY:
-	cp 010h			;989f - Jump forward if
-	jr c,l98e2h		;98a1 - hex digit
+	cp 010h			;989f - Jump forward if hex digit
+	jr c,l98e2h		;98a1 - 
 
 	;;  Otherwise is a command
-	ld hl,TEST		;98a3
-	set 0,(hl)		;98a6
-	ld (EBP_KEY_SAVE),a	;98a8 - Save 'A'
-	cp 015h			;98ab 'SBR' / 'PROGRAM'
-	jr z,l98bbh		;98ad
-	cp 018h			;98af 'PC'
-	jr z,l98bbh		;98b1
-	cp 01ah			;98b3 'CBR'
-	jr c,l98cah		;98b5 Jump forward if 10 '+', 11 '-', 12
-				;'GO', 13 'STEP', 14 'DATA', 16 'INS',
-				;17 'DEL', or 19 'ADDR' (STATE=0)
-	cp 01dh			;98b7 Jump forward if 'RELA'
-	jr z,l98cah		;98b9 (STATE=0)
+	ld hl,TEST		;98a3 - Reset flag for new numeric entry.
+	set 0,(hl)		;98a6 - Ensures next numeric entry will
+				;       reset number display
 	
-l98bbh: 			; Key press is one of 15 'SBR', 1A
-				; 'CBR', 1B 'REG', 1C 'MOVE', 1E 'TPWR',
-				; 1F 'TPRD' and these key presses
-				; require a change of state
+	ld (EBP_KEY_SAVE),a	;98a8 - Save 'A'
+
+	cp 015h			;98ab - Check for 'PROGRAM'
+	jr z,l98bbh		;98ad
+	
+	cp 018h			;98af - Check for 'PC'
+	jr z,l98bbh		;98b1
+	
+	cp 01ah			;98b3 - Corresponds to 'LIST'
+	jr c,l98cah		;98b5 - Jump forward if 10 '+', 11 '-',
+				;       12 'GO', 13 'STEP', 14 'DATA', 16
+				;       'INS', 17 'DEL', or 19 'ADDR'
+	
+	cp 01dh			;98b7 - Check for 'RELA' (undefined)
+	jr z,l98cah		;98b9
+	
+	;; At this point, key press is one of 15 'SBR', 1A 'CBR', 1B
+	;; 'REG', 1C 'MOVE', 1E 'TPWR', 1F 'TPRD' and these key presses
+	;; require a change of state
 
 	;; Work out new STATE 'READ' = 3 (not set here); 'PROGRAM' =
 	;; '4'; LIST='5'; TP_WR='6'; TP_RD='7'; VERIFY='8'
-	sub 014h		;98bb
+l98bbh: sub 014h		;98bb
 	ld hl,l9fc9h		;98bd
 	add a,l			;98c0
 	ld l,a			;98c1
@@ -1679,7 +1700,7 @@ l99a9h:
 
 	;; Handle 'MOVE'
 	ld hl,EPB_MODEL_STR	;99b7
-	jp sub_9e17h		;99ba
+	jp WRITE_TO_DISP		;99ba
 
 	;; Handle 'RELA'
 	call IGNORE		;99bd
@@ -1687,7 +1708,7 @@ l99a9h:
 
 	;; Handle 'LIST' key press
 	ld hl,l9fb7h		;99c1
-	jp sub_9e17h		;99c4
+	jp WRITE_TO_DISP		;99c4
 
 	;; Handle 'PROGRAM'
 	xor a			;99c7
@@ -1884,7 +1905,7 @@ l9adah:	call sub_9c86h		;9ada - Read byte
 	jp pe,l9adah		;9ae3   and repeat
 
 	ld hl,l9fc3h		;9ae6 - Pointer to "PASS V" message
-	jp sub_9e17h		;9ae9 - Display message and done
+	jp WRITE_TO_DISP		;9ae9 - Display message and done
 
 	;; Not used?
 	ld ix,EPB_01F22_W	;9aec
@@ -1930,7 +1951,7 @@ l9b14h:
 	jr nz,l9b14h		;9b1d - Repeat if not
 
 	ld hl,l9fbdh		;9b1f - PASS message
-	jp sub_9e17h		;9b22 - Done
+	jp WRITE_TO_DISP		;9b22 - Done
 
 	;; Not used?
 	ld ix,EPB_01F22_W	;9b25
@@ -2252,7 +2273,7 @@ sub_9c86h:
 	push hl			;9c86
 
 	ld a,090h		;9c87
-	out (07fh),a		;9c89
+	out (EPB_8255_CONTROL),a		;9c89
 	
 	ld hl,(EPB_EPROM_READ)	;9c8b - Retrieve address of
 				;model-specific code (see table at $9F35
@@ -2264,11 +2285,11 @@ sub_9c86h:
 	;; Om entry, DE=address to read from
 	;; On exit, A=byte read
 	ld a,e			;9c8f
-	out (07dh),a		;9c90
+	out (EPB_8255_PORTB),a		;9c90
 	ld a,d			;9c92
 	and 017h		;9c93
 	or 020h			;9c95
-	out (07eh),a		;9c97
+	out (EPB_8255_PORTC),a		;9c97
 	bit 3,d			;9c99
 	jr z,$+7		;9c9b
 	ld a,008h		;9c9d
@@ -2277,12 +2298,12 @@ sub_9c86h:
 	jr z,$-43		;9ca3
 	ld (hl),b		;9ca5
 	nop			;9ca6
-	in a,(07ch)		;9ca7
+	in a,(EPB_8255_PORTA)		;9ca7
 	push af			;9ca9
 	xor a			;9caa
-	out (070h),a		;9cab
+	out (EPB_8255_LATCH),a		;9cab
 	ld a,008h		;9cad
-	out (07eh),a		;9caf
+	out (EPB_8255_PORTC),a		;9caf
 	pop af			;9cb1
 	pop hl			;9cb2
 	ret			;9cb3
@@ -2291,17 +2312,17 @@ sub_9c86h:
 	;; Om entry, DE=address to read from
 	;; On exit, A=byte read
 	ld a,e			;9cb4
-	out (07dh),a		;9cb5
+	out (EPB_8255_PORTB),a		;9cb5
 	ld a,d			;9cb7
 	and 00fh		;9cb8
-	out (07eh),a		;9cba
+	out (EPB_8255_PORTC),a		;9cba
 	ld a,008h		;9cbc
-	out (070h),a		;9cbe
+	out (EPB_8255_LATCH),a		;9cbe
 	nop			;9cc0
-	in a,(07ch)		;9cc1
+	in a,(EPB_8255_PORTA)		;9cc1
 	push af			;9cc3
 	xor a			;9cc4
-	out (070h),a		;9cc5
+	out (EPB_8255_LATCH),a		;9cc5
 	pop af			;9cc7
 	pop hl			;9cc8
 	ret			;9cc9
@@ -2310,11 +2331,11 @@ sub_9c86h:
 	;; Om entry, DE=address to read from
 	;; On exit, A=byte read
 	ld a,e			;9cca
-	out (07dh),a		;9ccb
+	out (EPB_8255_PORTB),a		;9ccb
 	ld a,d			;9ccd
 	and 00fh		;9cce
 	or 030h			;9cd0
-	out (07eh),a		;9cd2
+	out (EPB_8255_PORTC),a		;9cd2
 	bit 4,d			;9cd4
 	jr z,l9cdch		;9cd6
 	ld a,008h		;9cd8
@@ -2322,12 +2343,12 @@ sub_9c86h:
 l9cdch:
 	ld a,028h		;9cdc
 l9cdeh:
-	out (070h),a		;9cde
+	out (EPB_8255_LATCH),a		;9cde
 	ld a,d			;9ce0
 	and 00fh		;9ce1
-	out (07eh),a		;9ce3
+	out (EPB_8255_PORTC),a		;9ce3
 	nop			;9ce5
-	in a,(07ch)		;9ce6
+	in a,(EPB_8255_PORTA)		;9ce6
 	push af			;9ce8
 	xor a			;9ce9
 	out (078h),a		;9cea
@@ -2343,7 +2364,7 @@ sub_9cefh:
 	push af			;9cf1
 
 	ld a,080h		;9cf2
-	out (07fh),a		;9cf4
+	out (EPB_8255_CONTROL),a		;9cf4
 
 	ld hl,(EPB_EPROM_WRITE)	;9cf6
 	jp (hl)			;9cf9
@@ -2357,24 +2378,24 @@ sub_9cefh:
 	pop af			;9cfb
 	pop hl			;9cfc
 	
-	out (07ch),a		;9cfd
+	out (EPB_8255_PORTA),a		;9cfd
 	xor a			;9cff
-	out (07eh),a		;9d00
+	out (EPB_8255_PORTC),a		;9d00
 	ld a,010h		;9d02
-	out (070h),a		;9d04
+	out (EPB_8255_LATCH),a		;9d04
 
 	ld a,e			;9d06
-	out (07dh),a		;9d07
+	out (EPB_8255_PORTB),a		;9d07
 	ld a,d			;9d09
 	and 007h		;9d0a
 	or 008h			;9d0c
-	out (07eh),a		;9d0e
+	out (EPB_8255_PORTC),a		;9d0e
 
 	pop af			;9d10
 	call sub_9dd2h		;9d11 - Update display
 	
 	xor a			;9d14
-	out (070h),a		;9d15
+	out (EPB_8255_LATCH),a		;9d15
 
 	ld b,028h		;9d17
 l9d19h:
@@ -2388,21 +2409,21 @@ l9d19h:
 	;;   TOS = AF (byte) ; 2OS = HL (source addr); 3OS=AF
 	pop af			;9d1c
 	pop hl			;9d1d
-	out (07ch),a		;9d1e
+	out (EPB_8255_PORTA),a		;9d1e
 	ld a,010h		;9d20
-	out (070h),a		;9d22
+	out (EPB_8255_LATCH),a		;9d22
 	ld a,e			;9d24
-	out (07dh),a		;9d25
+	out (EPB_8255_PORTB),a		;9d25
 	ld a,d			;9d27
 	and 00fh		;9d28
-	out (07eh),a		;9d2a
+	out (EPB_8255_PORTC),a		;9d2a
 	nop			;9d2c
 	ld a,018h		;9d2d
-	out (070h),a		;9d2f
+	out (EPB_8255_LATCH),a		;9d2f
 	pop af			;9d31
 	call sub_9dd2h		;9d32 - Update display
 	xor a			;9d35
-	out (070h),a		;9d36
+	out (EPB_8255_LATCH),a		;9d36
 	ld b,028h		;9d38
 l9d3ah:
 	djnz l9d3ah		;9d3a
@@ -2417,30 +2438,30 @@ l9d3ah:
 	;;   TOS = AF (byte) ; 2OS = HL (source addr); 3OS=AF
 	pop af			;9d3d
 	pop hl			;9d3e
-	out (07ch),a		;9d3f
+	out (EPB_8255_PORTA),a		;9d3f
 	ld a,008h		;9d41
-	out (07eh),a		;9d43
+	out (EPB_8255_PORTC),a		;9d43
 	ld a,e			;9d45
-	out (07dh),a		;9d46
+	out (EPB_8255_PORTB),a		;9d46
 	bit 3,d			;9d48
 	ld a,024h		;9d4a
 	jr z,l9d50h		;9d4c
 	ld a,004h		;9d4e
 l9d50h:
-	out (070h),a		;9d50
+	out (EPB_8255_LATCH),a		;9d50
 	ld a,d			;9d52
 	and 007h		;9d53
 	or 008h			;9d55
-	out (07eh),a		;9d57
+	out (EPB_8255_PORTC),a		;9d57
 	nop			;9d59
 	and 007h		;9d5a
-	out (07eh),a		;9d5c
+	out (EPB_8255_PORTC),a		;9d5c
 	pop af			;9d5e
 	call sub_9dd2h		;9d5f - Update display
 	ld a,0ffh		;9d62
-	out (07eh),a		;9d64
+	out (EPB_8255_PORTC),a		;9d64
 	xor a			;9d66
-	out (070h),a		;9d67
+	out (EPB_8255_LATCH),a		;9d67
 	ld b,028h		;9d69
 l9d6bh:
 	djnz l9d6bh		;9d6b
@@ -2453,21 +2474,21 @@ l9d6bh:
 	;;   TOS = AF (byte) ; 2OS = HL (source addr); 3OS=AF
 	pop af			;9d6e
 	pop hl			;9d6f
-	out (07ch),a		;9d70
+	out (EPB_8255_PORTA),a		;9d70
 	ld a,e			;9d72
-	out (07dh),a		;9d73
+	out (EPB_8255_PORTB),a		;9d73
 	ld a,d			;9d75
 	and 00fh		;9d76
-	out (07eh),a		;9d78
+	out (EPB_8255_PORTC),a		;9d78
 	ld a,020h		;9d7a
 	bit 4,d			;9d7c
 	jr z,l9d82h		;9d7e
 	ld a,000h		;9d80
 l9d82h:
-	out (070h),a		;9d82
+	out (EPB_8255_LATCH),a		;9d82
 	or 009h			;9d84
 	nop			;9d86
-	out (070h),a		;9d87
+	out (EPB_8255_LATCH),a		;9d87
 	pop af			;9d89
 	call sub_9dd2h		;9d8a - Update display
 	ld a,020h		;9d8d
@@ -2475,7 +2496,7 @@ l9d82h:
 	jr z,l9d94h		;9d91
 	xor a			;9d93
 l9d94h:
-	out (070h),a		;9d94
+	out (EPB_8255_LATCH),a		;9d94
 	ld b,028h		;9d96
 l9d98h:
 	djnz l9d98h		;9d98
@@ -2487,17 +2508,17 @@ l9d98h:
 	;;   TOS = AF (byte) ; 2OS = HL (source addr); 3OS=AF
 	pop af			;9d9b
 	pop hl			;9d9c
-	out (07ch),a		;9d9d
+	out (EPB_8255_PORTA),a		;9d9d
 	ld a,020h		;9d9f
-	out (07eh),a		;9da1
+	out (EPB_8255_PORTC),a		;9da1
 	ld a,e			;9da3
-	out (07dh),a		;9da4
+	out (EPB_8255_PORTB),a		;9da4
 	ld a,001h		;9da6
 	bit 3,d			;9da8
 	jr nz,l9daeh		;9daa
 	set 5,a			;9dac
 l9daeh:
-	out (070h),a		;9dae
+	out (EPB_8255_LATCH),a		;9dae
 	ld a,d			;9db0
 	and 007h		;9db1
 	or 020h		;9db3
@@ -2505,16 +2526,16 @@ l9daeh:
 	jr z,l9dbbh		;9db7
 	set 4,a		;9db9
 l9dbbh:
-	out (07eh),a		;9dbb
+	out (EPB_8255_PORTC),a		;9dbb
 	and 0dfh		;9dbd
 	nop			;9dbf
-	out (07eh),a		;9dc0
+	out (EPB_8255_PORTC),a		;9dc0
 	pop af			;9dc2
 	call sub_9dd2h		;9dc3 - Update display
 	ld a,028h		;9dc6
-	out (07eh),a		;9dc8
+	out (EPB_8255_PORTC),a		;9dc8
 	xor a			;9dca
-	out (070h),a		;9dcb
+	out (EPB_8255_LATCH),a		;9dcb
 	ld b,028h		;9dcd
 l9dcfh:
 	djnz l9dcfh		;9dcf
@@ -2579,11 +2600,12 @@ l9e08h:
 	out (0ceh),a		;9e14
 	ret			;9e16
 
-	;;  Copy six bytes from 1FB6 to HL
-sub_9e17h:
+	;;  Copy message (pointed to by HL) to display buffer
+WRITE_TO_DISP:
 	ld bc,00006h		;9e17
 	ld de,DISPBF		;9e1a
 	ldir			;9e1d
+
 	ret			;9e1f
 
 	;; Refresh address field
@@ -2622,7 +2644,7 @@ l9e44h:
 
 l9e49h:
 	ld hl,ERR_		;9e49 - Error message
-	jr sub_9e17h		;9e4c - Copy to display and return
+	jr WRITE_TO_DISP	;9e4c - Copy to display and return
 
 l9e4eh:
 	ld a,002h		;9e4e
@@ -2630,7 +2652,7 @@ l9e4eh:
 	ld a,065h		;9e53
 	ld (EPB_01F3B_B),a	;9e55
 	ld hl,l9fabh		;9e58
-	jr sub_9e17h		;9e5b
+	jr WRITE_TO_DISP	;9e5b
 
 EPB_BEEP:
 	push af			;9e5d
