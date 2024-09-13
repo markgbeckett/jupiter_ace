@@ -1329,7 +1329,7 @@ l97e8h:
 	;;  9800-9FFF - Programmer ROM (MPF-1 version)
 	;;  D800-EFFF - Programmer RAM (MPF-1 version)
 	;;  D800-F7FF - Available RAM (MPF-1P version)
-EPB_8255_LATCH:	equ $70		; Latch on 8255
+EPB_273_LATCH:	equ $70		; Latch on 8255
 EPB_8255_PORTA:	equ $7C		; Port A on 8255
 EPB_8255_PORTB:	equ $7D		; Port B on 8255
 EPB_8255_PORTC:	equ $7E		; Port C on 8255
@@ -1347,7 +1347,7 @@ EPB_ADSAVE_1: equ EPB_VAR+$10	; 01f30h
 EPB_ADSAVE_2: equ EPB_VAR+$12	; 01f32h
 EPB_ADSAVE_3: equ EPB_VAR+$14	; 01f34h
 EPB_01F36_B: equ EPB_VAR+$17	; 01f37h
-EPB_WRITE_STATUS: equ EPB_VAR+$1B	; 01f3bh - Write status (2 -
+EPB_WRITE_STATUS: equ EPB_VAR+$1B	; 01f3b - Write status (2 -
 					; good; 0 - err)
 EPB_01F3B_B: equ EPB_VAR+$1C	; 01f3ch
 EPB_01F3C_B: equ EPB_VAR+$1D	; 01f3dh	
@@ -1434,13 +1434,14 @@ l9859h:
 	jp pe,l9859h		;9860 - Repeat, if BC non-zero
 
 	;; At this point, third 2K of RAM tested successfully
-	jr l9872h		;9863 - Progress to main loop
+	;; Was 	jr l9872h
+	jr l986eh		; 9863 - Progress to main loop
 
 	db $28			;9865 - Not used
 	
 U7_RAM_FAIL: 
 	ld hl,$9FA5		;9867 - Error message 'BADU07'
-	call WRITE_TO_DISP		;9869 - Copy to display buffer
+	call WRITE_TO_DISP	;9869 - Copy to display buffer
 	jr l988ah		;986c - Continue to main loop
 
 l986eh:
@@ -1455,15 +1456,16 @@ l9872h:
 	;; Initialise display message (could use WRITE_TO_DISP)
 	ld bc,00006h		;9872 - six characters
 	ld hl,l9f93h		;9875 - Message "0000-E"
-	ld de,DISPBF		;9878
-	ldir			;987b
+	ld de,DISPBF		;9878 - Display buffer
+	ldir			;987b - Transfer message
 
 	;; Highlights address field in display
-	ld hl,DISPBF+2		;987d
+	ld hl,DISPBF+2		;987d - Display is stored in reverse
+				;       order
 	ld b,004h		;9880
 	call SETPT		;9882 - Set point
 
-	;; Set state = 1
+	;; Set initial state to 1
 	ld a,001h		;9885
 	ld (STATE),a		;9887
 
@@ -1493,12 +1495,12 @@ EPB_PROCESS_KEY:
 	set 0,(hl)		;98a6 - Ensures next numeric entry will
 				;       reset number display
 	
-	ld (EBP_KEY_SAVE),a	;98a8 - Save 'A'
+	ld (EBP_KEY_SAVE),a	;98a8 - Save keypress
 
 	cp 015h			;98ab - Check for 'PROGRAM'
 	jr z,l98bbh		;98ad
 	
-	cp 018h			;98af - Check for 'PC'
+	cp 018h			;98af - Check for 'VERIFY'
 	jr z,l98bbh		;98b1
 	
 	cp 01ah			;98b3 - Corresponds to 'LIST'
@@ -1509,34 +1511,44 @@ EPB_PROCESS_KEY:
 	cp 01dh			;98b7 - Check for 'RELA' (undefined)
 	jr z,l98cah		;98b9
 	
-	;; At this point, key press is one of 15 'SBR', 1A 'CBR', 1B
-	;; 'REG', 1C 'MOVE', 1E 'TPWR', 1F 'TPRD' and these key presses
-	;; require a change of state
-
-	;; Work out new STATE 'READ' = 3 (not set here); 'PROGRAM' =
-	;; '4'; LIST='5'; TP_WR='6'; TP_RD='7'; VERIFY='8'
+	;; At this point, key press is one of:
+	;;
+	;; Key		Code		State
+	;; 'PROGRAM'	$15		04
+	;; 'VERIFY'	$18		08
+	;; 'LIST'	$1A		05 
+	;; 'READ'	$1B		03
+	;; 'MOVE'	$1C		00
+	;; 'TPWR' 	$1E		06
+	;; 'TPRD' 	$1F		07
+	;; 
+	;; These key presses require a change of state
 l98bbh: sub 014h		;98bb
-	ld hl,l9fc9h		;98bd
+	ld hl,EPB_STATE_LIST	;98bd
 	add a,l			;98c0
 	ld l,a			;98c1
 	ld a,(hl)		;98c2
 	ld (STATE),a		;98c3
-	xor a			;98c6
+	
+	xor a			;98c6 - Zero minor state
 	ld (STMINOR),a		;98c7
 
 l98cah:
 	ld a,(EBP_KEY_SAVE)	;98ca - Retrieve keypress
-	cp 012h			;98cd
-	jr z,l98dah		;98cf - Skip forward if key is 'GO'
+	cp 012h			;98cd - Check if 'GO'
+	jr z,l98dah		;98cf - Skip forward, if so
+
+	;; Not obvious these system variables are ever used?
 	push af			;98d1
 	xor a			;98d2
 	ld (EPB_01F3D_B),a	;98d3
 	ld (EPB_01F3E_B),a	;98d6
 	pop af			;98d9
 
-l98dah:
-	sub 010h		;98da
-	ld hl,l9f55h		;98dc
+	;; Jump to appropriate subroutine to handle the particular
+	;; keypress
+l98dah:	sub 010h		;98da
+	ld hl,EPB_FUNCTIONS		;98dc
 	jp BRANCH		;98df
 
 	;; Deal with hex digits (based on STATE)
@@ -1649,13 +1661,15 @@ l995dh:
 	jr l9941h		;996b - Continue as for 'INS'
 
 	;; Process READ
-	call sub_9976h		;996d
+	call sub_9976h		;996d - Use VERIFY routine to set up
+				;step buffer
 l9970h:
-	ld a,003h		;9970
+	ld a,003h		;9970 - Restore state=3
 	ld (STATE),a		;9972
+
 	ret			;9975
 
-	;; Process VEFIFY
+	;; Process VEFIFY (and READ - see $996D)
 sub_9976h:
 	;; Set start address for read to 0000h
 	ld hl,00000h		;9976
@@ -1691,38 +1705,46 @@ l99a3h: 			; EPROM type 6 or 7
 l99a9h:
 	;; Retrieve input parameters
 	ld a,005h		;99a9 - Set state to 5 for retrieving params
-	ld (STATE),a		;99ab
-	call STEPDP		;99ae
+	ld (STATE),a		;99ab - In Monitor, state 5 corresponds to 
+				;       RELA, which requires two parameters
+
+	call STEPDP		;99ae - Display step buffer
 	
-	ld a,008h		;99b1
+	ld a,008h		;99b1 - Restore state for VERIFY
 	ld (STATE),a		;99b3
+	
 	ret			;99b6
 
 	;; Handle 'MOVE'
 	ld hl,EPB_MODEL_STR	;99b7
-	jp WRITE_TO_DISP		;99ba
+
+	jp WRITE_TO_DISP	;99ba
 
 	;; Handle 'RELA'
 	call IGNORE		;99bd
+	
 	ret			;99c0
 
 	;; Handle 'LIST' key press
 	ld hl,l9fb7h		;99c1
-	jp WRITE_TO_DISP		;99c4
 
-	;; Handle 'PROGRAM'
+	jp WRITE_TO_DISP	;99c4
+
+	;; Handle 'PROGRAM'. State is suitable for STEPDP (parameters
+	;; are S, E, and D)
 	xor a			;99c7
 	ld (EPB_01F3B_B),a	;99c8
 
-	;; Handle 'TP_RD' and 'TP_WR'
+	;; Handle 'TP_RD' and 'TP_WR'. State is suitable for STEPDP
+	;; (parameters are F or F, S, and E, respectively).
 	call STEPDP		;99cb
 
 	ret			;99ce
 
-	;; Handle address entry
+	;; Handle alphanumeric entry (STATE=0, 1. 2)
 	call HAD		;99cf - Hex address entry
 
-	;; Refresh last two characters to be '-E'
+	;; Set last two characters of display to be '-E'
 	ld a,08fh		;99d2 'E'
 	ld (DISPBF),a		;99d4
 	ld a,002h		;99d7 '-'
@@ -1730,9 +1752,8 @@ l99a9h:
 
 	;; Done
 	ret			;99dc
-
 	
-	;; Process hex digit in STATE=5 (LIST)
+	;; Process alphanumeric entry (STATE=5 (LIST))
 	ld a,(EPB_DISP_MODE)	;99dd - Check if address/ data mode?
 	and a			;99e0
 	jr z,l99fah		;99e1 - Jump if address mode
@@ -1760,22 +1781,29 @@ l99fah:
 
 	ret			;9a09
 
-	;; Process hex digit in STATE=3 (READ)
+	;; Process hex digit in STATE=3 (READ) or STATE=8 (VERIFY)
 	call HMV		;9a0a - GOT THIS FAR
+
+	;; Correct display for 'READ'/'VERIFY' command (would be 'S' and
+	;; 'D' for Monitor's usual STATE=5 operation)
 	ld a,(STMINOR)		;9a0d
 	and a			;9a10
 	jr nz,l9a19h		;9a11
 	ld a,0aeh		;9a13 - 'S'
 	ld (DISPBF),a		;9a15
+	
 	ret			;9a18
 
 l9a19h:
 	ld a,08fh		;9a19 - 'E'
+
 	ld (DISPBF),a		;9a1b 
+
 	ret			;9a1e
 
-
+	;; Process hex digit in STATE=4 (PROGRAM), 6 (TPWR), 7 (TPRD)
 	call HMV		;9a1f
+	
 	ret			;9a22
 
 	;; Handle '+' for STATE=1
@@ -2301,7 +2329,7 @@ sub_9c86h:
 	in a,(EPB_8255_PORTA)		;9ca7
 	push af			;9ca9
 	xor a			;9caa
-	out (EPB_8255_LATCH),a		;9cab
+	out (EPB_273_LATCH),a		;9cab
 	ld a,008h		;9cad
 	out (EPB_8255_PORTC),a		;9caf
 	pop af			;9cb1
@@ -2317,12 +2345,12 @@ sub_9c86h:
 	and 00fh		;9cb8
 	out (EPB_8255_PORTC),a		;9cba
 	ld a,008h		;9cbc
-	out (EPB_8255_LATCH),a		;9cbe
+	out (EPB_273_LATCH),a		;9cbe
 	nop			;9cc0
 	in a,(EPB_8255_PORTA)		;9cc1
 	push af			;9cc3
 	xor a			;9cc4
-	out (EPB_8255_LATCH),a		;9cc5
+	out (EPB_273_LATCH),a		;9cc5
 	pop af			;9cc7
 	pop hl			;9cc8
 	ret			;9cc9
@@ -2343,7 +2371,7 @@ sub_9c86h:
 l9cdch:
 	ld a,028h		;9cdc
 l9cdeh:
-	out (EPB_8255_LATCH),a		;9cde
+	out (EPB_273_LATCH),a		;9cde
 	ld a,d			;9ce0
 	and 00fh		;9ce1
 	out (EPB_8255_PORTC),a		;9ce3
@@ -2382,7 +2410,7 @@ sub_9cefh:
 	xor a			;9cff
 	out (EPB_8255_PORTC),a		;9d00
 	ld a,010h		;9d02
-	out (EPB_8255_LATCH),a		;9d04
+	out (EPB_273_LATCH),a		;9d04
 
 	ld a,e			;9d06
 	out (EPB_8255_PORTB),a		;9d07
@@ -2395,7 +2423,7 @@ sub_9cefh:
 	call sub_9dd2h		;9d11 - Update display
 	
 	xor a			;9d14
-	out (EPB_8255_LATCH),a		;9d15
+	out (EPB_273_LATCH),a		;9d15
 
 	ld b,028h		;9d17
 l9d19h:
@@ -2411,7 +2439,7 @@ l9d19h:
 	pop hl			;9d1d
 	out (EPB_8255_PORTA),a		;9d1e
 	ld a,010h		;9d20
-	out (EPB_8255_LATCH),a		;9d22
+	out (EPB_273_LATCH),a		;9d22
 	ld a,e			;9d24
 	out (EPB_8255_PORTB),a		;9d25
 	ld a,d			;9d27
@@ -2419,11 +2447,11 @@ l9d19h:
 	out (EPB_8255_PORTC),a		;9d2a
 	nop			;9d2c
 	ld a,018h		;9d2d
-	out (EPB_8255_LATCH),a		;9d2f
+	out (EPB_273_LATCH),a		;9d2f
 	pop af			;9d31
 	call sub_9dd2h		;9d32 - Update display
 	xor a			;9d35
-	out (EPB_8255_LATCH),a		;9d36
+	out (EPB_273_LATCH),a		;9d36
 	ld b,028h		;9d38
 l9d3ah:
 	djnz l9d3ah		;9d3a
@@ -2448,7 +2476,7 @@ l9d3ah:
 	jr z,l9d50h		;9d4c
 	ld a,004h		;9d4e
 l9d50h:
-	out (EPB_8255_LATCH),a		;9d50
+	out (EPB_273_LATCH),a		;9d50
 	ld a,d			;9d52
 	and 007h		;9d53
 	or 008h			;9d55
@@ -2461,7 +2489,7 @@ l9d50h:
 	ld a,0ffh		;9d62
 	out (EPB_8255_PORTC),a		;9d64
 	xor a			;9d66
-	out (EPB_8255_LATCH),a		;9d67
+	out (EPB_273_LATCH),a		;9d67
 	ld b,028h		;9d69
 l9d6bh:
 	djnz l9d6bh		;9d6b
@@ -2485,10 +2513,10 @@ l9d6bh:
 	jr z,l9d82h		;9d7e
 	ld a,000h		;9d80
 l9d82h:
-	out (EPB_8255_LATCH),a		;9d82
+	out (EPB_273_LATCH),a		;9d82
 	or 009h			;9d84
 	nop			;9d86
-	out (EPB_8255_LATCH),a		;9d87
+	out (EPB_273_LATCH),a		;9d87
 	pop af			;9d89
 	call sub_9dd2h		;9d8a - Update display
 	ld a,020h		;9d8d
@@ -2496,7 +2524,7 @@ l9d82h:
 	jr z,l9d94h		;9d91
 	xor a			;9d93
 l9d94h:
-	out (EPB_8255_LATCH),a		;9d94
+	out (EPB_273_LATCH),a		;9d94
 	ld b,028h		;9d96
 l9d98h:
 	djnz l9d98h		;9d98
@@ -2518,7 +2546,7 @@ l9d98h:
 	jr nz,l9daeh		;9daa
 	set 5,a			;9dac
 l9daeh:
-	out (EPB_8255_LATCH),a		;9dae
+	out (EPB_273_LATCH),a		;9dae
 	ld a,d			;9db0
 	and 007h		;9db1
 	or 020h		;9db3
@@ -2535,7 +2563,7 @@ l9dbbh:
 	ld a,028h		;9dc6
 	out (EPB_8255_PORTC),a		;9dc8
 	xor a			;9dca
-	out (EPB_8255_LATCH),a		;9dcb
+	out (EPB_273_LATCH),a		;9dcb
 	ld b,028h		;9dcd
 l9dcfh:
 	djnz l9dcfh		;9dcf
@@ -2845,14 +2873,14 @@ l9f45h:	dw $9CFB
 	dw $9D9B
 	dw $9D6E
 
-	;; BRANCH table for various main-loop functions
-l9f55h: dw $98EC
+	;; BRANCH table for various main-loop functions (based on
+	;; keypress, relative to keycode-$10).
+EPB_FUNCTIONS: dw $98EC
 	db $00, $05, $0A, $0F, $15, $DB, $3C, $66
 	db $8A, $29, $D5, $81, $CB, $D1, $DF, $DF
 
-	;; BRANCH table for hex digits
-l9f67h:
-	dw $99cf
+	;; BRANCH table for hex digits (based on state)
+l9f67h:	dw $99cf
 	db $00, $00, $00, $3B, $50, $0E, $50, $50
 	db $3B
 
@@ -2898,7 +2926,7 @@ l9fbdh:	db $03, $02, $AE, $AE, $3F, $1F
 	;; Verify message "V 55AP"
 l9fc3h:	db $B7, $00, $AE, $AE, $3F, $1F 
 
-l9fc9h: ; Jump table for commands
+EPB_STATE_LIST: ; Jump table for commands
 	db $02, $04, $00, $00, $08, $01, $05, $03
 	db $00, $00, $06, $07
 
