@@ -2245,7 +2245,7 @@ l9bdah:	cp 016h			; 9bda - Check if 2716
 				;        capacity)
 
 l9be2h:	cp 032h			; 9be2 - Check if 2732
-	jr nz,l9beah		; 9be4 - Jumo if not
+	jr nz,l9beah		; 9be4 - Jump if not
 	
 	ld (hl),004h		; 9be6 - Store model number
 	
@@ -2297,7 +2297,7 @@ l9bfch:
 	
 	ret			;9c18 - Done
 
-	;; Retrieve address of read routine for specific EPROM model
+	;; Retrieve address of read/ write routine for specific EPROM model
 sub_9c19h:
 	ld a,(EPB_EPROM_MODEL)	;9c19 - Retrive model code
 	add a,a			;9c1c - Multply by 2
@@ -2309,25 +2309,37 @@ sub_9c19h:
 	ld l,a			;9c22
 	
 	ret			;9c23
-l9c24h:
-	pop hl			;9c24
-	pop bc			;9c25
-	inc de			;9c26
-	cpi		;9c27
-	ld (STEPBF+4),de		;9c29
-	ld de,0d800h		;9c2d
-	and a			;9c30
+
+	;; Program (write byte to) EPROM has failed
+l9c24h:	pop hl			;9c24 - Memory location being written
+	pop bc			;9c25 - Number of bytes still to write
+	inc de			;9c26 - Advance EPROM address pointer
+	cpi			;9c27 - Work out A-(HL), inc HL, dec BC
+	
+	ld (STEPBF+4),de	;9c29 - Store EPROM address pointer
+
+	ld de,0d800h		;9c2d - Convert HL from absolute to
+	and a			;9c30   EPROM-relative address
 	sbc hl,de		;9c31
+
 	ld (STEPBF),hl		;9c33
-	add hl,bc			;9c36
+
+	;; Work out end of buffer (relative)
+	add hl,bc		;9c36
 	dec hl			;9c37
-	ld (STEPBF+2),hl		;9c38
-	ld a,037h		;9c3b
+
+	ld (STEPBF+2),hl	;9c38
+
+	;; Set data field on display buffer to "HH"
+	ld a,037h		;9c3b - 'H'
 	ld (DISPBF),a		;9c3d
 	ld (DISPBF+1),a		;9c40
+	
 	call EPB_BEEP		;9c43
+	
 	ret			;9c46
 
+	;; ----------------------------------------------------------------
 	;; Compute (and check) program parameter
 	;; 
 	;; On entry:
@@ -2340,6 +2352,7 @@ l9c24h:
 	;;   DE - Start (RAM)
 	;;   HL - Offset (EPROM)
 	;; 
+	;; ----------------------------------------------------------------
 sub_9c47h:
 	;; Check PROGRAM parameters against EPROM model.
 	push bc			;9c47 - Save start and offset
@@ -2373,6 +2386,7 @@ l9c62h:
 	pop hl			;9c63
 	xor a			;9c64
 	ld (EPB_WRITE_STATUS),a	;9c65
+
 	ret			;9c68
 
 l9c69h:
@@ -2382,18 +2396,22 @@ l9c69h:
 
 	ret			;9c6c
 
+	;; Check EPROM is writable
 sub_9c6dh:
 	push de			;9c6d
 	push bc			;9c6e
 l9c6fh:
 	call sub_9c86h		;9c6f - Read byte from EPROM
 	cp 0ffh			;9c72 - Check if FF
+
 	jr z,l9c7dh		;9c74
 
 	xor a			;9c76 - Error???
 	ld (EPB_WRITE_STATUS),a	;9c77
+
 	pop bc			;9c7a
 	pop de			;9c7b
+
 	ret			;9c7c
 
 l9c7dh:
@@ -2402,72 +2420,108 @@ l9c7dh:
 	ld a,b			;9c7f
 	or c			;9c80
 	jr nz,l9c6fh		;9c81
+
 	pop bc			;9c83
 	pop de			;9c84
+
 	ret			;9c85
 
+	;; ----------------------------------------------------------------
 	;; Read byte from EPROM
-	;; DE=address of byte to read from eprom
-	;; a=EPROM model
-	;; BC and HL should be preserved
+	;; 
+	;; On entry:
+	;;   DE=address of byte to read from eprom
+	;;
+	;; On exit:
+	;;   A=byte read
+	;;   BC and HL should be preserved
+	;; ----------------------------------------------------------------
 sub_9c86h:
-	push hl			;9c86
+	push hl			; 9c86
 
-	ld a,090h		;9c87
+	ld a,090h		; 9c87
 	out (EPB_8255_CONTROL),a		;9c89
 	
-	ld hl,(EPB_EPROM_READ)	;9c8b - Retrieve address of
-				;model-specific code (see table at $9F35
-				;for addresses)
+	ld hl,(EPB_EPROM_READ)	; 9c8b - Retrieve address of
+				;        model-specific subroutine for
+				;        read)
 	
-	jp (hl)			;9c8e
+	jp (hl)			; 9c8e
 
+	;; ----------------------------------------------------------------
 	;; Read byte from EPROM (model 4 and 6)
-	;; Om entry, DE=address to read from
+	;; 
+	;; On entry, DE=address to read from
 	;; On exit, A=byte read
-	ld a,e			;9c8f
-	out (EPB_8255_PORTB),a		;9c90
-	ld a,d			;9c92
-	and 017h		;9c93
-	or 020h			;9c95
-	out (EPB_8255_PORTC),a		;9c97
+	;; ----------------------------------------------------------------
+	ld a,e			;9c8f - Low byte of offset
+	out (EPB_8255_PORTB),a	;9c90
+	
+	ld a,d			;9c92 - High byte of offset
+	and 017h		;9c93 - Mask to 001XXXXX
+	or 020h			;9c95 
+	out (EPB_8255_PORTC),a	;9c97
+	
 	bit 3,d			;9c99
-	jr z,$+7		;9c9b
+	jr z,l9ca2h		;9c9b
+
 	ld a,008h		;9c9d
-	jr $+5			;9c9f
-	ld a,03eh		;9ca1
-	jr z,$-43		;9ca3
-	ld (hl),b		;9ca5
+	jr l9ca4h		;9c9f
+
+	db $3e
+
+l9ca2h:	ld a, $28
+
+l9ca4h:	out (EPB_273_LATCH),a	;9ca5
 	nop			;9ca6
-	in a,(EPB_8255_PORTA)		;9ca7
+
+	in a,(EPB_8255_PORTA)	;9ca7
+
 	push af			;9ca9
+
 	xor a			;9caa
-	out (EPB_273_LATCH),a		;9cab
+	out (EPB_273_LATCH),a	;9cab
+	
 	ld a,008h		;9cad
-	out (EPB_8255_PORTC),a		;9caf
+	out (EPB_8255_PORTC),a	;9caf
+
 	pop af			;9cb1
+
 	pop hl			;9cb2
+
 	ret			;9cb3
 
+	
+	;; ----------------------------------------------------------------
 	;; Read byte from EPROM (model 0,1,2,3,5)
-	;; Om entry, DE=address to read from
+	;; 
+	;; On entry, DE=address to read from
 	;; On exit, A=byte read
-	ld a,e			;9cb4
-	out (EPB_8255_PORTB),a		;9cb5
-	ld a,d			;9cb7
-	and 00fh		;9cb8
-	out (EPB_8255_PORTC),a		;9cba
-	ld a,008h		;9cbc
-	out (EPB_273_LATCH),a		;9cbe
-	nop			;9cc0
-	in a,(EPB_8255_PORTA)		;9cc1
-	push af			;9cc3
-	xor a			;9cc4
-	out (EPB_273_LATCH),a		;9cc5
-	pop af			;9cc7
-	pop hl			;9cc8
-	ret			;9cc9
+	;; ----------------------------------------------------------------
+	ld a,e			; 9cb4 - Low byte of offset
+	out (EPB_8255_PORTB),a	; 9cb5
+	
+	ld a,d			; 9cb7 - High byte of offset
+	and 00fh		; 9cb8 - Isolate 0000XXXX
+	out (EPB_8255_PORTC),a	; 9cba
+	
+	ld a,008h		; 9cbc
+	out (EPB_273_LATCH),a	; 9cbe
+	nop			; 9cc0
 
+	in a,(EPB_8255_PORTA)	; 9cc1
+
+	push af			; 9cc3
+
+	xor a			; 9cc4
+	out (EPB_273_LATCH),a	; 9cc5
+
+	pop af			; 9cc7
+	pop hl			; 9cc8
+
+	ret			; 9cc9
+
+	
 	;; Read byte from EPROM (model 7)
 	;; Om entry, DE=address to read from
 	;; On exit, A=byte read
