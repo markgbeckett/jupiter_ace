@@ -1353,7 +1353,7 @@ EPB_01F3B_B: equ EPB_VAR+$1C	; 01f3ch
 EPB_01F3C_B: equ EPB_VAR+$1D	; 01f3dh	
 EPB_01F3D_B: equ EPB_VAR+$1E	; 01f3eh	
 EPB_01F3E_B: equ EPB_VAR+$1F	; 01f3fh	
-EPB_01F45_B: equ EPB_VAR+$26 	; 01f46h - EPROM model (2758=0; 2508=1;
+EPB_EPROM_MODEL: equ EPB_VAR+$26 	; 01f46h - EPROM model (2758=0; 2508=1;
 				;          2716=2; 2516=3; 2732=4; 2532=5;
 				;          2764=6; 2564=7)
 EPB_01F46_W: equ EPB_VAR+$27	; 01f47h - EPROM memory (no 2K blocks) -
@@ -1552,31 +1552,46 @@ l98dah:	sub 010h		;98da
 	jp BRANCH		;98df
 
 	;; Deal with hex digits (based on STATE)
-l98e2h:	ld c,a			;98e2 - Save A
+l98e2h:	ld c,a			;98e2 - Save keypress
 	ld hl,l9f67h		;98e3
-l98e6h:
-	ld a,(STATE)		;98e6
+
+	;; Branch based on STATE
+l98e6h:	ld a,(STATE)		;98e6
+
 	jp BRANCH		;98e9
 
-
+	;; ----------------------------------------------------------------
 	;; Process '+'
+	;; ----------------------------------------------------------------
 	ld hl,l9f72h		;98ec
+
 	jr l98e6h		;98ef
 
+	;; ----------------------------------------------------------------
 	;; Process '-'
+	;; ----------------------------------------------------------------
 	ld hl,09f7dh		;98f1
+
 	jr l98e6h		;98f4
 
+	;; ----------------------------------------------------------------
 	;; Process 'GO'
+	;; ----------------------------------------------------------------
 	ld hl,09f88h		;98f6
+
 	jr l98e6h		;98f9
 
+	;; ----------------------------------------------------------------
 	;; Process 'STEP' (undefined key)
+	;; ----------------------------------------------------------------
 	ld a,055h		;98fb
 	ld (EPB_01F3C_B),a	;98fd
+
 	ret			;9900
 
+	;; ----------------------------------------------------------------
 	;; Process 'DATA'
+	;; ----------------------------------------------------------------
 l9901h:
 	ld a,(STATE)		;9901
 	cp 005h			;9904
@@ -1715,33 +1730,45 @@ l99a9h:
 	
 	ret			;99b6
 
+	;; ----------------------------------------------------------------
 	;; Handle 'MOVE'
+	;; ----------------------------------------------------------------
 	ld hl,EPB_MODEL_STR	;99b7
 
 	jp WRITE_TO_DISP	;99ba
 
+	;; ----------------------------------------------------------------
 	;; Handle 'RELA'
+	;; ----------------------------------------------------------------
 	call IGNORE		;99bd
 	
 	ret			;99c0
 
+	;; ----------------------------------------------------------------
 	;; Handle 'LIST' key press
+	;; ----------------------------------------------------------------
 	ld hl,l9fb7h		;99c1
 
 	jp WRITE_TO_DISP	;99c4
 
+	;; ----------------------------------------------------------------
 	;; Handle 'PROGRAM'. State is suitable for STEPDP (parameters
 	;; are S, E, and D)
+	;; ----------------------------------------------------------------
 	xor a			;99c7
 	ld (EPB_01F3B_B),a	;99c8
 
+	;; ----------------------------------------------------------------
 	;; Handle 'TP_RD' and 'TP_WR'. State is suitable for STEPDP
 	;; (parameters are F or F, S, and E, respectively).
+	;; ----------------------------------------------------------------
 	call STEPDP		;99cb
 
 	ret			;99ce
 
+	;; ----------------------------------------------------------------
 	;; Handle alphanumeric entry (STATE=0, 1. 2)
+	;; ----------------------------------------------------------------
 	call HAD		;99cf - Hex address entry
 
 	;; Set last two characters of display to be '-E'
@@ -1753,7 +1780,9 @@ l99a9h:
 	;; Done
 	ret			;99dc
 	
-	;; Process alphanumeric entry (STATE=5 (LIST))
+	;; ----------------------------------------------------------------
+	;; Handle alphanumeric entry (STATE=5 (LIST))
+	;; ----------------------------------------------------------------
 	ld a,(EPB_DISP_MODE)	;99dd - Check if address/ data mode?
 	and a			;99e0
 	jr z,l99fah		;99e1 - Jump if address mode
@@ -1781,7 +1810,12 @@ l99fah:
 
 	ret			;9a09
 
-	;; Process hex digit in STATE=3 (READ) or STATE=8 (VERIFY)
+	;; ----------------------------------------------------------------
+	;; Handle alphanumeric entry (STATE=3 (READ) or STATE=8
+	;; ----------------------------------------------------------------
+	;; 
+	;; (VERIFY)). Can use Monitor ROM routine though need to change
+	;; parameter label
 	call HMV		;9a0a - GOT THIS FAR
 
 	;; Correct display for 'READ'/'VERIFY' command (would be 'S' and
@@ -1801,38 +1835,67 @@ l9a19h:
 
 	ret			;9a1e
 
-	;; Process hex digit in STATE=4 (PROGRAM), 6 (TPWR), 7 (TPRD)
+	;; ----------------------------------------------------------------
+	;; Handle alphanumeric entry (STATE=4 (PROGRAM), 6 (TPWR), 7
+	;; (TPRD))
+	;; ----------------------------------------------------------------
+
+	;; Can just use Monitor ROM routine for this case
 	call HMV		;9a1f
 	
 	ret			;9a22
 
-	;; Handle '+' for STATE=1
-	ld hl,(ADSAVE)		;9a23 - though ADSAVE looks to have EPROM number
+	;; ----------------------------------------------------------------
+	;; Handle '+' for STATE=0, 1, 2, 5 (PROGRAM)
+	;; ----------------------------------------------------------------
+	ld hl,(ADSAVE)		;9a23 - though ADSAVE looks to have
+				;       EPROM number
 	inc hl			;9a26
 	ld (ADSAVE),hl		;9a27
 	ld a,002h		;9a2a - Switch display to Data mode
 	ld (EPB_DISP_MODE),a	;9a2c
 	call sub_9e27h		;9a2f
+
 	ret			;9a32
 
-	;; Handle '+' for STATE=3
-	call sub_9a39h		;9a33
+	;; ----------------------------------------------------------------
+	;; Handle '+' for STATE=3 (READ)
+	;; ----------------------------------------------------------------
+	call sub_9a39h		;9a33 - Corresponding routine for VERIFY
+
 	jp l9970h		;9a36 - Restore STATE=3 and done
 
+	;; ----------------------------------------------------------------
+	;; Handle '+' for STATE=8 (VERIFY)
+	;; ----------------------------------------------------------------
 sub_9a39h:
-	ld a,005h		;9a39
-	ld (STATE),a		;9a3b
-	call IMV		;9a3e
-	ld a,008h		;9a41
-	ld (STATE),a		;9a43
-	ld a,08fh		;9a46
-	ld (DISPBF),a		;9a48
-	ret			;9a4b
-
-	;; Handle '+' for STATE 4
-	call IMV		;9a4c
-	ret			;9a4f
+	ld a,005h		; 9a39 - Set state to 5 (Rela in Monitor
+				;        ROM)
+	ld (STATE),a		; 9a3b
 	
+	call IMV		; 9a3e - Monitor ROM service routine for '+'
+
+	ld a,008h		; 9a41 - Restore state to 8 (VERIFY)
+	ld (STATE),a		; 9a43
+
+	ld a,08fh		; 9a46 - Set parameter name to 'E' (must be
+	ld (DISPBF),a		; 9a48   case, as '+' will always end up
+				;        displaying second parameter)
+
+	ret			; 9a4b
+
+	;; ----------------------------------------------------------------
+	;; Handle '+' for STATE 4 (PROGRAM), 6 (TPWR), 7 (TPRD)
+	;;
+	;; Monitor ROM routine can be used, as is
+	;; ----------------------------------------------------------------
+	call IMV		;9a4c
+	
+	ret			;9a4f
+
+	;; ----------------------------------------------------------------
+	;; Handle '+' for STATE=0, 1, 2, 5 (PROGRAM)
+	;; ----------------------------------------------------------------
 	ld hl,(ADSAVE)		;9a50
 	dec hl			;9a53
 	ld (ADSAVE),hl		;9a54
@@ -1843,23 +1906,41 @@ sub_9a39h:
 
 	ret			;9a5f
 
-	;; Handle '-' for STATE=3
-	call sub_9a66h		;9a60
+	
+	;; ----------------------------------------------------------------
+	;; Handle '-' for STATE=3 (READ)
+	;; ----------------------------------------------------------------
+	call sub_9a66h		;9a60 - Corresponding routine for VERIFY
+	
 	jp l9970h		;9a63 - Restore STATE=3 and done
 
+	;; ----------------------------------------------------------------
+	;; Handle '-' for STATE=8 (VERIFY)
+	;; ----------------------------------------------------------------
 sub_9a66h:
-	ld a,005h		;9a66
-	ld (STATE),a		;9a68
-	call DMV		;9a6b
-	ld a,008h		;9a6e
-	ld (STATE),a		;9a70
-	ret			;9a73
+	ld a,005h		; 9a66 - Set state to 5 (Rela in Monitor
+				;        ROM)
+	ld (STATE),a		; 9a68
+	
+	call DMV		;9a6b - Monitor ROM service routine for '-'
 
-	;; Handle '-' for STATE=4
+	ld a,008h		;9a6e - Restore state to 8 (VERIFY)
+	ld (STATE),a		;9a70
+
+	ret			;9a73 - Done
+
+	;; ----------------------------------------------------------------
+	;; Handle '-' for STATE=4 (PROGRAM), 6 (TPWR), 7 (TPRD)
+	;;
+	;; Monitor ROM routine can be used, as is
+	;; ----------------------------------------------------------------
 	call DMV		;9a74
+	
 	ret			;9a77
 
-	;; Handle 'GO' for STATE=0, 1, 2
+	;; ----------------------------------------------------------------
+	;; Handle 'GO' for STATE=0, 1 (ENTER_EPROM), 2
+	;; ----------------------------------------------------------------
 	call sub_9e03h		;9a78 - De-highlight text on display
 	call sub_9efeh		;9a7b - Check if valid EPROM model
 	call sub_9b9bh		;9a7e - Populate system variables based
@@ -1867,25 +1948,29 @@ sub_9a66h:
 	
 	ret			;9a81
 
-	;; Handle 'GO' for STATE=5 (i.e., LIST)
+	;; ----------------------------------------------------------------
+	;; Handle 'GO' for STATE=5 (LIST)
+	;; ----------------------------------------------------------------
 	ld de,00000h		;9a82 - Set start address to zero
 	ld (ADSAVE),de		;9a85
 
 	jp l9901h		;9a89
 
-	;; Handle 'GO' for STATE=6 (i.e., TAPE_READ)
-	ld hl,(STEPBF+2)	;9a8c - Retrieve start of save buffer
-	ld de,0d800h		;9a8f - Turn into physical RAM address
+	;; ----------------------------------------------------------------
+	;; Handle 'GO' for STATE=6 (TPWR)
+	;; ----------------------------------------------------------------
+	ld hl,(STEPBF+2)	;9a8c - Retrieve start of save buffer and
+	ld de,0d800h		;9a8f - convert to absolute RAM address
 	add hl,de		;9a92
 	ld (STEPBF+2),hl	;9a93 - Store it
 
-	ld hl,(STEPBF+4)	;9a96 - Retrieve emd of save buffer
-	add hl,de		;9a99 - Turn into physical RAM address
-	ld (STEPBF+4),hl	;9a9a - Save it
+	ld hl,(STEPBF+4)	;9a96 - Retrieve emd of save buffer and
+	add hl,de		;9a99 - convert into absolute RAM address
+	ld (STEPBF+4),hl	;9a9a - Store it
 
 	call GWT		;9a9d - Write tape
 
-	;;  Set STATE to 6
+	;;  Set STATE to 6 (TPWR)
 	ld a,006h		;9aa0
 	ld (STATE),a		;9aa2
 	
@@ -1894,18 +1979,23 @@ sub_9a66h:
 	
 	ret			;9aaa - Done
 	
-	;; Handle 'GO' for STATE=7 (i.e., TAPE_WRITE)
+	;; ----------------------------------------------------------------
+	;; Handle 'GO' for STATE=7 (TPRD)
+	;; ----------------------------------------------------------------
 	call GRT		;9aab - Read tape
 
-	;; Set STATE to 7
+	;; Set STATE to 7 (TPRD)
 	ld a,007h		;9aae
 	ld (STATE),a		;9ab0
+	
 	ld a,0bdh		;9ab3 - Character '0'
 	ld (DISPBF+5),a		;9ab5
 	
 	ret			;9ab8 - Done
 
-	;; Process 'GO' based on STATE=8 (VERIFY)
+	;; ----------------------------------------------------------------
+	;; Handle 'GO' for STATE=8 (VERIFY)
+	;; ----------------------------------------------------------------
 	ld hl,(STEPBF+2)	;9ab9 - Parameter 'E'
 	ld de,(STEPBF)		;9abc - Parameter 'S'
 	and a			;9ac0 - Work out length
@@ -1939,7 +2029,9 @@ l9adah:	call sub_9c86h		;9ada - Read byte
 	ld ix,EPB_01F22_W	;9aec
 	jp BRANCH		;9af0
 
-	;; Handle 'GO' on STATE=3
+	;; ----------------------------------------------------------------
+	;; Handle 'GO' for STATE=3 (READ)
+	;; ----------------------------------------------------------------
 	ld hl,(STEPBF+2)	;9af3 - Parameter "E"
 	ld de,(STEPBF)		;9af6 - Parameter "S"
 	and a			;9afa - Work out length of read op
@@ -1985,7 +2077,9 @@ l9b14h:
 	ld ix,EPB_01F22_W	;9b25
 	jp BRANCH		;9b29
 	
+	;; ----------------------------------------------------------------
 	;; Handle 'GO' on STATE=5 (PROGRAM)
+	;; ----------------------------------------------------------------
 	ld a,(EPB_01F3B_B)	;9b2c
 	cp 065h			;9b2f
 	jr nz,l9b3ch		;9b31
@@ -1993,18 +2087,18 @@ l9b14h:
 	call sub_9c47h		;9b36
 	jp l9b82h		;9b39
 
-l9b3ch:
-	ld a,002h		;9b3c
+	;; Work out memory capacity of EPROM
+l9b3ch:	ld a,002h		;9b3c
 	ld (EPB_WRITE_STATUS),a	;9b3e
 	ld a,(EPB_EPROM_MODEL)	;9b41
 	ld ix,EPB_01F2E_B	;9b44 ???
 
 	;; Branch based on model (in A)
-	cp 002h		;9b48
+	cp 002h			;9b48
 	jr c,l9b56h		;9b4a - Model 0 or 1
-	cp 004h		;9b4c
+	cp 004h			;9b4c
 	jr c,l9b5bh		;9b4e - Model 2 or 3
-	cp 006h		;9b50
+	cp 006h			;9b50
 	jr c,l9b60h		;9b52 - Model 4 or 5
 
 	jr l9b65h		;9b54 - Model 6 or 7
@@ -2067,6 +2161,10 @@ l9b82h:
 
 	ret			;9b9a
 
+	;; ----------------------------------------------------------------
+	;; Populate EPROM system variables based on model number entered
+	;; by user
+	;; ----------------------------------------------------------------
 sub_9b9bh:
 	ld hl,(ADSAVE)		;9b9b - Retrieve model number
 
@@ -2074,100 +2172,115 @@ sub_9b9bh:
 	cp 025h			;9b9f
 	jr nz,l9bcah		;9ba1 - Jump if not 25XX
 
-	ld a,l			;9ba3
-	ld hl,EPB_01F45_B	;9ba4 - 
+	;; At this, point, no is model 25XX
+	ld a,l			;9ba3 - Retrieve third and fourth digit
+				;       of model number
+	ld hl,EPB_EPROM_MODEL	;9ba4 - Holds model number
 
-	cp 008h			;9ba7 - Check if 2508
-	jr nz,l9bafh		;9ba9 - Jump if not
+	cp 008h			; 9ba7 - Check if 2508
+	jr nz,l9bafh		; 9ba9 - Jump if not
 	
-	ld (hl),001h		;9bab
+	ld (hl),001h		; 9bab - Set model number
 
-	jr l9bf2h		;9bad
+	jr l9bf2h		; 9bad - Move on to next step (memory
+				;        capacity)
 
 l9bafh:
-	cp 016h			;9baf - Check if 2516
-	jr nz,l9bb7h		;9bb1 - Jump if not
+	cp 016h			; 9baf - Check if 2516
+	jr nz,l9bb7h		; 9bb1 - Jump if not
 	
-	ld (hl),003h		;9bb3
+	ld (hl),003h		; 9bb3 - Set model number
 	
-	jr l9bf2h		;9bb5
+	jr l9bf2h		; 9bb5 - Move on to next step (memory
+				;        capacity)
 	
 l9bb7h:
-	cp 032h			;9bb7 - Check if 2532
-	jr nz,l9bbfh		;9bb9 - Jump if not
+	cp 032h			; 9bb7 - Check if 2532
+	jr nz,l9bbfh		; 9bb9 - Jump if not
 
-	ld (hl),005h		;9bbb
+	ld (hl),005h		; 9bbb - Set model number
 
-	jr l9bf2h		;9bbd
+	jr l9bf2h		; 9bbd - Move on to next step (memory
+				;        capacity)
 
 l9bbfh:
-	cp 064h			;9bbf - Check if 2564
-	jr nz,l9bc7h		;9bc1 - Error if not
+	cp 064h			; 9bbf - Check if 2564
+	jr nz,l9bc7h		; 9bc1 - Error if not
 	
-	ld (hl),007h		;9bc3
+	ld (hl),007h		; 9bc3 - Set model number
 
-	jr l9bf2h		;9bc5
+	jr l9bf2h		; 9bc5 - Move on to next step (memory
+				;        capacity)
+
 
 	;; Handle error in model number specification (possibly should
 	;; never be reached, as model number checked previously).
 	;; *** Looks to be an infinite loop ***
 l9bc7h:
-	scf			;9bc7
-	jr sub_9b9bh		;9bc8 - Revalidate EPROM model
+	scf			; 9bc7
+	jr sub_9b9bh		; 9bc8 - Revalidate EPROM model
 
-l9bcah:
-	cp 027h			;9bca - Check if 27xx
-	jr nz,l9bc7h		;9bcc - Error if not
+	;; At this point, know model number is not 25XX, so check if
+	;; 27XX
+l9bcah:	cp 027h			; 9bca - Check if 27xx
+	jr nz,l9bc7h		; 9bcc - Error if not
 
-	ld a,l			;9bce - retrieve low digits
-	ld hl,EPB_01F45_B	;9bcf
+	ld a,l			; 9bce - Retrieve low digits
+	ld hl,EPB_EPROM_MODEL	; 9bcf - Holds model number
 
-	cp 058h			;9bd2 - Check if 2758
-	jr nz,l9bdah		;9bd4
+	cp 058h			; 9bd2 - Check if 2758
+	jr nz,l9bdah		; 9bd4
 
-	ld (hl),000h		;9bd6
+	ld (hl),000h		; 9bd6 - Set model number
 
-	jr l9bf2h		;9bd8
+	jr l9bf2h		; 9bd8 - Move on to next step (memory
+				;        capacity)
 
-l9bdah:
-	cp 016h			;9bda - Check if 2716
-	jr nz,l9be2h		;9bdc - Jump if not
+l9bdah:	cp 016h			; 9bda - Check if 2716
+	jr nz,l9be2h		; 9bdc - Jump if not
 	
-	ld (hl),002h		;9bde
+	ld (hl),002h		; 9bde - Store model number
 
-	jr l9bf2h		;9be0
+	jr l9bf2h		; 9be0 - Move on to next step (memory
+				;        capacity)
 
-l9be2h:
-	cp 032h			;9be2 - Check if 2732
-	jr nz,l9beah		;9be4 - Jumo if not
+l9be2h:	cp 032h			; 9be2 - Check if 2732
+	jr nz,l9beah		; 9be4 - Jumo if not
 	
-	ld (hl),004h		;9be6
+	ld (hl),004h		; 9be6 - Store model number
 	
-	jr l9bf2h		;9be8
+	jr l9bf2h		; 9be8 - Move on to next step (memory
+				;        capacity)
 	
-l9beah:
-	cp 064h			;9bea - Check if 2764
+l9beah:	cp 064h			;9bea - Check if 2764
 	jr nz,l9bc7h		;9bec - Error if not
 
-	ld (hl),006h		;9bee
+	ld (hl),006h		;9bee - Store model number
 
-	jr l9bf2h		;9bf0
+	jr l9bf2h		;9bf0 - Not needed
 
-l9bf2h:
-	ld a,(hl)		;9bf2 - Retrieve model code from
-				;       EPB_01F45_B
+	;; At this point, model number has been validated and we can
+	;; record information on EPROM's memory capacity
+l9bf2h:	ld a,(hl)		;9bf2 - Retrieve model code from
+				;       EPB_EPROM_MODEL
+
 	ld hl,l9f2dh		;9bf3 - Store for memory information
 
-	;; Zero bit 0 of model code
-	bit 0,a			;9bf6 - Could replace with "AND $FE"?
-	jr z,l9bfch		;9bf8
-	sub 001h		;9bfa
-	
-l9bfch:
+	;; Drop least significant digit of model numbers as models 0 and
+	;; 1 have same memory capacity, 2 and 3 have same memory
+	;; capacity, etc.
+	;;
+	;;  Could replace with `and $FE`?
+	bit 0,a			;9bf6 - Check odd/ even
+	jr z,l9bfch		;9bf8 - Jump forward if even
+	sub 001h		;9bfa - Drop least-significant bit
+
+	;; Work out offset into table of EPROM memory capacities
+l9bfch:		
 	add a,l			;9bfc
 	ld l,a			;9bfd
 
-	;; Copy memory info into EPB_01F46_W
+	;; Copy memory config info into EPB_01F46_W
 	ld de,EPB_01F46_W	;9bfe
 	ld bc,00002h		;9c01
 	ldir			;9c04
@@ -2182,11 +2295,11 @@ l9bfch:
 	call sub_9c19h		;9c12
 	ld (EPB_EPROM_WRITE),hl	;9c15 - Store it
 	
-	ret			;9c18
+	ret			;9c18 - Done
 
 	;; Retrieve address of read routine for specific EPROM model
 sub_9c19h:
-	ld a,(EPB_01F45_B)	;9c19 - Retrive model code
+	ld a,(EPB_EPROM_MODEL)	;9c19 - Retrive model code
 	add a,a			;9c1c - Multply by 2
 	add a,l			;9c1d - Compute offset into buffer
 	ld l,a			;9c1e
@@ -2884,15 +2997,15 @@ l9f67h:	dw $99cf
 	db $00, $00, $00, $3B, $50, $0E, $50, $50
 	db $3B
 
-	;; Branch table for '+'
+	;; Branch table for '+' (based on state)
 l9f72h:	dw $9a23
 	db $00, $00, $00, $10, $29, $00, $29, $29
 	db $16
 
-	;; Branch table for '-'
+	;; Branch table for '-' (based on state)
 l9f7dh:	dw $9a50
 	db $00, $00, $00, $10, $24, $00, $24, $24
-	db $16			;9f87
+	db $16
 
 l09f88h: ; Branch table for 'GO' (based on STATE)
 	dw $9a78
