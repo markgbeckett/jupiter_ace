@@ -1330,6 +1330,7 @@ l97e8h:
 	;;  D800-EFFF - Programmer RAM (MPF-1 version)
 	;;  D800-F7FF - Available RAM (MPF-1P version)
 EPB_273_LATCH:	equ $70		; Latch on 8255
+EPB_8255_PORTA_ALT:	equ $78		; Port A on 8255
 EPB_8255_PORTA:	equ $7C		; Port A on 8255
 EPB_8255_PORTB:	equ $7D		; Port B on 8255
 EPB_8255_PORTC:	equ $7E		; Port C on 8255
@@ -2449,7 +2450,7 @@ sub_9c86h:
 	jp (hl)			; 9c8e
 
 	;; ----------------------------------------------------------------
-	;; Read byte from EPROM (model 4 and 6)
+	;; Read byte from EPROM (model 2732 (type 4) and 2764 (type 6))
 	;; 
 	;; On entry, DE=address to read from
 	;; On exit, A=byte read
@@ -2458,42 +2459,42 @@ sub_9c86h:
 	out (EPB_8255_PORTB),a	;9c90
 	
 	ld a,d			;9c92 - High byte of offset
-	and 017h		;9c93 - Mask to 001XXXXX
-	or 020h			;9c95 
+	and %00011111h		;9c93 - Mask to 001XXXXX ($1F)
+	or %00100000h		;9c95 - ($20)
 	out (EPB_8255_PORTC),a	;9c97
 	
 	bit 3,d			;9c99
 	jr z,l9ca2h		;9c9b
 
-	ld a,008h		;9c9d
+	ld a,%00001000		;9c9d ($08)
 	jr l9ca4h		;9c9f
 
 	db $3e
 
-l9ca2h:	ld a, $28
+l9ca2h:	ld a,%00101000		; ($28)
 
 l9ca4h:	out (EPB_273_LATCH),a	;9ca5
-	nop			;9ca6
+	nop			;9ca6 - Wait?
 
-	in a,(EPB_8255_PORTA)	;9ca7
+	in a,(EPB_8255_PORTA)	;9ca7 - Read byte
 
 	push af			;9ca9
 
 	xor a			;9caa
 	out (EPB_273_LATCH),a	;9cab
 	
-	ld a,008h		;9cad
+	ld a,%00001000		;9cad ($8)
 	out (EPB_8255_PORTC),a	;9caf
 
 	pop af			;9cb1
-
 	pop hl			;9cb2
 
 	ret			;9cb3
 
 	
 	;; ----------------------------------------------------------------
-	;; Read byte from EPROM (model 0,1,2,3,5)
+	;; Read byte from EPROM (model 2758, 2508, 2716, 2516, 2532
+	;; (types 0,1,2,3,5)).
 	;; 
 	;; On entry, DE=address to read from
 	;; On exit, A=byte read
@@ -2502,12 +2503,12 @@ l9ca4h:	out (EPB_273_LATCH),a	;9ca5
 	out (EPB_8255_PORTB),a	; 9cb5
 	
 	ld a,d			; 9cb7 - High byte of offset
-	and 00fh		; 9cb8 - Isolate 0000XXXX
+	and %00001111		; 9cb8 - Isolate 0000XXXX ($0F)
 	out (EPB_8255_PORTC),a	; 9cba
 	
-	ld a,008h		; 9cbc
+	ld a,%00001000		; 9cbc ($08)
 	out (EPB_273_LATCH),a	; 9cbe
-	nop			; 9cc0
+	nop			; 9cc0 - Pause
 
 	in a,(EPB_8255_PORTA)	; 9cc1
 
@@ -2522,37 +2523,53 @@ l9ca4h:	out (EPB_273_LATCH),a	;9ca5
 	ret			; 9cc9
 
 	
+	;; ----------------------------------------------------------------
 	;; Read byte from EPROM (model 7)
 	;; Om entry, DE=address to read from
 	;; On exit, A=byte read
-	ld a,e			;9cca
-	out (EPB_8255_PORTB),a		;9ccb
-	ld a,d			;9ccd
-	and 00fh		;9cce
-	or 030h			;9cd0
-	out (EPB_8255_PORTC),a		;9cd2
-	bit 4,d			;9cd4
+	;; ----------------------------------------------------------------
+	ld a,e			; 9cca - Low byte of offset
+	out (EPB_8255_PORTB),a	; 9ccb
+
+	ld a,d			;9ccd - High byte of offset
+
+	;;  Mask off 0011XXXX
+	and %00001111		;9cce ($0f)
+	or %00110000		;9cd0 ($30)
+	out (EPB_8255_PORTC),a	;9cd2
+	
+	bit 4,d			;9cd4 - Offset if top 4K of EPROM?
+
 	jr z,l9cdch		;9cd6
-	ld a,008h		;9cd8
+	ld a,%00001000		;9cd8 ($08) (PIN 22 set, 0V)
 	jr l9cdeh		;9cda
+
 l9cdch:
-	ld a,028h		;9cdc
-l9cdeh:
-	out (EPB_273_LATCH),a		;9cde
+	ld a,%00101000		;9cdc ($28) (PIN 22 and PIN 23 set, 0V)
+
+l9cdeh:	out (EPB_273_LATCH),a		;9cde
+
 	ld a,d			;9ce0
-	and 00fh		;9ce1
-	out (EPB_8255_PORTC),a		;9ce3
+	and %00001111		;9ce1 ($0F)
+	out (EPB_8255_PORTC),a	;9ce3
 	nop			;9ce5
-	in a,(EPB_8255_PORTA)		;9ce6
+
+	in a,(EPB_8255_PORTA)	;9ce6
+
 	push af			;9ce8
+
 	xor a			;9ce9
-	out (078h),a		;9cea
+	out (EPB_8255_PORTA_ALT),a	;9cea
+
 	pop af			;9cec
 	pop hl			;9ced
+	
 	ret			;9cee
 
 
+	;; ----------------------------------------------------------------
 	;; Write byte to EPROM (A=byte; DE=EPROM address)
+	;; ----------------------------------------------------------------
 sub_9cefh:
 	push af			;9cef
 	push hl			;9cf0
@@ -2566,59 +2583,83 @@ sub_9cefh:
 
 	db $3E			; Not used
 
-	;; Write byte to EPROM types 0, 1, 2, and 3
+	;; ----------------------------------------------------------------
+	;; Write byte to EPROM model 2758, 2508, 2716, 2516 (that is,
+	;; type 0, 1, 2, and 3)
+	;; 
 	;; On entry:
 	;;   DE = EPROM address
 	;;   TOS = AF (byte) ; 2OS = HL (source addr); 3OS=AF
+	;; ----------------------------------------------------------------
 	pop af			;9cfb
 	pop hl			;9cfc
-	
-	out (EPB_8255_PORTA),a		;9cfd
-	xor a			;9cff
-	out (EPB_8255_PORTC),a		;9d00
-	ld a,010h		;9d02
-	out (EPB_273_LATCH),a		;9d04
 
+	;; Transmit data
+	out (EPB_8255_PORTA),a	;9cfd
+	
+	xor a			;9cff
+	out (EPB_8255_PORTC),a	;9d00
+
+	ld a,%00010000		;9d02 ($10)
+	out (EPB_273_LATCH),a	;9d04
+
+	;; Retrieve low byte of EPROM address
 	ld a,e			;9d06
-	out (EPB_8255_PORTB),a		;9d07
+	out (EPB_8255_PORTB),a	;9d07
+
+	;; Retrieve high byte of EPROM address
 	ld a,d			;9d09
-	and 007h		;9d0a
-	or 008h			;9d0c
-	out (EPB_8255_PORTC),a		;9d0e
+	and %00000111		;9d0a ($07)
+	or %00001000		;9d0c ($08)
+	out (EPB_8255_PORTC),a	;9d0e
 
 	pop af			;9d10
+	
 	call sub_9dd2h		;9d11 - Update display
 	
 	xor a			;9d14
-	out (EPB_273_LATCH),a		;9d15
+	out (EPB_273_LATCH),a	;9d15
 
+	;; May need to adjust timing, given clock speed is higher
 	ld b,028h		;9d17
 l9d19h:
 	djnz l9d19h		;9d19
 
 	ret			;9d1b
 
-	;; Write byte to EPROM types 5
+	;; ----------------------------------------------------------------
+	;; Write byte to EPROM nodel 2532 (type 5)
+	;; 
 	;; On entry:
 	;;   DE = EPROM address
 	;;   TOS = AF (byte) ; 2OS = HL (source addr); 3OS=AF
+	;; ----------------------------------------------------------------
 	pop af			;9d1c
 	pop hl			;9d1d
-	out (EPB_8255_PORTA),a		;9d1e
-	ld a,010h		;9d20
-	out (EPB_273_LATCH),a		;9d22
+
+	out (EPB_8255_PORTA),a	;9d1e
+
+	ld a,%00010000		;9d20 ($10)
+	out (EPB_273_LATCH),a	;9d22
+
 	ld a,e			;9d24
 	out (EPB_8255_PORTB),a		;9d25
+
 	ld a,d			;9d27
-	and 00fh		;9d28
-	out (EPB_8255_PORTC),a		;9d2a
+	and %00001111		;9d28 ($0F)
+	out (EPB_8255_PORTC),a	;9d2a
 	nop			;9d2c
-	ld a,018h		;9d2d
-	out (EPB_273_LATCH),a		;9d2f
+
+	ld a,%00011000		;9d2d ($18)
+	out (EPB_273_LATCH),a	;9d2f
+
 	pop af			;9d31
+
 	call sub_9dd2h		;9d32 - Update display
+
 	xor a			;9d35
 	out (EPB_273_LATCH),a		;9d36
+
 	ld b,028h		;9d38
 l9d3ah:
 	djnz l9d3ah		;9d3a
@@ -2626,94 +2667,128 @@ l9d3ah:
 	ret			;9d3c
 
 	
-	;; Write byte to EPROM types 4
+	;; ----------------------------------------------------------------
+	;; Write byte to EPROM model 2732 (type 4)
 	;; 
 	;; On entry:
 	;;   DE = EPROM address
 	;;   TOS = AF (byte) ; 2OS = HL (source addr); 3OS=AF
+	;; ----------------------------------------------------------------
 	pop af			;9d3d
 	pop hl			;9d3e
-	out (EPB_8255_PORTA),a		;9d3f
+
+	out (EPB_8255_PORTA),a	;9d3f
+
 	ld a,008h		;9d41
-	out (EPB_8255_PORTC),a		;9d43
+	out (EPB_8255_PORTC),a	;9d43
+
 	ld a,e			;9d45
 	out (EPB_8255_PORTB),a		;9d46
+
 	bit 3,d			;9d48
 	ld a,024h		;9d4a
 	jr z,l9d50h		;9d4c
 	ld a,004h		;9d4e
 l9d50h:
 	out (EPB_273_LATCH),a		;9d50
+
 	ld a,d			;9d52
 	and 007h		;9d53
 	or 008h			;9d55
 	out (EPB_8255_PORTC),a		;9d57
 	nop			;9d59
+
 	and 007h		;9d5a
 	out (EPB_8255_PORTC),a		;9d5c
+
 	pop af			;9d5e
+
 	call sub_9dd2h		;9d5f - Update display
+
 	ld a,0ffh		;9d62
 	out (EPB_8255_PORTC),a		;9d64
+
 	xor a			;9d66
 	out (EPB_273_LATCH),a		;9d67
+
 	ld b,028h		;9d69
 l9d6bh:
 	djnz l9d6bh		;9d6b
 	ret			;9d6d
 
 
-	;; Write byte to EPROM types 7
+	;; ----------------------------------------------------------------
+	;; Write byte to EPROM model 2564 (types 7)
+	;; 
 	;; On entry:
 	;;   DE = EPROM address
 	;;   TOS = AF (byte) ; 2OS = HL (source addr); 3OS=AF
+	;; ----------------------------------------------------------------
 	pop af			;9d6e
 	pop hl			;9d6f
-	out (EPB_8255_PORTA),a		;9d70
+	
+	out (EPB_8255_PORTA),a	;9d70
+
 	ld a,e			;9d72
-	out (EPB_8255_PORTB),a		;9d73
+	out (EPB_8255_PORTB),a	;9d73
+
 	ld a,d			;9d75
 	and 00fh		;9d76
-	out (EPB_8255_PORTC),a		;9d78
+	out (EPB_8255_PORTC),a	;9d78
+
 	ld a,020h		;9d7a
 	bit 4,d			;9d7c
 	jr z,l9d82h		;9d7e
 	ld a,000h		;9d80
 l9d82h:
-	out (EPB_273_LATCH),a		;9d82
+	out (EPB_273_LATCH),a	;9d82
+
 	or 009h			;9d84
 	nop			;9d86
-	out (EPB_273_LATCH),a		;9d87
+	out (EPB_273_LATCH),a	;9d87
+
 	pop af			;9d89
+
 	call sub_9dd2h		;9d8a - Update display
+
 	ld a,020h		;9d8d
 	bit 4,d			;9d8f
 	jr z,l9d94h		;9d91
 	xor a			;9d93
 l9d94h:
-	out (EPB_273_LATCH),a		;9d94
+	out (EPB_273_LATCH),a	;9d94
+
 	ld b,028h		;9d96
 l9d98h:
 	djnz l9d98h		;9d98
+
 	ret			;9d9a
 
+	;; ----------------------------------------------------------------
 	;; Write byte to EPROM types 6
 	;; On entry:
+	;; 
 	;;   DE = EPROM address
 	;;   TOS = AF (byte) ; 2OS = HL (source addr); 3OS=AF
+	;; ----------------------------------------------------------------
 	pop af			;9d9b
 	pop hl			;9d9c
+
 	out (EPB_8255_PORTA),a		;9d9d
+
 	ld a,020h		;9d9f
 	out (EPB_8255_PORTC),a		;9da1
+
 	ld a,e			;9da3
 	out (EPB_8255_PORTB),a		;9da4
+
 	ld a,001h		;9da6
 	bit 3,d			;9da8
 	jr nz,l9daeh		;9daa
 	set 5,a			;9dac
 l9daeh:
 	out (EPB_273_LATCH),a		;9dae
+
 	ld a,d			;9db0
 	and 007h		;9db1
 	or 020h		;9db3
@@ -2722,20 +2797,30 @@ l9daeh:
 	set 4,a		;9db9
 l9dbbh:
 	out (EPB_8255_PORTC),a		;9dbb
+
 	and 0dfh		;9dbd
 	nop			;9dbf
 	out (EPB_8255_PORTC),a		;9dc0
+
 	pop af			;9dc2
+
 	call sub_9dd2h		;9dc3 - Update display
+
 	ld a,028h		;9dc6
 	out (EPB_8255_PORTC),a		;9dc8
+
 	xor a			;9dca
 	out (EPB_273_LATCH),a		;9dcb
+
 	ld b,028h		;9dcd
 l9dcfh:
 	djnz l9dcfh		;9dcf
+
 	ret			;9dd1
 
+	;; ----------------------------------------------------------------
+	;; Update the display
+	;; ----------------------------------------------------------------
 sub_9dd2h:
 	push bc			;9dd2
 	push de			;9dd3
@@ -2758,12 +2843,14 @@ l9ddfh:
 
 	ret			;9deb
 
+	;; ----------------------------------------------------------------
 	;; Retrieve start and end address (and offset) for PROGRAM
 	;;
 	;; On exit:
 	;;   BC - Start of RAM to be written
 	;;   DE - Edn of RAM to be written
 	;;   HL - Offset on EPROM
+	;; ----------------------------------------------------------------
 sub_9dech:
 	ld hl,(STEPBF)		;9dec - Parameter 'S'
 	ld de,0d800h		;9def - Start of RAM used for EPROM data
