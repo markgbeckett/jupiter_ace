@@ -1,33 +1,18 @@
 ; z80dasm 1.1.6
 ; command line: z80dasm -a -l -g 36864 -o mpf1_1pb_rom.asm EPB-MPF-1BP.bin
 
-	;; Entry point for MPF1 (as opposed to MPF1P) is $9800 (labelled
-	;; MPF1_START)
-
-	;; MPF1 to EPB Key mapping
-	;; +		= +		= $10
-	;; -		= -		= $11
-	;; GO   	= GO   		= $12
-	;; STEP		= undefined	= $13
-	;; DATA		= DATA		= $14
-	;; SBR  	= PROGRAM 	= $15
-	;; INS          = INS		= $16
-	;; DEL		= DEL		= $17
-	;; PC		= VERIFY	= $18
-	;; ADDR		= ADDR		= $19
-	;; CBR		= LIST 		= $1A
-	;; REG  	= READ 		= $1B
-	;; MOVE		= undefined	= $1C
-	;; RELA		= undefined	= $1D
-	;; TAPE_WRITE	= TAPE_WRITE	= $1E
-	;; TAPE_READ	= TAPE_READ	= $1F
-	
 	include "mpf1_monitor.sym"
 
 EPB_VAR: equ SYSVARS-$0100 ; Location of system variables
 	
 	org	09000h
 
+	;;
+	;; Entry point for MPF-1 version of monitor
+	;; 
+	;; This version of the software has not been studied -- there ae
+	;; no comments. The version that has been studied is the MPF-1
+	;; version that begins at $9800.
 	call 009b9h		;9000
 	ld hl,0d800h		;9003
 	ld bc,00800h		;9006
@@ -1320,48 +1305,92 @@ l97e8h:
 	rst 38h			;97fe
 	rst 38h			;97ff
 
-	;;
+	;; ================================================================
 	;; Entry point for MPF-1 version of monitor
+	;; ================================================================
+	;; Disassembly based on reading ROM from a physical EPB-MPF-1BP
+	;; card. Small number of potential bugs or inefficiencies,
+	;; identified with *** or ???.
 	;; 
-
-	;; Memory map
+	;; Memory map (MPF-1):
+	;;  0000-07FF - Monitor ROM
+	;;  1800-1FFF - Available RAM 
+	;;  2000-2FFF - Expansion RAM/ installed EPROM
 	;;  9000-97FF - Programmer ROM (MPF-1P version)
 	;;  9800-9FFF - Programmer ROM (MPF-1 version)
 	;;  D800-EFFF - Programmer RAM (MPF-1 version)
-	;;  D800-F7FF - Available RAM (MPF-1P version)
+	;;
+	;; Memory map (MPF-1 on Minstrel 4th, ROM version)
+	;;  0000-07FF - Monitor ROM
+	;;  1000-1FFF - PRT-MPF (Printer and disassembler) ROM
+	;;  2000-2FFF - Display memory, pad, and character-set RAM
+	;;  3000-3FFF - System variables, machine stackes, etc. RAM
+	;;  4000-FFFF - Available RAM
+	;;
+	;; EPROM Programmer includes customer keypad overlay, which
+	;; attributes different functions to keys, as follows:
+	;;
+	;; MPF-1 Monitor	EPROM Programmer	Key code
+	;; ----------------------------------------------------------------
+	;; +			+			$10
+	;; -			-			$11
+	;; GO   		GO   			$12
+	;; STEP			undefined		$13
+	;; DATA			DATA			$14
+	;; SBR  		PROGRAM 		$15
+	;; INS          	INS			$16
+	;; DEL			DEL			$17
+	;; PC			VERIFY			$18
+	;; ADDR			ADDR			$19
+	;; CBR			LIST 			$1A
+	;; REG  		READ 			$1B
+	;; MOVE			undefined		$1C
+	;; RELA			undefined		$1D
+	;; TAPE_WRITE		TAPE_WRITE		$1E
+	;; TAPE_READ		TAPE_READ		$1F
+	;; ----------------------------------------------------------------
+
+	;; Useful defines
 EPB_273_LATCH:	equ $70		; Latch on 8255
-EPB_8255_PORTA_ALT:	equ $78		; Port A on 8255
+EPB_8255_PORTA_ALT: equ $78	; Port A on 8255 (potentially abug)
 EPB_8255_PORTA:	equ $7C		; Port A on 8255
 EPB_8255_PORTB:	equ $7D		; Port B on 8255
 EPB_8255_PORTC:	equ $7E		; Port C on 8255
 EPB_8255_CONTROL: equ $7F	; Control register on 8255
 
-EPB_EPROM_MODEL: equ EPB_VAR 	; 01f20h - EPROM model number
-EBP_KEY_SAVE: equ EPB_VAR+$01	; 01f21h - Temporary store for key press
-EPB_01F22_W: equ EPB_VAR+$02	; 01f22h - Not used?
-EPB_MODEL_STR: equ EPB_VAR+$04 	; 01f24h - Store for EPROM model string
-EPB_DISP_MODE: equ EPB_VAR+$0A	; 01f2ah - ADDR/ DATA mode
-EPB_EPROM_CAPACITY: equ EPB_VAR+$0B	; 01f2bh
-EPB_BUFFER_ADDR: equ EPB_VAR+$0D	; 01f2dh
-EPB_01F2E_B: equ EPB_VAR+$0F 	; 01f2fh
-EPB_ADSAVE_1: equ EPB_VAR+$10	; 01f30h
-EPB_ADSAVE_2: equ EPB_VAR+$12	; 01f32h
-EPB_ADSAVE_3: equ EPB_VAR+$14	; 01f34h
-EPB_01F36_B: equ EPB_VAR+$17	; 01f37h
-EPB_WRITE_STATUS: equ EPB_VAR+$1B	; 01f3b - Write status (2 -
-					; good; 0 - err)
-EPB_01F3B_B: equ EPB_VAR+$1C	; 01f3ch
-EPB_01F3C_B: equ EPB_VAR+$1D	; 01f3dh	
-EPB_01F3D_B: equ EPB_VAR+$1E	; 01f3eh	
-EPB_01F3E_B: equ EPB_VAR+$1F	; 01f3fh	
-EPB_EPROM_MODEL: equ EPB_VAR+$26 	; 01f46h - EPROM model (2758=0; 2508=1;
-				;          2716=2; 2516=3; 2732=4; 2532=5;
-				;          2764=6; 2564=7)
-EPB_01F46_W: equ EPB_VAR+$27	; 01f47h - EPROM memory (no 2K blocks) -
-				;          little endian
-EPB_EPROM_READ: equ EPB_VAR+$2A	; 01f4ah - Address of EPROM read routine?
-EPB_EPROM_WRITE: equ EPB_VAR+$2C	; 01f4ch - Address of EPROM
-					; write routine?
+	;; EPROM Programmer system variables, commented where function
+	;; is understood. Note: some variables appear not to be used.
+EPB_EPROM_MODEL: equ EPB_VAR 	; EPROM model number - 2758=0; 2508=1;
+				; 2716=2; 2516=3; 2732=4; 2532=5;
+				; 2764=6; 2564=7 (1 byte, was 01f20h)
+EPB_KEY_SAVE: equ EPB_VAR+$01	; Temporary store for key press (1 byte,
+				; was 01f21h)
+EPB_01F22_W: equ EPB_VAR+$02	; Not used? (1 byte?, was 01f22h)
+EPB_MODEL_STR: equ EPB_VAR+$03 	; Store for EPROM model string (6 bytes,
+				; was 01f23h)
+EPB_DISP_MODE: equ EPB_VAR+$09	; ADDR/ DATA mode (1 byte, was 01f29h)
+EPB_EPROM_CAPACITY: equ EPB_VAR+$0A	; 10000h - EPROM capacity (2
+					; bytes, was 01f2ah)
+EPB_BUFFER_ADDR: equ EPB_VAR+$0C	; Temp store for start of buffer
+					; (2 bytes, was 01f2ch)
+EPB_01F2E_B: equ EPB_VAR+$0E 	; Not used? (1 byte, was 01f2eh)
+EPB_ADSAVE_1: equ EPB_VAR+$0F	; Temp store for INS (2 bytes, was 01f2fh)
+EPB_ADSAVE_2: equ EPB_VAR+$11	; Temp store for INS (2 bytes, was 01f31h)
+EPB_ADSAVE_3: equ EPB_VAR+$13	; Temp store for INS (2 bytes, was 01f33h)
+EPB_BYTESAVE: equ EPB_VAR+$16	; Temp store for byte during VERIFY (1
+				; byte, was 01f36h)
+EPB_WRITE_STATUS: equ EPB_VAR+$1A	;  Write status (2-good; 0-err)
+					;  (1 byte, was 01f3ah)
+EPB_01F3B_B: equ EPB_VAR+$1B	; Status flag for PROGRAM (1 byte, was 01f3bh)
+EPB_01F3C_B: equ EPB_VAR+$1C	; (1 byte, was 01f3ch)
+EPB_01F3D_B: equ EPB_VAR+$1D	; (1 byte, was 01f3dh)
+EPB_01F3E_B: equ EPB_VAR+$1E	; (1 byte, was 01f3eh)
+EPB_PAGE_COUNT: equ EPB_VAR+$26	; EPROM memory (number of 256-byte pages) -
+				; little endian (2 bytes, was 01f46h)
+EPB_EPROM_READ: equ EPB_VAR+$29	; Address of EPROM read routine (2
+				; bytes, was 01f49h)
+EPB_EPROM_WRITE: equ EPB_VAR+$2B	; Address of EPROM write routine
+					; (2 bytes, was 01f4bh)
 
 MPF1_START:
 	;;  Relocate stack away from user memory ($4000--), system
@@ -1496,7 +1525,7 @@ EPB_PROCESS_KEY:
 	set 0,(hl)		;98a6 - Ensures next numeric entry will
 				;       reset number display
 	
-	ld (EBP_KEY_SAVE),a	;98a8 - Save keypress
+	ld (EPB_KEY_SAVE),a	;98a8 - Save keypress
 
 	cp 015h			;98ab - Check for 'PROGRAM'
 	jr z,l98bbh		;98ad
@@ -1535,7 +1564,7 @@ l98bbh: sub 014h		;98bb
 	ld (STMINOR),a		;98c7
 
 l98cah:
-	ld a,(EBP_KEY_SAVE)	;98ca - Retrieve keypress
+	ld a,(EPB_KEY_SAVE)	;98ca - Retrieve keypress
 	cp 012h			;98cd - Check if 'GO'
 	jr z,l98dah		;98cf - Skip forward, if so
 
@@ -1556,7 +1585,12 @@ l98dah:	sub 010h		;98da
 l98e2h:	ld c,a			;98e2 - Save keypress
 	ld hl,l9f67h		;98e3
 
+	;; ----------------------------------------------------------------
 	;; Branch based on STATE
+	;;
+	;; Branch to routine based on state, looking up address of
+	;; routine based on address table pointed to by HL.
+	;; ----------------------------------------------------------------
 l98e6h:	ld a,(STATE)		;98e6
 
 	jp BRANCH		;98e9
@@ -1564,21 +1598,21 @@ l98e6h:	ld a,(STATE)		;98e6
 	;; ----------------------------------------------------------------
 	;; Process '+'
 	;; ----------------------------------------------------------------
-	ld hl,l9f72h		;98ec
+	ld hl,EPB_PLUS_TAB	;98ec
 
 	jr l98e6h		;98ef
 
 	;; ----------------------------------------------------------------
 	;; Process '-'
 	;; ----------------------------------------------------------------
-	ld hl,09f7dh		;98f1
+	ld hl,EPB_MINUS_TAB	;98f1
 
 	jr l98e6h		;98f4
 
 	;; ----------------------------------------------------------------
 	;; Process 'GO'
 	;; ----------------------------------------------------------------
-	ld hl,09f88h		;98f6
+	ld hl,EPB_GO_TAB	;98f6
 
 	jr l98e6h		;98f9
 
@@ -1593,24 +1627,23 @@ l98e6h:	ld a,(STATE)		;98e6
 	;; ----------------------------------------------------------------
 	;; Process 'DATA'
 	;; ----------------------------------------------------------------
-l9901h:
-	ld a,(STATE)		;9901
+l9901h:	ld a,(STATE)		;9901 - Only valid if STATE=5
 	cp 005h			;9904
 	jr z,l990ch		;9906
 
 	call IGNORE		;9908
 	ret			;990b
 
-	;; Processing LIST
-l990ch:
-	ld a,002h		;990c - Switch display to Data mode
+l990ch:	ld a,002h		;990c - Switch display to Data mode
 	ld (EPB_DISP_MODE),a	;990e
 
 	call sub_9e27h		;9911
 
 	ret			;9914
 
+	;; ----------------------------------------------------------------
 	;; Handle 'ADDR'
+	;; ----------------------------------------------------------------
 	ld a,(STATE)		;9915
 	
 	cp 005h			;9918 - Check if LIST mde
@@ -1620,15 +1653,17 @@ l990ch:
 
 	ret			;991f
 	
-l9920h:
-	xor a			;9920 - Switch display to Addr mode
+l9920h:	xor a			;9920 - Switch display to Addr mode
 	ld (EPB_DISP_MODE),a	;9921
 
-	call sub_9e20h		;9924
+	call sub_9e20h		;9924 - Update display and highlight
+				;       address
 
 	ret			;9927
 	
+	;; ----------------------------------------------------------------
 	;; Process 'INS'
+	;; ----------------------------------------------------------------
 	ld a,(STATE)		;9928 - only valid in STATE=5
 	cp 005h			;992b
 	jr z,l9933h		;992d
@@ -1637,18 +1672,22 @@ l9920h:
 
 	ret			;9932
 
+	;; ----------------------------------------------------------------
 	;; Process 'INS' with STATE=5
-l9933h:
+	;; ----------------------------------------------------------------
+l9933h:	; Work out absolute address of current buffer location
 	ld de,0d800h		;9933 - Start of memory buffer
 	ld hl,(ADSAVE)		;9936 - Current address (relative)
 	add hl,de		;9939 - Work out actual RAM address
 
 	ld (EPB_ADSAVE_1),hl	;993a - Store it
-	inc hl			;993d - Next address
+	inc hl			;993d - Work out current buffer location
+				;       after insertion
 	ld (EPB_ADSAVE_3),hl	;993e - Store it
 l9941h:
-	call RAMCHK		;9941 - Check next address is vald RAM
-	jp nz,IGNORE		;9944
+	call RAMCHK		;9941 - Check new location is valid RAM
+	jp nz,IGNORE		;9944 - Exit, if not
+	
 	ld de,0efffh		;9947 - End of memory buffer
 	ld (EPB_ADSAVE_2),de	;994a - Store it
 
@@ -1656,29 +1695,37 @@ l9941h:
 
 	ret			;9951
 
+	;; ----------------------------------------------------------------
 	;; Process 'DEL'
+	;; ----------------------------------------------------------------
 	ld a,(STATE)		;9952
 
 	cp 005h			;9955 - Only valid if STATE=5
 	jr z,l995dh		;9957
 
-	call IGNORE		;9959
+	call IGNORE		;9959 - ??? Could probable replace these
+				;three commands with JP NZ
 
 	ret			;995c
 
-	;; Process 'DEL' with STATE=5
-l995dh:
-	ld hl,(ADSAVE)		;995d
-	ld de,0d800h		;9960
+	;; Work out absolute address of current buffer location
+l995dh: ld hl,(ADSAVE)		;995d - Convert current buffer location
+	ld de,0d800h		;9960   absolute address
 	add hl,de		;9963
-	ld (EPB_ADSAVE_3),hl	;9964
-	inc hl			;9967
-	ld (EPB_ADSAVE_1),hl	;9968
+	
+	ld (EPB_ADSAVE_3),hl	;9964 - Store as destionation for
+				;       transfer
+	inc hl			;9967 - work out source (one more to
+				;       implement DEL)
+	ld (EPB_ADSAVE_1),hl	;9968 - Store it
+	
 	jr l9941h		;996b - Continue as for 'INS'
 
+	;; ----------------------------------------------------------------
 	;; Process READ
+	;; ----------------------------------------------------------------
 	call sub_9976h		;996d - Use VERIFY routine to set up
-				;step buffer
+				;       step buffer
 l9970h:
 	ld a,003h		;9970 - Restore state=3
 	ld (STATE),a		;9972
@@ -1760,8 +1807,9 @@ l99a9h:
 	ld (EPB_01F3B_B),a	;99c8
 
 	;; ----------------------------------------------------------------
-	;; Handle 'TP_RD' and 'TP_WR'. State is suitable for STEPDP
-	;; (parameters are F or F, S, and E, respectively).
+	;; Handle 'TP_RD' and 'TP_WR'. EPB states coincide with Monitor
+	;; states, so is suitable for STEPDP (parameters are F or F, S,
+	;; and E, respectively).
 	;; ----------------------------------------------------------------
 	call STEPDP		;99cb
 
@@ -1778,36 +1826,49 @@ l99a9h:
 	ld a,002h		;99d7 '-'
 	ld (DISPBF+1),a		;99d9
 
-	;; Done
-	ret			;99dc
+	ret			;99dc - Done
 	
 	;; ----------------------------------------------------------------
 	;; Handle alphanumeric entry (STATE=5 (LIST))
+	;;
+	;; On entry:
+	;;   C - Key press (which is hex digit)
 	;; ----------------------------------------------------------------
 	ld a,(EPB_DISP_MODE)	;99dd - Check if address/ data mode?
 	and a			;99e0
-	jr z,l99fah		;99e1 - Jump if address mode
-	
-	ld hl,(ADSAVE)		;99e3
-	ld de,0d800h		;99e6
-	add hl,de			;99e9
-	call RAMCHK		;99ea
+	jr z,l99fah		;99e1 - Jump ahead, if address mode
+
+	;; Update data field
+	ld hl,(ADSAVE)		;99e3 - Retrieve address (relative) and
+	ld de,0d800h		;99e6   convert to absolute address
+	add hl,de		;99e9
+
+	call RAMCHK		;99ea - Check is RAM
+
 	jp nz,IGNORE		;99ed
-	call PRECL1		;99f0
-	ld a,c			;99f3
-	rld		;99f4
-	call sub_9e27h		;99f6
+	
+	call PRECL1		;99f0 - Clear data, if new entry
+
+	ld a,c			;99f3 - Rotate in new digit
+	rld			;99f4 
+
+	call sub_9e27h		;99f6 - Update display and highlight
+				;       data
 
 	ret			;99f9
 
-l99fah:
-	ld hl,ADSAVE		;99fa
-	call PRECL2		;99fd
-	ld a,c			;9a00
-	rld		;9a01
+	;; Update address field
+l99fah:	ld hl,ADSAVE		;99fa - Retrieve address (relative)
+	
+	call PRECL2		;99fd - Clear address, is new entry
+
+	ld a,c			;9a00 - Rotate in new digit
+	rld			;9a01
 	inc hl			;9a03
-	rld		;9a04
-	call sub_9e20h		;9a06
+	rld			;9a04
+	
+	call sub_9e20h		;9a06 - Update display and highlight
+				;       address
 
 	ret			;9a09
 
@@ -1855,7 +1916,9 @@ l9a19h:
 	ld (ADSAVE),hl		;9a27
 	ld a,002h		;9a2a - Switch display to Data mode
 	ld (EPB_DISP_MODE),a	;9a2c
-	call sub_9e27h		;9a2f
+	
+	call sub_9e27h		;9a2f - Update display and highlight
+				;       data
 
 	ret			;9a32
 
@@ -1903,7 +1966,9 @@ sub_9a39h:
 
 	ld a,002h		;9a57 - Switch display to Data mode
 	ld (EPB_DISP_MODE),a	;9a59
-	call sub_9e27h		;9a5c
+
+	call sub_9e27h		;9a5c - Update display and highlight
+				;       data
 
 	ret			;9a5f
 
@@ -1943,7 +2008,7 @@ sub_9a66h:
 	;; Handle 'GO' for STATE=0, 1 (ENTER_EPROM), 2
 	;; ----------------------------------------------------------------
 	call sub_9e03h		;9a78 - De-highlight text on display
-	call sub_9efeh		;9a7b - Check if valid EPROM model
+	call sub_9efeh		;9a7b - Check if valid EPROM model specified
 	call sub_9b9bh		;9a7e - Populate system variables based
 				;       on model information
 	
@@ -1971,8 +2036,7 @@ sub_9a66h:
 
 	call GWT		;9a9d - Write tape
 
-	;;  Set STATE to 6 (TPWR)
-	ld a,006h		;9aa0
+	ld a,006h		;9aa0 - Set STATE to 6 (TPWR)
 	ld (STATE),a		;9aa2
 	
 	ld a,0bdh		;9aa5 - Character '0'
@@ -1985,8 +2049,7 @@ sub_9a66h:
 	;; ----------------------------------------------------------------
 	call GRT		;9aab - Read tape
 
-	;; Set STATE to 7 (TPRD)
-	ld a,007h		;9aae
+	ld a,007h		;9aae - Set STATE to 7 (TPRD)
 	ld (STATE),a		;9ab0
 	
 	ld a,0bdh		;9ab3 - Character '0'
@@ -2056,8 +2119,7 @@ l9adah:	call sub_9c86h		;9ada - Read byte
 
 	;; At this point, DE is 'S', HL points to start of destination
 	;; buffer in memory and BC = length+1 of read
-l9b14h:
-	call sub_9c86h		;9b14
+l9b14h:	call sub_9c86h		;9b14
 
 	;; Store byte read
 	ld (hl),a		;9b17
@@ -2092,7 +2154,7 @@ l9b14h:
 l9b3ch:	ld a,002h		;9b3c
 	ld (EPB_WRITE_STATUS),a	;9b3e
 	ld a,(EPB_EPROM_MODEL)	;9b41
-	ld ix,EPB_01F2E_B	;9b44 ???
+	ld ix,EPB_01F2E_B	;9b44 Not used ???
 
 	;; Branch based on model (in A)
 	cp 002h			;9b48
@@ -2136,8 +2198,7 @@ l9b68h:
 	jp z,l9e4eh		;9b7f - Error
 
 	;; Program EPROM (HL = start; DE = destination; BC=length)
-l9b82h:
-	ld a,(hl)		;9b82 - Byte to write
+l9b82h:	ld a,(hl)		;9b82 - Byte to write
 	
 	push hl			;9b83
 	push bc			;9b84
@@ -2265,52 +2326,62 @@ l9beah:	cp 064h			;9bea - Check if 2764
 l9bf2h:	ld a,(hl)		;9bf2 - Retrieve model code from
 				;       EPB_EPROM_MODEL
 
-	ld hl,l9f2dh		;9bf3 - Store for memory information
+	ld hl,EPROM_PAGES_TAB	;9bf3 - Store for memory information
 
 	;; Drop least significant digit of model numbers as models 0 and
 	;; 1 have same memory capacity, 2 and 3 have same memory
 	;; capacity, etc.
 	;;
-	;;  Could replace with `and $FE`?
+	;;  Could replace with `and $FE` ???
 	bit 0,a			;9bf6 - Check odd/ even
 	jr z,l9bfch		;9bf8 - Jump forward if even
 	sub 001h		;9bfa - Drop least-significant bit
 
-	;; Work out offset into table of EPROM memory capacities
-l9bfch:		
-	add a,l			;9bfc
+	;; Work out offset into table of EPROM page count
+l9bfch:	add a,l			;9bfc
 	ld l,a			;9bfd
 
-	;; Copy memory config info into EPB_01F46_W
-	ld de,EPB_01F46_W	;9bfe
+	;; Copy memory config info into EPB_PAGE_COUNT
+	ld de,EPB_PAGE_COUNT	;9bfe
 	ld bc,00002h		;9c01
 	ldir			;9c04
 
 	;; Work out address of read routine
-	ld hl,l9f35h		;9c06
+	ld hl,EPB_BYTE_RD_TAB	;9c06
 	call sub_9c19h		;9c09
 	ld (EPB_EPROM_READ),hl	;9c0c - Store it
 
 	;; Work out address of write route 
-	ld hl,09f45h		;9c0f
+	ld hl,EPB_BYTE_WR_TAB	;9c0f
 	call sub_9c19h		;9c12
 	ld (EPB_EPROM_WRITE),hl	;9c15 - Store it
 	
 	ret			;9c18 - Done
 
+	;; ----------------------------------------------------------------
 	;; Retrieve address of read/ write routine for specific EPROM model
+	;;
+	;; On entry:
+	;;   HL - address of table of address
+	;;
+	;; On exit:
+	;;   HL - address read from table
+	;;   A  - corrupted
+	;; ----------------------------------------------------------------
 sub_9c19h:
 	ld a,(EPB_EPROM_MODEL)	;9c19 - Retrive model code
-	add a,a			;9c1c - Multply by 2
+	add a,a			;9c1c - Multiply by 2
 	add a,l			;9c1d - Compute offset into buffer
-	ld l,a			;9c1e
-	ld a,(hl)		;9c1f
+	ld l,a			;9c1e - Update address
+	
+	ld a,(hl)		;9c1f - Retrieve low byte
 	inc hl			;9c20
-	ld h,(hl)		;9c21
-	ld l,a			;9c22
+	ld h,(hl)		;9c21 - Retrieve high byte
+	ld l,a			;9c22 - Move low byte into address
 	
 	ret			;9c23
 
+	
 	;; Program (write byte to) EPROM has failed
 l9c24h:	pop hl			;9c24 - Memory location being written
 	pop bc			;9c25 - Number of bytes still to write
@@ -2627,6 +2698,7 @@ l9d19h:
 
 	ret			;9d1b
 
+	
 	;; ----------------------------------------------------------------
 	;; Write byte to EPROM nodel 2532 (type 5)
 	;; 
@@ -2643,7 +2715,7 @@ l9d19h:
 	out (EPB_273_LATCH),a	;9d22
 
 	ld a,e			;9d24
-	out (EPB_8255_PORTB),a		;9d25
+	out (EPB_8255_PORTB),a	;9d25
 
 	ld a,d			;9d27
 	and %00001111		;9d28 ($0F)
@@ -2658,7 +2730,7 @@ l9d19h:
 	call sub_9dd2h		;9d32 - Update display
 
 	xor a			;9d35
-	out (EPB_273_LATCH),a		;9d36
+	out (EPB_273_LATCH),a	;9d36
 
 	ld b,028h		;9d38
 l9d3ah:
@@ -2683,33 +2755,33 @@ l9d3ah:
 	out (EPB_8255_PORTC),a	;9d43
 
 	ld a,e			;9d45
-	out (EPB_8255_PORTB),a		;9d46
+	out (EPB_8255_PORTB),a	;9d46
 
 	bit 3,d			;9d48
 	ld a,024h		;9d4a
 	jr z,l9d50h		;9d4c
 	ld a,004h		;9d4e
 l9d50h:
-	out (EPB_273_LATCH),a		;9d50
+	out (EPB_273_LATCH),a	;9d50
 
 	ld a,d			;9d52
 	and 007h		;9d53
 	or 008h			;9d55
-	out (EPB_8255_PORTC),a		;9d57
+	out (EPB_8255_PORTC),a	;9d57
 	nop			;9d59
 
 	and 007h		;9d5a
-	out (EPB_8255_PORTC),a		;9d5c
+	out (EPB_8255_PORTC),a	;9d5c
 
 	pop af			;9d5e
 
 	call sub_9dd2h		;9d5f - Update display
 
 	ld a,0ffh		;9d62
-	out (EPB_8255_PORTC),a		;9d64
+	out (EPB_8255_PORTC),a	;9d64
 
 	xor a			;9d66
-	out (EPB_273_LATCH),a		;9d67
+	out (EPB_273_LATCH),a	;9d67
 
 	ld b,028h		;9d69
 l9d6bh:
@@ -2764,6 +2836,7 @@ l9d98h:
 
 	ret			;9d9a
 
+	
 	;; ----------------------------------------------------------------
 	;; Write byte to EPROM types 6
 	;; On entry:
@@ -2774,43 +2847,43 @@ l9d98h:
 	pop af			;9d9b
 	pop hl			;9d9c
 
-	out (EPB_8255_PORTA),a		;9d9d
+	out (EPB_8255_PORTA),a	;9d9d
 
 	ld a,020h		;9d9f
-	out (EPB_8255_PORTC),a		;9da1
+	out (EPB_8255_PORTC),a	;9da1
 
 	ld a,e			;9da3
-	out (EPB_8255_PORTB),a		;9da4
+	out (EPB_8255_PORTB),a	;9da4
 
 	ld a,001h		;9da6
 	bit 3,d			;9da8
 	jr nz,l9daeh		;9daa
 	set 5,a			;9dac
 l9daeh:
-	out (EPB_273_LATCH),a		;9dae
+	out (EPB_273_LATCH),a	;9dae
 
 	ld a,d			;9db0
 	and 007h		;9db1
-	or 020h		;9db3
-	bit 4,d		;9db5
+	or 020h			;9db3
+	bit 4,d			;9db5
 	jr z,l9dbbh		;9db7
-	set 4,a		;9db9
+	set 4,a			;9db9
 l9dbbh:
-	out (EPB_8255_PORTC),a		;9dbb
+	out (EPB_8255_PORTC),a	;9dbb
 
 	and 0dfh		;9dbd
 	nop			;9dbf
-	out (EPB_8255_PORTC),a		;9dc0
+	out (EPB_8255_PORTC),a	;9dc0
 
 	pop af			;9dc2
 
 	call sub_9dd2h		;9dc3 - Update display
 
 	ld a,028h		;9dc6
-	out (EPB_8255_PORTC),a		;9dc8
+	out (EPB_8255_PORTC),a	;9dc8
 
 	xor a			;9dca
-	out (EPB_273_LATCH),a		;9dcb
+	out (EPB_273_LATCH),a	;9dcb
 
 	ld b,028h		;9dcd
 l9dcfh:
@@ -2820,23 +2893,31 @@ l9dcfh:
 
 	;; ----------------------------------------------------------------
 	;; Update the display
+	;;
+	;; On entry:
+	;;   DE - value for address field
+	;;   A  - value for data field
 	;; ----------------------------------------------------------------
 sub_9dd2h:
+	;; Save registers
 	push bc			;9dd2
 	push de			;9dd3
 	push hl			;9dd4
 
 	push af			;9dd5
 	ld b,005h		;9dd6
-	call ADDRDP		;9dd8
+	
+	call ADDRDP		;9dd8 - Write DE to address field
+	
 	pop af			;9ddb
 
-	call DATADP		;9ddc
-l9ddfh:
-	ld ix,DISPBF		;9ddf
+	call DATADP		;9ddc - Write A to data field
+
+l9ddfh:	ld ix,DISPBF		;9ddf - Display and wait for 5 scan iterations
 	call SCAN1		;9de3
 	djnz l9ddfh		;9de6
-	
+
+	;; Recover registers
 	pop hl			;9de8
 	pop de			;9de9
 	pop bc			;9dea
@@ -2848,7 +2929,7 @@ l9ddfh:
 	;;
 	;; On exit:
 	;;   BC - Start of RAM to be written
-	;;   DE - Edn of RAM to be written
+	;;   DE - End of RAM to be written
 	;;   HL - Offset on EPROM
 	;; ----------------------------------------------------------------
 sub_9dech:
@@ -2866,7 +2947,10 @@ sub_9dech:
 	
 	ret			;9e02
 
+	
+	;; ----------------------------------------------------------------
 	;; De-highlight text on display
+	;; ----------------------------------------------------------------
 sub_9e03h:
 	ld b,006h		;9e03
 	ld hl,DISPBF		;9e05
@@ -2874,58 +2958,70 @@ l9e08h:
 	res 6,(hl)		;9e08
 	inc hl			;9e0a
 	djnz l9e08h		;9e0b
+
 	ret			;9e0d
 
 	ld a,090h		;9e0e
 	out (0cfh),a		;9e10
 	ld a,0d0h		;9e12
 	out (0ceh),a		;9e14
+
 	ret			;9e16
 
-	;;  Copy message (pointed to by HL) to display buffer
+	;; ----------------------------------------------------------------
+	;; Print message to display buffer
+	;;
+	;; On entry:
+	;;   HL - pointer to message
+	;; ----------------------------------------------------------------
 WRITE_TO_DISP:
-	ld bc,00006h		;9e17
+	ld bc,00006h		;9e17 - Buffer is six characters long
 	ld de,DISPBF		;9e1a
 	ldir			;9e1d
 
 	ret			;9e1f
 
-	;; Refresh address field
+	;; ----------------------------------------------------------------
+	;; Update display and highlight address field
+	;; ----------------------------------------------------------------
 sub_9e20h:
-	ld b,004h		;9e20
+	ld b,004h		;9e20 - Set inputs to SETDP
 	ld hl,DISPBF+2		;9e22
+	
 	jr l9e2ch		;9e25
 
-	;; Refresh data field
+	;; ----------------------------------------------------------------
+	;; Update display and highlight data field
+	;; ----------------------------------------------------------------
 sub_9e27h:
-	ld b,002h		;9e27
-	ld hl,DISPBF		;9e29
-l9e2ch:
-	exx			;9e2c
-	ld de,(ADSAVE)		;9e2d
-	call ADDRDP		;9e31
+	ld b,002h		;9e27 - Set inputs to SETDP
+	ld hl,DISPBF		;9e29 
 
-	;; Work out actual memory address by adding base to relative
-	;; address
+l9e2ch:	exx			;9e2c - Save active register set
+	
+	ld de,(ADSAVE)		;9e2d - Retrieve address (relative)
+	call ADDRDP		;9e31 - Convert to display format
+
+	;; Work out absolute memory address
 	ld hl,(ADSAVE)		;9e34
 	ld de,0d800h		;9e37
 	add hl,de		;9e3a
 
 	;; Retrieve value
-	ld a,(hl)		;9e3b
-	call DATADP		;9e3c
+	ld a,(hl)		;9e3b - Retrieve value
+	call DATADP		;9e3c - Convert to display format
 	
-	exx			;9e3f
-	call SETPT		;9e40
+	exx			;9e3f - Restore active registers
+
+	call SETPT		;9e40 - Update display, highlighting
+				;       address/ data, based on B and HL
 
 	ret			;9e43
 	
-l9e44h:
-	ld a,002h		;9e44
+l9e44h:	ld a,002h		;9e44
 	ld (EPB_WRITE_STATUS),a	;9e46
 
-l9e49h:
-	ld hl,ERR_		;9e49 - Error message
+l9e49h:	ld hl,ERR_		;9e49 - Error message
 	jr WRITE_TO_DISP	;9e4c - Copy to display and return
 
 l9e4eh:
@@ -2936,49 +3032,87 @@ l9e4eh:
 	ld hl,l9fabh		;9e58
 	jr WRITE_TO_DISP	;9e5b
 
+	;; ----------------------------------------------------------------
+	;; Sound beeper
+	;; ----------------------------------------------------------------
 EPB_BEEP:
 	push af			;9e5d
+
+	;; Retrieve beep parameters
 	ld hl,FBEEP		;9e5e
 	ld c,(hl)		;9e61
 	ld hl,(TBEEP)		;9e62
 	ld a,(BEEPSET)		;9e65
-	cp 055h			;9e68
+
+	cp 055h			;9e68 - Check if muted
 	jr nz,l9e6fh		;9e6a
+
 	call TONE		;9e6c
 l9e6fh:
 	pop af			;9e6f
+
 	ret			;9e70
 
-	;; Insert byte 
+	;; ----------------------------------------------------------------
+	;; Insert/ delete byte into/ from RAM buffer
+	;;
+	;; Implemented as block memory copy operation (either moving
+	;; subsequent data down by one byte for DEL or moving remainder
+	;; of buffer up by one byte for INS).
+	;;
+	;; On entry:
+	;; 	ADSAVE_1 - start of interval to move
+	;;      ADSAVE_2 - end of interval to move
+	;;      ADSAVE_3 - new start address for interval after DEL/INS
+	;; ----------------------------------------------------------------
 sub_9e71h:
-	ld hl,EPB_ADSAVE_1	;9e71 - Retrieve start of buffer
-	call GETP		;9e74 - Computes length of buffer (sets
-				;       HL to start of buffer)
-	ld de,(EPB_ADSAVE_3)	;9e77
-	sbc hl,de		;9e7b
-	jr nc,l9e8bh		;9e7d
-	ex de,hl		;9e7f
-	add hl,bc		;9e80
-	dec hl			;9e81
-	ex de,hl		;9e82
-	ld hl,(EPB_ADSAVE_2)	;9e83
-	lddr			;9e86
-	inc de			;9e88
+	ld hl,EPB_ADSAVE_1	;9e71 - Retrieve current location
+				;       (absolute)
+	call GETP		;9e74 - Computes length of remainder of
+				;       interval to move and store in BC
+				;       (also sets HL to insertion point
+				;       in buffer)
+
+	ld de,(EPB_ADSAVE_3)	;9e77 - Retrieve new start address of
+				;       interval
+	sbc hl,de		;9e7b - Will be -1 for INS/ +1 for DEL
+	jr nc,l9e8bh		;9e7d   Jump forward, if DEL
+	
+	ex de,hl		;9e7f - HL=insertion point+1, DE=-1
+
+	add hl,bc		;9e80 - Work out one byte past end of
+	dec hl			;9e81   buffer interval to move
+
+	ex de,hl		;9e82 - DE=end of buffer interval to move
+
+	ld hl,(EPB_ADSAVE_2)	;9e83 - Retreive end of buffer
+	lddr			;9e86 - Move from insertion point to end
+				;       of buffer up by one byte (note
+				;       overwrites $F000 (one past end
+				;       of buffer)
+	inc de			;9e88 - Increment to point to new buffer
+				;       location
 	jr l9e8fh		;9e89
+	
 l9e8bh:
-	add hl,de		;9e8b
-	ldir			;9e8c
-	dec de			;9e8e
+	add hl,de		;9e8b - Restore source address for move
+	ldir			;9e8c   Complete move
+	dec de			;9e8e - Decrement to point to new buffer
+				;       location
+	
 l9e8fh:
-	xor a			;9e8f
+	xor a			;9e8f - Zero newly inserted byte
 	ld (de),a		;9e90
-	ld hl,(EPB_ADSAVE_3)	;9e91
-	ld de,0d800h		;9e94
+	
+	ld hl,(EPB_ADSAVE_3)	;9e91 - Turn new buffer location from
+	ld de,0d800h		;9e94   absolute to local address
 	and a			;9e97
 	sbc hl,de		;9e98
-	ld (ADSAVE),hl		;9e9a
+	ld (ADSAVE),hl		;9e9a - Set as curent address
+	
 	call sub_9e27h		;9e9d - Display
-	ld a,005h		;9ea0
+
+	ld a,005h		;9ea0 - State 5 = LIST
 	ld (STATE),a		;9ea2
 
 	ld a,002h		;9ea5 - Switch display to Data mode
@@ -2986,6 +3120,7 @@ l9e8fh:
 
 	ret			;9eaa
 
+	;; ----------------------------------------------------------------
 	;; Check and work out size of memory range ('S' ... 'E')
 	;;
 	;; On entry:
@@ -2993,11 +3128,13 @@ l9e8fh:
 	;; 
 	;; On exit:
 	;;   BC = length of buffer+1
+	;; ----------------------------------------------------------------
 sub_9eabh:
 	ld hl,(STEPBF+2)	;9eab - End of buffer 'E'
 	ld de,(STEPBF)		;9eae - Start of buffer 'S'
 	and a			;9eb2 - Work out length
 	sbc hl,de		;9eb3
+
 	jp c,l9e49h		;9eb5 - Error if S > E
 
 	inc hl			;9eb8 - Increase length and 
@@ -3006,12 +3143,14 @@ sub_9eabh:
 
 	ret			;9ebb
 
+	;; ----------------------------------------------------------------
 	;; Error detected during verify
+	;; ----------------------------------------------------------------
 l9ebch:	push af			;9ebc - Store value read from EPROM
 	dec hl			;9ebd - Restore read address
 	ld a,(hl)		;9ebe - and retrieve corresponding value
 				;       from memory
-	ld (EPB_01F36_B),a	;9ebf
+	ld (EPB_BYTESAVE),a	;9ebf
 	ld (ADSAVE),de		;9ec2 - Save EPROM offset
 	inc de			;9ec6
 	push de			;9ec7
@@ -3035,7 +3174,7 @@ l9edch:
 l9eeah:
 	ld a,0f3h		;9eea
 	ld (DISPBF+2),a		;9eec
-	ld a,(EPB_01F36_B)		;9eef
+	ld a,(EPB_BYTESAVE)		;9eef
 	ld hl,DISPBF		;9ef2
 	call HEX7SG		;9ef5
 	inc hl			;9ef8
@@ -3044,28 +3183,33 @@ l9eeah:
 
 	ret			;9efd
 
+	;; ----------------------------------------------------------------
 	;; Check if user has entered a valid EPROM model number
 	;;
 	;; Some issues in here:
 	;; - First command `xor b` looks to be unnecessary
 	;; - Counter, C, and pointer, HL, point at mid-point of a model
 	;;   number
+	;; ----------------------------------------------------------------
 sub_9efeh:
-	xor b			;9efe - B=0 (because of subroutine at
-				;9e03 and A is the low byte of the
-				;offset of previous BRANCH
-				;command)). Not sure what this is for
+	xor b			; 9efe - B=0 (because of subroutine at
+				;        9e03 and A is the low byte of
+				;        the offset of previous BRANCH
+				;        command)). Not sure what this
+				;        is for
+
 	ld hl,EPB_EPROM_MODELS	; 9eff - Table of supported EPROM models
-	ld c,011h		;9f02 - 2*no models + 1
+	ld c,011h		; 9f02 - 2*no models + 1
 l9f04h:
-	ld de,(ADSAVE)		;9f04 - Points to word containing
-				;candidate EPROM model
+	ld de,(ADSAVE)		;9f04 - Retreive candidate EPROM model
+				;number
 
 	;; Check if C is negative (i.e., have checked all models)
 	;; Return to model entry, if so.
 	ld a,c			;9f08
 	and a			;9f09
-	jp m,l986eh		;9f0a
+	jp m,l986eh		;9f0a - *** Looks to lead to stack
+				;       imbalance/ memory leak?
 
 	;; Check high byte of EPROM model
 	ld a,d			;9f0d - Retrieve high byte of EPROM model
@@ -3077,15 +3221,14 @@ l9f04h:
 	cpi			;9f13
 	dec hl			;9f15 - Restore HL (does not affect Z)
 	jr z,l9f1ch		;9f16 - Jump forward if match
+
 	;; Not a match
-l9f18h:
-	inc b			;9f18 - Advance to next candidate model
+l9f18h:	inc b			;9f18 - Advance to next candidate model
 	inc hl			;9f19
 	jr l9f04h		;9f1a - Repeat
 
 	;; Match made
-l9f1ch:
-	ld a,b			; 9f1c - Retrieve EPROM model
+l9f1ch:	ld a,b			; 9f1c - Retrieve EPROM model
 	ld (EPB_EPROM_MODEL),a	; 9f1d - Store
 
 	;; Copy model string into buffer
@@ -3094,20 +3237,23 @@ l9f1ch:
 	ld bc,00006h		; 9f26
 	ldir			; 9f29
 	
-	ret			;9f2b
-	
-	ld c,(hl)		;9f2c
+	ret			; 9f2b
 
-	;; EPROM model memory information (number of 2k blocks, little
+	;; ----------------------------------------------------------------
+	;; ----------------------------------------------------------------
+	ld c,(hl)		;9f2c - Not used?
+
+	;; EPROM model memory information (number of 256-byte blocks, little
 	;; endian)
-l9f2dh:
+EPROM_PAGES_TAB:
 	db $00, $04
 	db $00, $08
 	db $00, $10
 	db $00, $20
 
 	;; Table of read routines for different EPROM models
-l9f35h:	dw $9CB4
+EPB_BYTE_RD_TAB:
+	dw $9CB4
 	dw $9CB4
 	dw $9CB4
 	dw $9CB4
@@ -3118,7 +3264,8 @@ l9f35h:	dw $9CB4
 
 	
 	;; Table of write routines for different EPROM models
-l9f45h:	dw $9CFB
+EPB_BYTE_WR_TAB:
+	dw $9CFB
 	dw $9CFB
 	dw $9CFB
 	dw $9CFB
@@ -3139,16 +3286,16 @@ l9f67h:	dw $99cf
 	db $3B
 
 	;; Branch table for '+' (based on state)
-l9f72h:	dw $9a23
+EPB_PLUS_TAB:	dw $9a23
 	db $00, $00, $00, $10, $29, $00, $29, $29
 	db $16
 
 	;; Branch table for '-' (based on state)
-l9f7dh:	dw $9a50
+EPB_MINUS_TAB:	dw $9a50
 	db $00, $00, $00, $10, $24, $00, $24, $24
 	db $16
 
-l09f88h: ; Branch table for 'GO' (based on STATE)
+EPB_GO_TAB: ; Branch table for 'GO' (based on STATE)
 	dw $9a78
 	db $00, $00, $00, $7B, $B4, $0A, $14, $33
 	db $41
