@@ -12,7 +12,9 @@ The Ace version of Centipede runs okay on the Minstrel 4th and 4D though does no
 
 To run Centipede on your Minstrel 4th/ 4D, simply load the game from the TAP or WAV file with `LOAD centipede` and type `centipede` to run.
 
-A reminder about the keyboard controls is provided at the beginning of the game: to fire, you press 'A', to move you press 'J' and 'L' to move left and right, 'I' and 'M' for up and down. Joystick controls, if you have a suitable interface, are also available.
+A reminder about the keyboard controls is provided at the beginning of the game: to fire, you press 'A', to move you press 'J' and 'L' to move left and right, 'I' and 'M' for up and down.
+
+Joystick controls, if you have a suitable interface, are also available. Press 'H' to switch to joystick controls. Press 'K' to switch back to keyboard controls.
 
 ## Sound Support
 
@@ -59,5 +61,3 @@ Having patched and re-saved the program, I was able to test on the Minstrel 4th 
 As a final check, I ran the patched version of the program in EightyOne and confirmed there was no sound from the Soundbox (indicating I had not missed any instructions).
 
 Finally, it was time to play some Centipede!
-
-
