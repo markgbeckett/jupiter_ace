@@ -4,21 +4,21 @@
 
 Centipede is an arcade game, launched by Atari in 1981. It was very popular and spawned a number of micro conversions including, in 1984, a decent port by Colin Dooley to the Jupiter Ace. Colin's port is very playable with a strong resemblence to the original (accepting there is no spider and everything is monochrome). It is also one of the few Jupiter Ace games that supports both the Boldfield Soundbox and the Boldfield joystick interface.
 
-If you have read my [post about Valkyr](../valkyr-minstrel/README.md), you will know that by adding an RC2014 YM2149 sound card to the Minstrel 4th or 4D gives a Soundbox-like experience, except that the port addresses used for controlling the card are different.
+If you have read my [post about Valkyr](../valkyr-minstrel/README.md), you will know that by adding an RC2014 YM2149 sound card to the Minstrel 4th or 4D, you can get a Soundbox-like experience (except that the port addresses used for controlling the card are different).
 
 The Ace version of Centipede runs okay on the Minstrel 4th and 4D though does not have the enhanced sound support. I have therefore updated Colin Dooley's original, so that you can play the game in all of it's original glory, Plus, if you have a joystick interface, you can get the full experience.
 
 ## Playing the game
 
-To run Centipede on your Minstrel 4th/ 4D, simply load the game from the TAP or WAV file with `LOAD centipede` and type `centipede` to run.
+To run Centipede on your Minstrel 4th/ 4D, simply load the game from the TAP or WAV file with `LOAD centipede` and type `go` to run.
 
 A reminder about the keyboard controls is provided at the beginning of the game: to fire, you press 'A', to move you press 'J' and 'L' to move left and right, 'I' and 'M' for up and down.
 
-Joystick controls, if you have a suitable interface, are also available. Press 'H' to switch to joystick controls. Press 'K' to switch back to keyboard controls.
+Joystick controls, if you have a suitable interface, are also available. Press 'H' to switch to joystick controls, while playing the game. Press 'K' to switch back to keyboard controls.
 
 ## Sound Support
 
-This Minstrel 4th port of Centipede produces sound on both the built-in speaker and, if plugged in, an RC2014 YM2419 sound card. By default, the program assumes an RC2014 YM2419 sound card Rev 5 with default addressing (that is, the Register port is D8h and the Data port is D0h) is connected. If you have a Rev 6 card or your card is configured to use different ports, you can update the program using the included word `PATCH`.
+This Minstrel 4th port of Centipede produces sound on both the built-in speaker and, if plugged in, an RC2014 YM2419 sound card. By default, the program assumes an RC2014 YM2419 sound card Rev 5 with default addressing (that is, the Register port is D8h and the Data port is D0h) is connected. If you have a Rev 6 card or your card is configured to use different ports, you can update the program using the included word `PATCH` (see below for details).
 
 Because of copy-protection, some of the usual Ace Forth commands (such as SAVE and REDEFINE) are not available once Centipede is loaded: these words have been overloaded in the Centipede dictionary to make it more difficult for the user to access the program code. To work around this, you need to use `EXECUTE` with the code-field address of the built-in words you need.
 
@@ -93,26 +93,26 @@ I also found the code that checked the direction keys (the subroutine at address
 
 I started to wonder if there were multiple versions of the program code and I was looking at a version without joystick support, so I set about adding joystick support by replacing the two input routines with a version that checked both keyboard and joystick.
 
-The machine-code of the main game is stored in the Centipede dictionary in a word named `DATA`. The program code is not relocatable and the game entry point is expected to be at address 3C60. This makes it difficult to modify the existing code, since changes to the dictionary are likely to move subsequent words in memory and stop the game from working. Therefore I elected to add new game-control routines (one for fire and one for directions) at the end of the dictionary and then find the appropriate place to call out to those routines from within the original game code.
+The machine-code of the main game is stored in the Centipede dictionary in a word named `DATA`. The program code is not relocatable and the game entry point is expected to be at address 3C60h. This makes it difficult to modify the existing code, since changes to the dictionary are likely to move subsequent words in memory and stop the game from working. Therefore I elected to add new game-control routines (one for fire and one for directions) at the end of the dictionary and then find the appropriate place to call out to those routines from within the original game code.
 
-I created a new word, named `GAMECTRL`, at the end of the dictionary, in which to hold the new code. (The easiest way to do this is to use `CREATE` and then `ALLOT` enough space to hold the machine code in the word's parameter field). In this case, the parameter field for `GAMECTRL` started at address 5580, so that is where I would locate the new code.
+I created a new word, named `GAMECTRL`, at the end of the dictionary, in which to hold the new code. (The easiest way to do this is to use `CREATE` and then `ALLOT` enough space to hold the machine code in the word's parameter field). In this case, the parameter field for `GAMECTRL` started at address 5580h, so that is where I would locate the new code.
 
-I started with the routine that checked for the Fire button, as this seemed the easier of the two. The routine at 3F28 was relatively self-contained so I set about making a new version of it that would also check the fire button on the joystick. The routine first checks to see if there is already a bullet in flight. If so, there is nothing to do and control is returned the game loop. Otherwise, it checks if fire is pressed and, if so, jumps to a routine at 3F3F to implement the fire mechanism.
+I started with the routine that checked for the Fire button, as this seemed the easier of the two. The routine at 3F28h is relatively self-contained so I set about making a new version of it that would also check the fire button on the joystick. The routine first checks to see if there is already a bullet in flight. If so, there is nothing to do and control is returned the game loop. Otherwise, it checks if fire is pressed and, if so, jumps to a routine at 3F3Fh to implement the fire mechanism.
 
-Originally, I planned to have joystick support enabled all the time and to check both keyboard controls and joystick controls. However, I discovered that if no joystick interface was connected, then reading the joystick port can produce a misleading result. For exameple, on EightyOne, reading the port will typically return 20h (or 00100000 in binary) and, unfortunately, bit 5 is linked to the fire button, so this means the game thinks fire on the joystick is being pressed constantly.
+Originally, I planned to have joystick support enabled all the time and to check both keyboard controls and joystick controls. However, I discovered that if no joystick interface is connected, then reading the joystick port can produce a misleading result. For example, on EightyOne, reading the port will typically return 20h (or 00100000 in binary) and, unfortunately, bit 5 is linked to the fire button, so this means the game thinks fire on the joystick is being pressed constantly.
 
-Given this, I needed to update the game so the user could turn on and turn offjoystick support. An easy way to do this, which did not require significant changes to the original code, was to check for additional keys within the routine handling fire. Specifically, I extended the routine to check for 'H' and 'K', which I mapped to joystick-support on and joystick-support off, respectively. The 'J' key is more obvious than 'H' but this is already mapped to the move-left command.
+Given this, I needed to update the game so the user could turn on and turn off joystick support. An easy way to do this, which did not require significant changes to the original code, was to check for additional keys within the routine handling fire. Specifically, I extended the routine to check for 'H' and 'K', which I mapped to joystick-support on and joystick-support off, respectively. The 'J' key is more obvious than 'H' but this is already mapped to the move-left command.
 
 With this change, the user can switch back and forth between keyboard control and joystick control, while playing the game, by pressing 'H' and 'K'.
 
-I then moved on to look at the routine that checks the direction controls. That routine is more complicated than the routine that checks for fire, with various different functions. However, after a little studying I found a call out to a subroutine at address 3E60, from address 3F03, which is where the keyboard controls are checked. Again, I wrote a new version of this routine which checked the keyboard or the joystick port, according to which control was active.
+I then moved on to look at the routine that checks the direction controls. That routine is more complicated than the routine that checks for fire, with various different functions. However, after a little studying I found a call out to a subroutine at address 3E60h, from address 3F03h, which is where the keyboard controls are checked. Again, I wrote a new version of this routine which checked the keyboard or the joystick port, according to which control was active.
 
-To complete teh port, I then had to change the call instructions at address 3C86 and at address 3F03 to use my new versions of the routines, save the new version of the game, and get testing.
+To complete the port, I then had to change the call instructions at address 3C86h and at address 3F03h to use my new versions of the routines, save the new version of the game, and get testing.
 
-I also considered changing the keyboard controls, as I found them slighty awkward to use and thought it might be easier to play with the typical 'Q', 'A', 'O', 'P', and 'M' controls. However, looking back at pictures of the original Centipede arcade nachine, I remembered that it used a trackball for control (possibly was the first arcade game to use that control) and realised that Colin's control choice sort of mimicked that setup. Thus, I decided it was best to leave it as Colin had designed it. With all of the testing, I was also getting more used to the controls anyway.
+I also considered changing the keyboard controls, as I found them slighty awkward to use and thought it might be easier to play with the typical 'Q', 'A', 'O', 'P', and 'M' controls. However, looking back at pictures of the original Centipede arcade machine, I remembered that it used a trackball for control (possibly was the first arcade game to use that control) and realised that Colin's control choice sort of mimicked that setup. Thus, I decided it was best to leave it as Colin had designed it. With all of the testing, I was also getting more used to the controls anyway.
 
 If you want to change the controls, I have included the source code of the [new game-control routines](gamectrl.asm). With the information above, it should be possible for anyone to make further changes to the game controls.
 
 ## Other Observations
 
-When I was working on the port, I noted that the first routine in the game loop (at address $41C8) points to an empty subroutine (returning immediately). Perhaps, Colin planned to include support for the spider, present in the original game, in this routine.
+When I was working on the port, I noted that the first routine in the game loop (at address 41C8h) points to an empty subroutine (returning immediately). Perhaps, Colin planned to include support for the spider, present in the original game, in this routine.
