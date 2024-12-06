@@ -36,9 +36,10 @@ DISPLAY:	equ 0x2400	; Start of display buffer
 	call sub_4188h		;3c60 - Save IX, IY, and SP to enable
 				;       return to Forth
 	call sub_41b0h		;3c63 - Initialise buffer at 4180h
-	call sub_3d90h		;3c66
-	call sub_4288h		;3c69
-	call sub_46e8h		;3c6c
+	call sub_3d90h		;3c66 - Initialise game screen
+	call sub_4288h		;3c69 - Initialise centipede store and
+				;       display it
+	call sub_46e8h		;3c6c - Zero some variables
 	nop			;3c6f
 	nop			;3c70
 	nop			;3c71
@@ -49,7 +50,7 @@ DISPLAY:	equ 0x2400	; Start of display buffer
 	nop			;3c76
 	nop			;3c77
 l3c78h:
-	call sub_3ca8h		;3c78
+	call sub_3ca8h		;3c78 - Initialise sound card
 	nop			;3c7b
 	nop			;3c7c
 	nop			;3c7d
@@ -57,15 +58,14 @@ l3c78h:
 	nop			;3c7f
 
 	;; Main game loop
-l3c80h:
-	call 041c8h		;3c80 - does nothing
+l3c80h:	call 041c8h		;3c80 - does nothing
 	call sub_3ee0h		;3c83 - seems to shift screen left or right
 	call sub_3f28h		;3c86 - check for fire
 	call sub_3ee0h		;3c89 - 
 	call sub_3f28h		;3c8c - check for fire
 	call sub_3ef0h		;3c8f - check for keyboard directions
 	call sub_44e8h		;3c92 - check caterillar
-	call sub_46f8h		;3c95 - move caterpillar?
+	call sub_46f8h		;3c95 - move centipede?
 	jp l3c80h		;3c98 - Jump back to start
 	nop			;3c9b
 	nop			;3c9c
@@ -84,15 +84,16 @@ l3c80h:
 	;; Initialise AY sound card
 sub_3ca8h:
 	call WRITE_TO_AY	;3ca8 - Set mixer
-	db AY_MIXER, %00110101 
-	call WRITE_TO_AY	;3cad - Set Channel A vol
+	db AY_MIXER, %00110101  ; Channel A noise; Channel B sound;
+				; Channel C off
+	call WRITE_TO_AY	;3cad - Set Channel A vol to wave pattern
 	db AY_VOL_1, $10
 	call WRITE_TO_AY	; Set Envelope period (high byte)
 	db AY_ENV_P+1, $08
 	call WRITE_TO_AY	;3cb7 - Set noise period
 	db AY_NOISE_FREQ, $04
-	call WRITE_TO_AY	;3cbc - Set Channel B vol
-	db $09, $00
+	call WRITE_TO_AY	;3cbc - Set Channel B vol to 0
+	db AY_VOL_2, $00
 
 	ret			;3cc1
 
@@ -171,23 +172,28 @@ WRITE_TO_AY:
 	nop			;3cfd
 	nop			;3cfe
 	nop			;3cff
+
+	;; Store character in A at screen location B,C
 sub_3d00h:
 	push hl			;3d00
 	push bc			;3d01
 	ld hl,02400h		;3d02
-	srl b		;3d05
-	rr l		;3d07
-	srl b		;3d09
-	rr l		;3d0b
-	srl b		;3d0d
-	rr l		;3d0f
-	add hl,bc			;3d11
-	ld (hl),a			;3d12
+	srl b			;3d05
+	rr l			;3d07
+	srl b			;3d09
+	rr l			;3d0b
+	srl b			;3d0d
+	rr l			;3d0f
+	add hl,bc		;3d11
+	ld (hl),a		;3d12
 	pop bc			;3d13
 	pop hl			;3d14
 	ret			;3d15
 	nop			;3d16
 	nop			;3d17
+
+
+	;; Retrieve character at screen location B,C
 sub_3d18h:
 	push hl			;3d18
 	push bc			;3d19
@@ -205,19 +211,29 @@ sub_3d18h:
 	ret			;3d2d
 	nop			;3d2e
 	nop			;3d2f
+
+	;; Generate random number
+	;; 
+	;; On entry:
+	;;
+	;; On exit:
+	;;   A - random number
 sub_3d30h:
 	push hl			;3d30
 	ld a,(l3d3fh)		;3d31
-	rlc a		;3d34
+	rlc a			;3d34
 	ld l,a			;3d36
-	ld a,r		;3d37
+	ld a,r			;3d37 - Random number ?
 l3d39h:
 	add a,l			;3d39
 	ld (l3d3fh),a		;3d3a
 	pop hl			;3d3d
+
 	ret			;3d3e
+
 l3d3fh:
-	adc a,e			;3d3f
+	db %10001011		;3d3f
+
 sub_3d40h:
 	ex (sp),ix		;3d40
 	push af			;3d42
@@ -277,72 +293,52 @@ l3d64h:
 	nop			;3d8e
 	nop			;3d8f
 
-	;; Initialisation routine #3
+	;; Initialisation routine #3 - Initialie game screen
 sub_3d90h:
 	call sub_3de0h		;3d90 - Set up graphics
-	ld hl,DISPLAY+17h*20h-01h	;3d93
-l3d96h:
-	ld (hl),000h		;3d96
+
+	;; Clear row 17h of the display
+	ld hl,DISPLAY+17h*20h-01h	;3d93 - Address 26DF = end of row 17
+l3d96h:	ld (hl),000h		;3d96
 	dec hl			;3d98
 	ld a,l			;3d99
-	cp 0bfh		;3d9a
+	cp 0bfh			;3d9a
 	jr nz,l3d96h		;3d9c
-l3d9eh:
-	call sub_3d30h		;3d9e
+
+	;; Randomly distribute mushrooms
+l3d9eh:	call sub_3d30h		;3d9e
 	and 00fh		;3da1
 	jr nz,l3da9h		;3da3
-	ld (hl),004h		;3da5
+	ld (hl),004h		;3da5 - Plot mushroom
 	jr l3dabh		;3da7
 l3da9h:
-	ld (hl),000h		;3da9
+	ld (hl),000h		;3da9 - Plot space
 l3dabh:
 	dec hl			;3dab
+
+	;; Check if done (top-left of screen is HL=2400h)
 	ld a,h			;3dac
-	cp 023h		;3dad
-	jr nz,l3d9eh		;3daf
+	cp 023h			;3dad 
+	jr nz,l3d9eh		;3daf - Repeat if not
+
 	ld bc,00020h		;3db1
 	ld de,02400h		;3db4
 	ld hl,l3dc0h		;3db7
 	ldir		;3dba
+
 	call sub_3f18h		;3dbc
+
 	ret			;3dbf
 
-l3dc0h:
-	nop			;3dc0
-	nop			;3dc1
-	nop			;3dc2
-	nop			;3dc3
-	nop			;3dc4
-	nop			;3dc5
-	nop			;3dc6
-	jr nc,l3dc9h		;3dc7
-l3dc9h:
-	dec b			;3dc9
-	dec b			;3dca
-	nop			;3dcb
-	nop			;3dcc
-	nop			;3dcd
-	nop			;3dce
-	nop			;3dcf
-	nop			;3dd0
-	nop			;3dd1
-	nop			;3dd2
-	nop			;3dd3
-l3dd4h:
-	ld b,c			;3dd4
-	ld b,c			;3dd5
-	ld b,c			;3dd6
-	nop			;3dd7
-l3dd8h:
-	nop			;3dd8
-	nop			;3dd9
-	nop			;3dda
-	nop			;3ddb
-	nop			;3ddc
-	nop			;3ddd
-	nop			;3dde
-	nop			;3ddf
-
+	;; Top line of game screen
+l3dc0h: db 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04 ; Score
+	db 0x00
+l3dc9h:	db 0x05, 0x05		; Lives
+	db 0x00, 0x00, 0x00, 0x00, 0x00
+	db 0x00, 0x00, 0x00, 0x00
+l3dd4h:	db 0x41, 0x41, 0x41 	; Name of high-scoring player
+	db 0x00
+l3dd8h: db 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 
 	;; Set up graphics
 sub_3de0h:
@@ -357,43 +353,43 @@ sub_3de0h:
 	nop			;3def
 
 	;; Graphics characters (extends as far as 3E48h)
-l3df0h:
-	nop			;3df0
+l3df0h:	nop			;3df0 - Quarter mushroom
 	ld a,h			;3df1
 	jp nz,0122ah		;3df2
 	nop			;3df5
 	nop			;3df6
 	nop			;3df7
-	nop			;3df8
+	nop			;3df8 - Half mushroom
 	ld a,h			;3df9
 	add a,d			;3dfa
 	add a,d			;3dfb
 	xor d			;3dfc
 	djnz l3dffh		;3dfd
-l3dffh:
-	nop			;3dff
-	nop			;3e00
+l3dffh:	nop			;3dff
+	nop			;3e00 - Three-quarter mushroom
 	ld a,h			;3e01
 	add a,d			;3e02
 	add a,d			;3e03
 	add a,0aah		;3e04
 	jr nc,l3e28h		;3e06
-	nop			;3e08
+	nop			;3e08 - Full mushroom
 	ld a,h			;3e09
 	add a,d			;3e0a
 	add a,d			;3e0b
 	add a,0aah		;3e0c
 	jr z,l3e48h		;3e0e
-	djnz l3e22h		;3e10
+	djnz l3e22h		;3e10 - Space ship
 	jr c,$+86		;3e12
 	sub 0feh		;3e14
 	ld a,h			;3e16
 	jr c,l3e29h		;3e17
-	djnz l3e2bh		;3e19
+	db $10			;3198 - Laser
+	db $10			;3e19
 	djnz $+18		;3e1b
 	djnz l3e2fh		;3e1d
-	djnz l3e5dh		;3e1f
-	ld a,(hl)			;3e21
+	db $10			;3e1f
+	db $3c			;3e20 - Centipede body
+	ld a,(hl)		;3e21
 l3e22h:
 	sbc a,c			;3e22
 	sbc a,c			;3e23
@@ -402,7 +398,7 @@ l3e22h:
 	ld b,d			;3e26
 	inc h			;3e27
 l3e28h:
-	inc a			;3e28
+	inc a			;3e28 - Centipede head
 l3e29h:
 	ld b,d			;3e29
 	cp l			;3e2a
@@ -411,7 +407,7 @@ l3e2bh:
 	jp l42ffh		;3e2c
 l3e2fh:
 	inc h			;3e2f
-	inc h			;3e30
+	inc h			;3e30 - Explosion ?
 	ld d,d			;3e31
 	adc a,d			;3e32
 	and a			;3e33
@@ -419,15 +415,15 @@ l3e2fh:
 	adc a,l			;3e35
 	add a,a			;3e36
 	inc bc			;3e37
-	inc h			;3e38
+	inc h			;3e38 - ?
 	ld c,d			;3e39
 	ld d,c			;3e3a
 	push hl			;3e3b
 	ld l,d			;3e3c
-	ld (hl),c			;3e3d
+	ld (hl),c		;3e3d
 	pop hl			;3e3e
 	ret nz			;3e3f
-	inc e			;3e40
+	inc e			;3e40 - Square
 	ld a,04fh		;3e41
 	adc a,a			;3e43
 	rst 38h			;3e44
@@ -985,6 +981,8 @@ l4132h:
 	dec h			;414c
 	inc sp			;414d
 	inc sp			;414e
+
+
 	add hl,sp			;414f
 	ccf			;4150
 	scf			;4151
@@ -1123,49 +1121,59 @@ l41ddh:
 	ld b,h			;41e5
 	nop			;41e6
 	nop			;41e7
+
+
+	;; Initialise centipede storage??
 sub_41e8h:
-	push ix		;41e8
+	push ix			;41e8
 	push bc			;41ea
 	push de			;41eb
 	push hl			;41ec
 	push af			;41ed
+
+	;; Reset bit 6 of memory locations 4141, ..., 415f inclusive
 	ld hl,04141h		;41ee
 	ld b,01fh		;41f1
 l41f3h:
 	res 6,(hl)		;41f3
 	inc hl			;41f5
 	djnz l41f3h		;41f6
+
+	;; Row number of each segment in 4101...410C, column number in
+	;; 4121...412C, body/head value in 4141...414C
 	ld ix,l4101h		;41f8
 	ld b,00ch		;41fc
-	ld c,000h		;41fe
+	ld c,000h		;41fe - 12 segments
 	ld h,046h		;4200
 	ld a,(l4180h+7)		;4202
 	and a			;4205
 	jr z,l420ah		;4206
-	set 3,h		;4208
-l420ah:
-	ld (ix+000h),001h		;420a
+	set 3,h		;4208 - H=$4E
+l420ah:	ld (ix+000h),001h	;420a
 	ld (ix+020h),c		;420e
 	ld (ix+040h),h		;4211
-	inc ix		;4214
+	inc ix			;4214
 	inc c			;4216
 	djnz l420ah		;4217
-	dec ix		;4219
+
+	dec ix			;4219
 	set 0,(ix+040h)		;421b
+
 	ld ix,l4101h		;421f
 	ld a,(l4180h+6)		;4223
 	ld b,a			;4226
-l4227h:
-	dec b			;4227
+l4227h:	dec b			;4227
 	jp z,l4240h		;4228
+
 	ld (ix+000h),002h		;422b
-	call sub_3d30h		;422f
+	call sub_3d30h		;422f - Get random number
 	and 01fh		;4232
 	ld (ix+020h),a		;4234
 	call sub_4618h		;4237
 	nop			;423a
 	inc ix		;423b
 	jp l4227h		;423d
+
 l4240h:
 	pop af			;4240
 	pop hl			;4241
@@ -1174,6 +1182,8 @@ l4240h:
 	pop ix		;4244
 	ret			;4246
 	nop			;4247
+
+
 sub_4248h:
 	push ix		;4248
 	push bc			;424a
@@ -1186,35 +1196,41 @@ l4254h:
 	ld b,(ix+000h)		;4254
 	ld c,(ix+020h)		;4257
 	call sub_3d18h		;425a
-	cp 005h		;425d
+	cp 005h			;425d - Check if space ship, bullet, flee, ...
 	jp nc,l4273h+1		;425f
+
 	set 5,(ix+040h)		;4262
 	ld (ix+060h),a		;4266
-	ld a,007h		;4269
-	bit 0,(ix+040h)		;426b
+	ld a,007h		;4269 - Centipede body
+	bit 0,(ix+040h)		;426b - Is it the head?
 	jr nz,l4273h		;426f
-	ld a,008h		;4271
-l4273h:
-	call sub_3d00h		;4273
-	inc ix		;4276
-	dec d			;4278
-	jp nz,l4254h		;4279
+	ld a,008h		;4271 - Centipede head
+
+l4273h:	call sub_3d00h		;4273 - Display character
+	inc ix			;4276 - Advance to next segment
+	dec d			;4278 - Check if any more segments
+	jp nz,l4254h		;4279 - Loop if so
+
 	pop af			;427c
 	pop hl			;427d
 	pop de			;427e
 	pop bc			;427f
-	pop ix		;4280
+	pop ix			;4280
+
 	ret			;4282
+	
 	nop			;4283
 	nop			;4284
 	nop			;4285
 	nop			;4286
 	nop			;4287
+
 sub_4288h:
 	call sub_41e8h		;4288
 	call sub_4248h		;428b
 	ret			;428e
 	nop			;428f
+
 sub_4290h:
 	push ix		;4290
 	push bc			;4292
@@ -1733,6 +1749,8 @@ l45e0h:
 	nop			;4615
 	nop			;4616
 	nop			;4617
+
+
 sub_4618h:
 	push af			;4618
 	call sub_3d30h		;4619
@@ -1746,6 +1764,7 @@ sub_4618h:
 l462eh:
 	pop af			;462e
 	ret			;462f
+
 sub_4630h:
 	push hl			;4630
 	push af			;4631
@@ -1860,13 +1879,17 @@ l46e4h:
 	nop			;46e4
 l46e5h:
 	ld bc,00020h		;46e5
+
+	;; Initialisation #5 - Zero some variables
 sub_46e8h:
 	push af			;46e8
 	ld a,000h		;46e9
 	ld (l46e0h),a		;46eb
 	ld (l46e2h+1),a		;46ee
 	pop af			;46f1
+	
 	ret			;46f2
+
 	nop			;46f3
 	nop			;46f4
 	nop			;46f5
