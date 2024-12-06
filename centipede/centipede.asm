@@ -23,6 +23,8 @@ AY_WAIT_UNIT:	EQU 0x0042	; Unit of duration (calibrate to clock)
 AY_REG_PORT:	db 0fdh
 AY_DAT_PORT:	db 0ffh
 
+DISPLAY:	equ 0x2400	; Start of display buffer
+	
 	org	03c5ch
 
 	nop			;3c5c
@@ -33,7 +35,7 @@ AY_DAT_PORT:	db 0ffh
 	;; Entry point for game
 	call sub_4188h		;3c60 - Save IX, IY, and SP to enable
 				;       return to Forth
-	call sub_41b0h		;3c63
+	call sub_41b0h		;3c63 - Initialise buffer at 4180h
 	call sub_3d90h		;3c66
 	call sub_4288h		;3c69
 	call sub_46e8h		;3c6c
@@ -274,9 +276,11 @@ l3d64h:
 	nop			;3d8d
 	nop			;3d8e
 	nop			;3d8f
+
+	;; Initialisation routine #3
 sub_3d90h:
-	call sub_3de0h		;3d90
-	ld hl,026dfh		;3d93
+	call sub_3de0h		;3d90 - Set up graphics
+	ld hl,DISPLAY+17h*20h-01h	;3d93
 l3d96h:
 	ld (hl),000h		;3d96
 	dec hl			;3d98
@@ -302,6 +306,7 @@ l3dabh:
 	ldir		;3dba
 	call sub_3f18h		;3dbc
 	ret			;3dbf
+
 l3dc0h:
 	nop			;3dc0
 	nop			;3dc1
@@ -337,16 +342,21 @@ l3dd8h:
 	nop			;3ddd
 	nop			;3dde
 	nop			;3ddf
+
+
+	;; Set up graphics
 sub_3de0h:
-	ld bc,00058h		;3de0
-	ld de,02c08h		;3de3
-	ld hl,l3df0h		;3de6
+	ld bc,00058h		;3de0 - 11 characters
+	ld de,02c08h		;3de3 - Character 1
+	ld hl,l3df0h		;3de6 - 
 	ldir		;3de9
 	ret			;3deb
 	nop			;3dec
 	nop			;3ded
 	nop			;3dee
 	nop			;3def
+
+	;; Graphics characters (extends as far as 3E48h)
 l3df0h:
 	nop			;3df0
 	ld a,h			;3df1
@@ -424,6 +434,8 @@ l3e2fh:
 	ld d,d			;3e45
 	sub d			;3e46
 	ld c,c			;3e47
+
+
 l3e48h:
 	nop			;3e48
 	nop			;3e49
@@ -1019,16 +1031,9 @@ l4132h:
 	nop			;417e
 	nop			;417f
 
-l4180h:
-	rlca			;4180
-l4181h:
-	dec b			;4181
-l4182h:
-	nop			;4182
-l4183h:
-	ld a,060h		;4183
-l4185h:
-	ld bc,00004h		;4185
+	;; 8-byte buffer, initialised at beginning of game so, likely,
+	;; does not matter what is here
+l4180h:	db 0x07, 0x05, 0x00, $3E, $60, $01, $04, $00
 
 	;; Initialisation routine
 	;;
@@ -1057,23 +1062,36 @@ SP_STR:	dw 0x0000
 	nop			;419e
 	nop			;419f
 
-	;; Exit game
+	;; Prepare to exit game
+	;;
+	;; Restore state for return to Forth interpretter, which
+	;; requires reinstating previous values of IX, IY, and SP (see
+	;; Steven Vickers, "Jupiter Ace Forth Programming", Chapter 25,
+	;; p.148)
+	;;
+	;; On entry:
+	;;
+	;; On exit:
+	;;   HL - corrupted
 sub_41a0h:
 	pop hl			;41a0
-	ld ix,(IX_STR)	;41a1
-	ld iy,(IY_STR)	;41a5
-	ld sp,(SP_STR)	;41a9
+	ld ix,(IX_STR)		;41a1
+	ld iy,(IY_STR)		;41a5
+	ld sp,(SP_STR)		;41a9
 	jp (hl)			;41ad
 	nop			;41ae
 	nop			;41af
 
-	
+
+	;; Initialisation routine #2
 sub_41b0h:
-	ld hl,l41c0h		;41b0
+	ld hl,l41c0h		;41b0 - Write 8 bytes from 41c0 to 4180
 	ld de,l4180h		;41b3
 	ld bc,00008h		;41b6
 	ldir		;41b9
+
 	ret			;41bb
+
 	nop			;41bc
 	nop			;41bd
 	nop			;41be
@@ -1121,7 +1139,7 @@ l41f3h:
 	ld b,00ch		;41fc
 	ld c,000h		;41fe
 	ld h,046h		;4200
-	ld a,(l4185h+2)		;4202
+	ld a,(l4180h+7)		;4202
 	and a			;4205
 	jr z,l420ah		;4206
 	set 3,h		;4208
@@ -1135,7 +1153,7 @@ l420ah:
 	dec ix		;4219
 	set 0,(ix+040h)		;421b
 	ld ix,l4101h		;421f
-	ld a,(l4185h+1)		;4223
+	ld a,(l4180h+6)		;4223
 	ld b,a			;4226
 l4227h:
 	dec b			;4227
@@ -1204,9 +1222,9 @@ sub_4290h:
 	push hl			;4294
 	push af			;4295
 	ld ix,l4100h		;4296
-	ld a,(l4185h)		;429a
+	ld a,(l4180h+5)		;429a
 	xor 001h		;429d
-	ld (l4185h),a		;429f
+	ld (l4180h+5),a		;429f
 l42a2h:
 	inc ix		;42a2
 	push ix		;42a4
@@ -1223,7 +1241,7 @@ l42a2h:
 l42b4h:
 	bit 6,(ix+040h)		;42b4
 	jp z,l42a2h		;42b8
-	ld a,(l4185h)		;42bb
+	ld a,(l4180h+5)		;42bb
 	cp 001h		;42be
 	jp z,l42cah		;42c0
 	bit 3,(ix+040h)		;42c3
@@ -1346,7 +1364,7 @@ l437eh:
 	res 2,(ix+040h)		;4383
 	bit 4,(ix+040h)		;4387
 	jr nz,l4395h		;438b
-	ld hl,l4181h		;438d
+	ld hl,l4180h+1		;438d
 	inc (hl)			;4390
 	set 4,(ix+040h)		;4391
 l4395h:
@@ -1431,7 +1449,7 @@ l4423h:
 	jr nz,l4436h		;4426
 	bit 4,(ix+040h)		;4428
 	jr nz,l4436h		;442c
-	ld hl,l4181h		;442e
+	ld hl,l4180h+1		;442e
 	inc (hl)			;4431
 	set 4,(ix+040h)		;4432
 l4436h:
@@ -1575,18 +1593,18 @@ l4510h:
 	ld a,(l41c0h)		;4510
 	ld (l4180h),a		;4513
 	ld a,000h		;4516
-	ld (l4181h),a		;4518
-	ld (l4182h),a		;451b
-	ld a,(l4185h+1)		;451e
+	ld (l4180h+1),a		;4518
+	ld (l4180h+2),a		;451b
+	ld a,(l4180h+6)		;451e
 	inc a			;4521
 	cp 00dh		;4522
 	jr z,l452bh		;4524
-	ld (l4185h+1),a		;4526
+	ld (l4180h+6),a		;4526
 	jr l4533h		;4529
 l452bh:
 	ld a,001h		;452b
-	ld (l4185h+1),a		;452d
-	ld (l4185h+2),a		;4530
+	ld (l4180h+6),a		;452d
+	ld (l4180h+7),a		;4530
 l4533h:
 	call sub_4288h		;4533
 	pop af			;4536
@@ -1696,9 +1714,9 @@ l45e0h:
 	ld (l3fbdh),hl		;45ea
 	ld a,000h		;45ed
 	ld (l4180h),a		;45ef
-	ld a,(l4185h+1)		;45f2
+	ld a,(l4180h+6)		;45f2
 	dec a			;45f5
-	ld (l4185h+1),a		;45f6
+	ld (l4180h+6),a		;45f6
 	ld bc,0160fh		;45f9
 	ld a,005h		;45fc
 	call sub_3d00h		;45fe
@@ -1721,7 +1739,7 @@ sub_4618h:
 	and 00ah		;461c
 	or 045h		;461e
 	ld (ix+040h),a		;4620
-	ld a,(l4185h+2)		;4623
+	ld a,(l4180h+7)		;4623
 	cp 001h		;4626
 	jr nz,l462eh		;4628
 	set 3,(ix+040h)		;462a
@@ -1731,12 +1749,12 @@ l462eh:
 sub_4630h:
 	push hl			;4630
 	push af			;4631
-	ld a,(l4182h)		;4632
+	ld a,(l4180h+2)		;4632
 	cp 001h		;4635
 	jp z,l4658h		;4637
 	ld a,(l4180h)		;463a
 	ld h,a			;463d
-	ld a,(l4181h)		;463e
+	ld a,(l4180h+1)		;463e
 	cp h			;4641
 	jr z,l4647h		;4642
 	pop af			;4644
@@ -1744,9 +1762,9 @@ sub_4630h:
 	ret			;4646
 l4647h:
 	ld a,001h		;4647
-	ld (l4182h),a		;4649
+	ld (l4180h+2),a		;4649
 	ld hl,06060h		;464c
-	ld (l4183h),hl		;464f
+	ld (l4180h+3),hl		;464f
 l4652h:
 	pop af			;4652
 	pop hl			;4653
@@ -1755,17 +1773,17 @@ l4652h:
 	nop			;4656
 	nop			;4657
 l4658h:
-	ld a,(l4183h)		;4658
+	ld a,(l4180h+3)		;4658
 	dec a			;465b
-	ld (l4183h),a		;465c
+	ld (l4180h+3),a		;465c
 	jr nz,l4652h		;465f
-	ld a,(l4183h+1)		;4661
+	ld a,(l4180h+4)		;4661
 	cp 020h		;4664
 	jr z,l466ah		;4666
 	sub 008h		;4668
 l466ah:
-	ld (l4183h),a		;466a
-	ld (l4183h+1),a		;466d
+	ld (l4180h+3),a		;466a
+	ld (l4180h+4),a		;466d
 	push ix		;4670
 	ld ix,l4100h		;4672
 l4676h:
@@ -1789,7 +1807,7 @@ l4685h:
 	jr nz,l469dh		;4698
 	ld hl,04f00h		;469a
 l469dh:
-	ld a,(l4185h+2)		;469d
+	ld a,(l4180h+7)		;469d
 	cp 001h		;46a0
 	jr z,l46abh		;46a2
 	call sub_3d30h		;46a4
@@ -1865,7 +1883,7 @@ sub_46f8h:
 	ld a,(l46e2h+1)		;4703
 	and a			;4706
 	jp nz,l471dh		;4707
-	ld a,(l4185h+1)		;470a
+	ld a,(l4180h+6)		;470a
 	cp 002h		;470d
 	jr z,l4716h		;470f
 l4711h:
@@ -2194,7 +2212,7 @@ sub_4908h:
 l490bh:
 	bit 4,(ix+040h)		;490b
 	ret z			;490f
-	ld hl,l4181h		;4910
+	ld hl,l4180h+1		;4910
 	dec (hl)			;4913
 	ret			;4914
 	nop			;4915
