@@ -2,23 +2,23 @@
 ; command line: z80dasm -g 15452 -a -l -o centipede.asm centipede.bin
 
 	;; Register mappings for AY-3-8910/ AY-3-8912 card
-AY_TONE_1:	EQU 0x00
-AY_TONE_2:	EQU 0x02
-AY_TONE_3:	EQU 0x04
-AY_NOISE_FREQ:	EQU 0x06
-AY_MIXER:	EQU 0x07
-AY_VOL_1:	EQU 0x08
-AY_VOL_2:	EQU 0x09
-AY_ENV_P:	EQU 0x0B
-AY_ENV_SH:	EQU 0x0D
+AY_TONE_1:	equ 0x00
+AY_TONE_2:	equ 0x02
+AY_TONE_3:	equ 0x04
+AY_NOISE_FREQ:	equ 0x06
+AY_MIXER:	equ 0x07
+AY_VOL_1:	equ 0x08
+AY_VOL_2:	equ 0x09
+AY_ENV_P:	equ 0x0B
+AY_ENV_SH:	equ 0x0D
 
-AY_MIN_VOL:	EQU 0x00	; Minimum volume for sound card
-AY_MAX_VOL:	EQU 0x0F	; Maximum volume for sound card
-AY_MAX_CHANNEL:	EQU 0x03	; Three channels
-DEF_TEMPO:	EQU 7920/120	; 120 beats per minute @ 3.5 MHz
-DEF_ENV:	EQU 8000	; Default envelope period
-DEF_ENV_SH:	EQU 0		; Default envelope shape
-AY_WAIT_UNIT:	EQU 0x0042	; Unit of duration (calibrate to clock)
+AY_MIN_VOL:	equ 0x00	; Minimum volume for sound card
+AY_MAX_VOL:	equ 0x0F	; Maximum volume for sound card
+AY_MAX_CHANNEL:	equ 0x03	; Three channels
+DEF_TEMPO:	equ 7920/120	; 120 beats per minute @ 3.5 MHz
+DEF_ENV:	equ 8000	; Default envelope period
+DEF_ENV_SH:	equ 0		; Default envelope shape
+AY_WAIT_UNIT:	equ 0x0042	; Unit of duration (calibrate to clock)
 	
 AY_REG_PORT:	db 0fdh
 AY_DAT_PORT:	db 0ffh
@@ -234,38 +234,43 @@ l3d39h:
 l3d3fh:
 	db %10001011		;3d3f
 
+	;; Play flee sound
 sub_3d40h:
-	ex (sp),ix		;3d40
+	ex (sp),ix		;3d40 - Retrieve return address
 	push af			;3d42
 	push bc			;3d43
 	push de			;3d44
-	ld d,(ix+000h)		;3d45
+	ld d,(ix+000h)		;3d45 - Wait time
 	ld e,(ix+002h)		;3d48
-l3d4bh:
-	ld c,e			;3d4b
-l3d4ch:
-	ld b,d			;3d4c
-l3d4dh:
-	djnz l3d4dh		;3d4d
+l3d4bh:	ld c,e			;3d4b
+
+l3d4ch:	ld b,d			;3d4c
+l3d4dh:	djnz l3d4dh		;3d4d
+
 	ld a,b			;3d4f
 	out (0feh),a		;3d50
+
 	ld b,d			;3d52
-l3d53h:
-	djnz l3d53h		;3d53
+l3d53h:	djnz l3d53h		;3d53
+
 	ld a,07fh		;3d55
 	out (0feh),a		;3d57
+
+	;; Read keyboard V, B, N, M, Space
 	in a,(0feh)		;3d59
+
+	;; Check for space
 	rra			;3d5b
-	jr c,l3d64h		;3d5c
+	jr c,l3d64h		;3d5c - Skip ahead if not pressed
 	nop			;3d5e
 	nop			;3d5f
 	nop			;3d60
 	nop			;3d61
 	nop			;3d62
 	nop			;3d63
-l3d64h:
-	dec e			;3d64
+l3d64h:	dec e			;3d64 - Decrement outside-loop counter
 	jp nz,l3d4ch		;3d65
+
 	ld a,e			;3d68
 	add a,(ix+002h)		;3d69
 	ld e,a			;3d6c
@@ -274,9 +279,11 @@ l3d64h:
 	ld d,a			;3d71
 	cp (ix+004h)		;3d72
 	jp nz,l3d4bh		;3d75
+
 	pop de			;3d78
 	pop bc			;3d79
 	pop af			;3d7a
+
 	inc ix		;3d7b
 	inc ix		;3d7d
 	inc ix		;3d7f
@@ -530,6 +537,8 @@ l3eddh:
 	pop af			;3edd
 	ret			;3ede
 	nop			;3edf
+
+	;; Game routine #2
 sub_3ee0h:
 	jp l4940h		;3ee0
 l3ee3h:
@@ -919,119 +928,157 @@ sub_40d0h:
 	nop			;40ff
 l4100h:
 	nop			;4100
+
+
+	;; Centipede storage
+	;;
+	;; 4101--410c - row coordinate
+	;; 4121--412c - column coordinate
+	;; 4141--411c - segment info
+	;;              Bit 0 - set for head, reset for body
+	;; 		Bit 5 - set if segment displayed
+	;; 4161-416c - temporary store for background character
+	;; 
+	;; These are original values from TAP file, though they are
+	;; probably not rlevant, as they are overwritten by the
+	;; initialisation routine
 l4101h:
-	inc d			;4101
-	add hl,bc			;4102
-	ld de,01515h		;4103
-	ld d,016h		;4106
-	ld d,00fh		;4108
-	ld bc,00c16h		;410a
-	ld d,013h		;410d
-	inc d			;410f
-	dec d			;4110
-	inc de			;4111
-	ld (de),a			;4112
-	inc de			;4113
-	inc d			;4114
-	inc d			;4115
-	inc d			;4116
-	ld de,01114h		;4117
-	djnz l4132h		;411a
-	dec d			;411c
-	ld d,015h		;411d
-	nop			;411f
-	nop			;4120
-	rra			;4121
-	add hl,de			;4122
-	rrca			;4123
-	rlca			;4124
-	ex af,af'			;4125
-	ex af,af'			;4126
-	add hl,bc			;4127
-	ld a,(bc)			;4128
-	inc c			;4129
-	rrca			;412a
-	rla			;412b
-	add hl,de			;412c
-	dec d			;412d
-	nop			;412e
-	add hl,de			;412f
-	nop			;4130
-	ex af,af'			;4131
-l4132h:
-	inc e			;4132
-	jr $+4		;4133
-	rra			;4135
-	jr $+8		;4136
-	rlca			;4138
-	dec de			;4139
-	ld (bc),a			;413a
-	ld (bc),a			;413b
-	ld bc,0030bh		;413c
-	nop			;413f
-	ld bc,0277fh		;4140
-	daa			;4143
-	ld h,(hl)			;4144
-	ld h,(hl)			;4145
-	ld (hl),d			;4146
-	ld (hl),d			;4147
-	ld (hl),e			;4148
-	daa			;4149
-	ld h,071h		;414a
-	dec h			;414c
-	inc sp			;414d
-	inc sp			;414e
+	db $14, $0c, $14, $15, $15, $16, $15, $13
+	db $12, $12, $12, $12, $13, $13, $14, $15
+	db $13, $12, $13, $14, $14, $14, $11, $14
+	db $11, $10, $16, $15, $16, $15, $00, $00
+	db $1a, $18, $11, $11, $12, $12, $13, $17
+	db $15, $08, $07, $06, $04, $00, $19, $00
+	db $08, $1c, $18, $02, $1f, $18, $06, $07
+	db $1b, $02, $02, $01, $0b, $03, $00, $01
+	db $25, $24, $64, $66, $66, $71, $27, $27
+	db $24, $64, $64, $65, $25, $33, $39, $3f
+	db $37, $33, $3b, $39, $37, $3f, $37, $31
+	db $39, $3d, $31, $39, $3b, $27, $00, $00
+	db $00, $00, $00, $00, $00, $00, $00, $00
+	db $00, $00, $00, $00, $00, $00, $00, $04
+	db $04, $00, $00, $00, $00, $00, $00, $00
+	db $05, $00, $00, $00, $00, $00, $00 
+
+;; 	inc d			;4101
+;; 	add hl,bc			;4102
+;; 	ld de,01515h		;4103
+;; 	ld d,016h		;4106
+;; 	ld d,00fh		;4108
+;; 	ld bc,00c16h		;410a
+;; 	ld d,013h		;410d
+;; 	inc d			;410f
+;; 	dec d			;4110
+;; 	inc de			;4111
+;; 	ld (de),a			;4112
+;; 	inc de			;4113
+;; 	inc d			;4114
+;; 	inc d			;4115
+;; 	inc d			;4116
+;; 	ld de,01114h		;4117
+;; 	djnz l4132h		;411a
+;; 	dec d			;411c
+;; 	ld d,015h		;411d
+;; 	nop			;411f
+;; 	nop			;4120
+;; 	rra			;4121
+;; 	add hl,de			;4122
+;; 	rrca			;4123
+;; 	rlca			;4124
+;; 	ex af,af'			;4125
+;; 	ex af,af'			;4126
+;; 	add hl,bc			;4127
+;; 	ld a,(bc)			;4128
+;; 	inc c			;4129
+;; 	rrca			;412a
+;; 	rla			;412b
+;; 	add hl,de			;412c
+;; 	dec d			;412d
+;; 	nop			;412e
+;; 	add hl,de			;412f
+;; 	nop			;4130
+;; 	ex af,af'			;4131
+;; l4132h:
+;; 	inc e			;4132
+;; 	jr $+4		;4133
+;; 	rra			;4135
+;; 	jr $+8		;4136
+;; 	rlca			;4138
+;; 	dec de			;4139
+;; 	ld (bc),a			;413a
+;; 	ld (bc),a			;413b
+;; 	ld bc,0030bh		;413c
+;; 	nop			;413f
+;; 	ld bc,0277fh		;4140
+;; 	daa			;4143
+;; 	ld h,(hl)			;4144
+;; 	ld h,(hl)			;4145
+;; 	ld (hl),d			;4146
+;; 	ld (hl),d			;4147
+;; 	ld (hl),e			;4148
+;; 	daa			;4149
+;; 	ld h,071h		;414a
+;; 	dec h			;414c
+;; 	inc sp			;414d
+;; 	inc sp			;414e
 
 
-	add hl,sp			;414f
-	ccf			;4150
-	scf			;4151
-	inc sp			;4152
-	dec sp			;4153
-	add hl,sp			;4154
-	scf			;4155
-	ccf			;4156
-	scf			;4157
-	ld sp,l3d39h		;4158
-	ld sp,03b39h		;415b
-	daa			;415e
-	nop			;415f
-	nop			;4160
-	nop			;4161
-	nop			;4162
-	nop			;4163
-	nop			;4164
-	nop			;4165
-	nop			;4166
-	nop			;4167
-	nop			;4168
-	nop			;4169
-	nop			;416a
-	nop			;416b
-	nop			;416c
-	nop			;416d
-	nop			;416e
-	nop			;416f
-	inc b			;4170
-	inc b			;4171
-	nop			;4172
-	nop			;4173
-	nop			;4174
-	nop			;4175
-	nop			;4176
-	nop			;4177
-	nop			;4178
-	dec b			;4179
-	nop			;417a
-	nop			;417b
-	nop			;417c
-	nop			;417d
-	nop			;417e
-	nop			;417f
+;; 	add hl,sp			;414f
+;; 	ccf			;4150
+;; 	scf			;4151
+;; 	inc sp			;4152
+;; 	dec sp			;4153
+;; 	add hl,sp			;4154
+;; 	scf			;4155
+;; 	ccf			;4156
+;; 	scf			;4157
+;; 	ld sp,l3d39h		;4158
+;; 	ld sp,03b39h		;415b
+;; 	daa			;415e
+;; 	nop			;415f
+;; 	nop			;4160
+;; 	nop			;4161
+;; 	nop			;4162
+;; 	nop			;4163
+;; 	nop			;4164
+;; 	nop			;4165
+;; 	nop			;4166
+;; 	nop			;4167
+;; 	nop			;4168
+;; 	nop			;4169
+;; 	nop			;416a
+;; 	nop			;416b
+;; 	nop			;416c
+;; 	nop			;416d
+;; 	nop			;416e
+;; 	nop			;416f
+;; 	inc b			;4170
+;; 	inc b			;4171
+;; 	nop			;4172
+;; 	nop			;4173
+;; 	nop			;4174
+;; 	nop			;4175
+;; 	nop			;4176
+;; 	nop			;4177
+;; 	nop			;4178
+;; 	dec b			;4179
+;; 	nop			;417a
+;; 	nop			;417b
+;; 	nop			;417c
+;; 	nop			;417d
+;; 	nop			;417e
+;; 	nop			;417f
 
 	;; 8-byte buffer, initialised at beginning of game so, likely,
 	;; does not matter what is here
-l4180h:	db 0x07, 0x05, 0x00, $3E, $60, $01, $04, $00
+l4180h:	db 0x07
+	db 0x05
+	db 0x00
+	db $3E
+	db $60
+	db $01
+	db $04			; Used when initialising centipede
+	db $00
 
 	;; Initialisation routine
 	;;
@@ -1097,7 +1144,9 @@ sub_41b0h:
 
 l41c0h: db $0c, $00, $00, $00, $00, $00, $01, $00
 
+	;; Game routine #1 - not used
 	ret			;41c8
+
 	ld a,07fh		;41c9
 	in a,(0feh)		;41cb
 	rra			;41cd
@@ -1141,31 +1190,33 @@ l41f3h:
 
 	;; Row number of each segment in 4101...410C, column number in
 	;; 4121...412C, body/head value in 4141...414C
-	ld ix,l4101h		;41f8
-	ld b,00ch		;41fc
-	ld c,000h		;41fe - 12 segments
-	ld h,046h		;4200
+	ld ix,l4101h		;41f8 - Start of centipede storage
+	ld b,00ch		;41fc - Centipede has 12 segments
+	ld c,000h		;41fe - First segment is in column 0
+	ld h,046h		;4200 - ??? 
 	ld a,(l4180h+7)		;4202
 	and a			;4205
 	jr z,l420ah		;4206
 	set 3,h		;4208 - H=$4E
-l420ah:	ld (ix+000h),001h	;420a
-	ld (ix+020h),c		;420e
-	ld (ix+040h),h		;4211
-	inc ix			;4214
-	inc c			;4216
-	djnz l420ah		;4217
+l420ah:	ld (ix+000h),001h	;420a - Set row coordinate to 01 for all
+				;       segments
+	ld (ix+020h),c		;420e - Set column coordinate
+	ld (ix+040h),h		;4211 - ??? 
+	inc ix			;4214 - Next segment
+	inc c			;4216 - Increase column coordinate
+	djnz l420ah		;4217 - Repeat
 
-	dec ix			;4219
+	dec ix			;4219 - Set last segment to be head
 	set 0,(ix+040h)		;421b
 
+	;; Check if centipede needs to be split
 	ld ix,l4101h		;421f
 	ld a,(l4180h+6)		;4223
 	ld b,a			;4226
 l4227h:	dec b			;4227
 	jp z,l4240h		;4228
 
-	ld (ix+000h),002h		;422b
+	ld (ix+000h),002h	;422b
 	call sub_3d30h		;422f - Get random number
 	and 01fh		;4232
 	ld (ix+020h),a		;4234
@@ -1184,23 +1235,29 @@ l4240h:
 	nop			;4247
 
 
+	;; Display centipede
 sub_4248h:
-	push ix		;4248
+	;; Save registers
+	push ix			;4248
 	push bc			;424a
 	push de			;424b
 	push hl			;424c
 	push af			;424d
-	ld ix,l4101h		;424e
-	ld d,00ch		;4252
+
+	ld ix,l4101h		;424e - Start of centipede
+	ld d,00ch		;4252 - 12 segments
 l4254h:
+	;; Retrieve coordinates of current segment into B and C
 	ld b,(ix+000h)		;4254
 	ld c,(ix+020h)		;4257
-	call sub_3d18h		;425a
-	cp 005h			;425d - Check if space ship, bullet, flee, ...
-	jp nc,l4273h+1		;425f
 
-	set 5,(ix+040h)		;4262
-	ld (ix+060h),a		;4266
+	;; Retrieve any object at B,C into A
+	call sub_3d18h		;425a
+	cp 005h			;425d - Check if space ship, bullet, flea, ...
+	jp nc,l4273h+1		;425f - Jump forward if is
+
+	set 5,(ix+040h)		;4262 - Comfirm is displayed
+	ld (ix+060h),a		;4266 - Save original character for later
 	ld a,007h		;4269 - Centipede body
 	bit 0,(ix+040h)		;426b - Is it the head?
 	jr nz,l4273h		;426f
@@ -1870,7 +1927,7 @@ l46d0h:
 	nop			;46de
 	nop			;46df
 l46e0h:
-	nop			;46e0
+	db 0x00			;46e0 - Flea is active
 l46e1h:
 	dec c			;46e1
 l46e2h:
@@ -1884,7 +1941,7 @@ l46e5h:
 sub_46e8h:
 	push af			;46e8
 	ld a,000h		;46e9
-	ld (l46e0h),a		;46eb
+	ld (l46e0h),a		;46eb - Flee is not active
 	ld (l46e2h+1),a		;46ee
 	pop af			;46f1
 	
@@ -1929,7 +1986,7 @@ l471dh:
 	ld c,a			;472b
 	ld (l46e1h),bc		;472c
 	ld a,001h		;4730
-	ld (l46e0h),a		;4732
+	ld (l46e0h),a		;4732 - ??? Flea is active
 	call sub_3d18h		;4735
 	ld (l46e5h+1),a		;4738
 	ld a,00bh		;473b
@@ -2011,21 +2068,22 @@ l47bbh:
 	nop			;47ce
 	nop			;47cf
 	push af			;47d0
-l47d1h:
-	ld a,(l46e0h)		;47d1
+l47d1h:	ld a,(l46e0h)		;47d1 - Check if flea active
 	and a			;47d4
-	jr nz,l47e0h		;47d5
-	call WRITE_TO_AY		;47d7
+	jr nz,l47e0h		;47d5 - Jump forward if so
+
+	;; Set Channel B volume to zero
+	call WRITE_TO_AY	;47d7
 	db AY_VOL_2, $00
 	
-l47dch:
-	pop af			;47dc
-	jp l3ee3h		;47dd
-l47e0h:
-	call WRITE_TO_AY		;47e0
+l47dch:	pop af			;47dc - Restore AF
+	jp l3ee3h		;47dd - Return to top level of Game
+				;       Routine #2
+
+	;; Make flea-dropping sound effect
+l47e0h:	call WRITE_TO_AY		;47e0
 	db AY_MIXER, %00110101
 	
-	dec (hl)			;47e4
 	call WRITE_TO_AY		;47e5
 	db AY_VOL_2, $0C
 
@@ -2275,24 +2333,28 @@ l490bh:
 	nop			;493d
 	nop			;493e
 	nop			;493f
-l4940h:
-	push af			;4940
+
+	;; Accessed by Game routine #2
+l4940h:	push af			;4940
+
+	;; Check if flea is active
 	ld a,(l46e0h)		;4941
 	and a			;4944
+
+	;;  Jump forward, if not
 	jp z,l47d1h		;4945
+
+	;; A = -(A+40)  (01 -> BF)
 	ld a,(l46e2h)		;4948
 	add a,040h		;494b
-	neg		;494d
+	neg			;494d
+
 	ld (l4958h),a		;494f
 	ld (l495ch),a		;4952
 	call sub_3d40h		;4955
-l4958h:
-	xor d			;4958
-	nop			;4959
-	ex af,af'			;495a
-	nop			;495b
-l495ch:
-	xor d			;495c
+l4958h: db $AA, $00, $08, $00
+l495ch:	db $AA
+
 	jp l47d1h		;495d
 	nop			;4960
 	nop			;4961
@@ -2393,13 +2455,8 @@ sub_49d0h:
 	ld (l49e1h),a		;49d8
 	ld (l49e5h),a		;49db
 	call sub_3d40h		;49de
-l49e1h:
-	cp l			;49e1
-	ld b,b			;49e2
-	dec b			;49e3
-	nop			;49e4
-l49e5h:
-	cp l			;49e5
+l49e1h: db $bd, $40, $05, $00
+l49e5h:	db $BD
 	ret			;49e6
 	nop			;49e7
 	nop			;49e8
