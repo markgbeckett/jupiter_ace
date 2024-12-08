@@ -24,6 +24,7 @@ AY_REG_PORT:	db 0fdh
 AY_DAT_PORT:	db 0ffh
 
 DISPLAY:	equ 0x2400	; Start of display buffer
+FRAMES:		equ 0x3C2B
 	
 	org	03c5ch
 
@@ -58,14 +59,14 @@ l3c78h:
 	nop			;3c7f
 
 	;; Main game loop
-l3c80h:	call 041c8h		;3c80 - does nothing
-	call sub_3ee0h		;3c83 - seems to shift screen left or right
-	call sub_3f28h		;3c86 - check for fire
-	call sub_3ee0h		;3c89 - 
-	call sub_3f28h		;3c8c - check for fire
-	call sub_3ef0h		;3c8f - check for keyboard directions
-	call sub_44e8h		;3c92 - check caterillar
-	call sub_46f8h		;3c95 - move centipede?
+l3c80h:	call 041c8h		;3c80 - Does nothing
+	call sub_3ee0h		;3c83 - Play sound
+	call sub_3f28h		;3c86 - Check for fire
+	call sub_3ee0h		;3c89 - Play sound
+	call sub_3f28h		;3c8c - Check for fire
+	call sub_3ef0h		;3c8f - Check for keyboard directions
+	call sub_44e8h		;3c92 - Check centipede
+	call sub_46f8h		;3c95 - Move centipede?
 	jp l3c80h		;3c98 - Jump back to start
 	nop			;3c9b
 	nop			;3c9c
@@ -231,33 +232,44 @@ l3d39h:
 
 	ret			;3d3e
 
-l3d3fh:
-	db %10001011		;3d3f
+l3d3fh:	db %10001011		;3d3f - Seed for random-number generator
 
-	;; Play flee sound
-sub_3d40h:
+	;; Play sound using built-in speaker
+	;;
+	;; On entry:
+	;;   Five sound parameters are stored immediately after call
+	;;     Param 0 - Tone 
+	;;     Param 1 - Tone increment
+	;;     Param 2 - Duration (combined with Param 0)
+	;;     Param 3 - Not used
+	;;     Param 4 - Tone limit
+PLAY_BEEPER:
 	ex (sp),ix		;3d40 - Retrieve return address
-	push af			;3d42
+
+	push af			;3d42 - Preserve registers
 	push bc			;3d43
 	push de			;3d44
-	ld d,(ix+000h)		;3d45 - Wait time
-	ld e,(ix+002h)		;3d48
+
+	ld d,(ix+000h)		;3d45 - Tone (wavelength)
+	ld e,(ix+002h)		;3d48 - Duration
+
 l3d4bh:	ld c,e			;3d4b
 
-l3d4ch:	ld b,d			;3d4c
-l3d4dh:	djnz l3d4dh		;3d4d
+l3d4ch:	ld b,d			;3d4c - Pause appropriate time to create
+l3d4dh:	djnz l3d4dh		;3d4d   tone
 
-	ld a,b			;3d4f
-	out (0feh),a		;3d50
+	ld a,b			;3d4f - Will always be zero
+	out (0feh),a		;3d50 - Push loud-speaker diaphram out
 
-	ld b,d			;3d52
-l3d53h:	djnz l3d53h		;3d53
+	ld b,d			;3d52 - Pause appropriate time to create
+l3d53h:	djnz l3d53h		;3d53   tone
 
 	ld a,07fh		;3d55
-	out (0feh),a		;3d57
+	out (0feh),a		;3d57 - Push loud-speaker diaphram out
 
-	;; Read keyboard V, B, N, M, Space
-	in a,(0feh)		;3d59
+	in a,(0feh)		;3d59 - Push loud-speaker diaphram in
+				;and read bottom-left keyboard half row
+				;(V, B, N, M, Space)
 
 	;; Check for space
 	rra			;3d5b
@@ -268,37 +280,45 @@ l3d53h:	djnz l3d53h		;3d53
 	nop			;3d61
 	nop			;3d62
 	nop			;3d63
-l3d64h:	dec e			;3d64 - Decrement outside-loop counter
+l3d64h:	dec e			;3d64 - Decrement duration
 	jp nz,l3d4ch		;3d65
 
-	ld a,e			;3d68
-	add a,(ix+002h)		;3d69
-	ld e,a			;3d6c
-	ld a,d			;3d6d
+	ld a,e			;3d68 - Will always be zero
+	add a,(ix+002h)		;3d69  
+	ld e,a			;3d6c - Effectively, e is duration again
+
+	ld a,d			;3d6d - Update tone
 	add a,(ix+001h)		;3d6e
 	ld d,a			;3d71
-	cp (ix+004h)		;3d72
-	jp nz,l3d4bh		;3d75
 
+	cp (ix+004h)		;3d72 - Check if reached limit and
+	jp nz,l3d4bh		;3d75 - repeat if not
+
+	;; Retrueve registers
 	pop de			;3d78
 	pop bc			;3d79
 	pop af			;3d7a
 
+	;; Balance stack for return
 	inc ix		;3d7b
 	inc ix		;3d7d
 	inc ix		;3d7f
 	inc ix		;3d81
 	inc ix		;3d83
-	ex (sp),ix		;3d85
-	ret			;3d87
-	nop			;3d88
-	nop			;3d89
-	nop			;3d8a
-	nop			;3d8b
-	nop			;3d8c
-	nop			;3d8d
-	nop			;3d8e
-	nop			;3d8f
+
+	ex (sp),ix	;3d85 - Restore IX
+
+	ret		;3d87
+
+
+	nop		;3d88
+	nop		;3d89
+	nop		;3d8a
+	nop		;3d8b
+	nop		;3d8c
+	nop		;3d8d
+	nop		;3d8e
+	nop		;3d8f
 
 	;; Initialisation routine #3 - Initialie game screen
 sub_3d90h:
@@ -404,16 +424,16 @@ l3e22h:
 	rst 38h			;3e25
 	ld b,d			;3e26
 	inc h			;3e27
-l3e28h:
-	inc a			;3e28 - Centipede head
-l3e29h:
-	ld b,d			;3e29
+
+l3e28h:	inc a			;3e28 - Centipede head
+
+l3e29h:	ld b,d			;3e29
 	cp l			;3e2a
-l3e2bh:
-	cp l			;3e2b
+
+l3e2bh:	cp l			;3e2b
 	jp l42ffh		;3e2c
-l3e2fh:
-	inc h			;3e2f
+
+l3e2fh:	inc h			;3e2f
 	inc h			;3e30 - Explosion ?
 	ld d,d			;3e31
 	adc a,d			;3e32
@@ -438,9 +458,7 @@ l3e2fh:
 	sub d			;3e46
 	ld c,c			;3e47
 
-
-l3e48h:
-	nop			;3e48
+l3e48h:	nop			;3e48
 	nop			;3e49
 	nop			;3e4a
 	nop			;3e4b
@@ -538,11 +556,10 @@ l3eddh:
 	ret			;3ede
 	nop			;3edf
 
-	;; Game routine #2
+	;; Game routine #2 - Play sounds
 sub_3ee0h:
-	jp l4940h		;3ee0
-l3ee3h:
-	jp l4a00h		;3ee3
+	jp l4940h		;3ee0 - If flee active, make sound
+l3ee3h:	jp l4a00h		;3ee3 - Otherwise, play game sound
 	nop			;3ee6
 	nop			;3ee7
 	nop			;3ee8
@@ -2351,7 +2368,8 @@ l4940h:	push af			;4940
 
 	ld (l4958h),a		;494f
 	ld (l495ch),a		;4952
-	call sub_3d40h		;4955
+
+	call PLAY_BEEPER	;4955 - Play [flea] sound
 l4958h: db $AA, $00, $08, $00
 l495ch:	db $AA
 
@@ -2364,10 +2382,11 @@ l495ch:	db $AA
 	nop			;4965
 	nop			;4966
 	nop			;4967
+
 sub_4968h:
-	call WRITE_TO_AY		;4968
-	rlca			;496b
-	rst 38h			;496c
+	call WRITE_TO_AY	;4968
+	db AY_MIXER, 0xFF	;496b
+
 	ld hl,02420h		;496d
 	ld (hl),000h		;4970
 	ld de,02421h		;4972
@@ -2454,9 +2473,11 @@ sub_49d0h:
 	nop			;49d7
 	ld (l49e1h),a		;49d8
 	ld (l49e5h),a		;49db
-	call sub_3d40h		;49de
-l49e1h: db $bd, $40, $05, $00
+
+	call PLAY_BEEPER		;49de
+l49e1h: db $BD, $40, $05, $00
 l49e5h:	db $BD
+
 	ret			;49e6
 	nop			;49e7
 	nop			;49e8
@@ -2484,40 +2505,55 @@ l49fah:
 	nop			;49fd
 	nop			;49fe
 	nop			;49ff
-l4a00h:
-	push af			;4a00
+
+
+l4a00h:	push af			;4a00
 	push hl			;4a01
+
+	;; Check if flea is active
 	ld a,(l46e0h)		;4a02
 	and a			;4a05
-	call z,sub_4a18h		;4a06
-	ld hl,03c2bh		;4a09
-	ld a,(hl)			;4a0c
-l4a0dh:
-	cp (hl)			;4a0d
+
+	;; Call subroutine if no flea
+	call z,sub_4a18h	;4a06
+
+	ld hl,FRAMES		;4a09
+	ld a,(hl)		;4a0c
+
+	;; Wait for next frame
+l4a0dh:	cp (hl)			;4a0d
 	jr z,l4a0dh		;4a0e
+
 	pop hl			;4a10
 	pop af			;4a11
+
 	ret			;4a12
-l4a13h:
-	inc b			;4a13
-l4a14h:
-	and b			;4a14
-l4a15h:
-	ld (bc),a			;4a15
+
+l4a13h:	db 0x04			;4a13
+l4a14h: db 0xA0			;4a14
+l4a15h:	ld (bc),a		;4a15
 	nop			;4a16
 	nop			;4a17
+
+	;; Play background sound (if no flea on screen)
 sub_4a18h:
+	;; Check timer #1, which counts down from 0F t0 00, playing a
+	;; sound when counter reaches 00, or reducing the volume based
+	;; on the value otherwise
 	ld a,(l4a13h)		;4a18
 	dec a			;4a1b
 	ld (l4a13h),a		;4a1c
+
 	jr nz,l4a50h		;4a1f
+
+	;; Check timer #2, which steps through four tone values
 	ld a,(l4a14h)		;4a21
 	add a,020h		;4a24
-	cp 000h		;4a26
+	cp 000h			;4a26
 	jr nz,l4a2ch		;4a28
-	ld a,0a0h		;4a2a
-l4a2ch:
-	ld (l4a14h),a		;4a2c
+	ld a,0a0h		;4a2a - Reset counter
+
+l4a2ch:	ld (l4a14h),a		;4a2c
 	ld a,00fh		;4a2f
 	ld (l4a13h),a		;4a31
 	nop			;4a34
@@ -2530,55 +2566,62 @@ l4a2ch:
 	nop			;4a3b
 	nop			;4a3c
 	ld a,(l4a14h)		;4a3d
+
+	;; Update tone for speaker sound in parameters below
 	ld (l4a49h),a		;4a40
 	ld (l4a4dh),a		;4a43
-	call sub_3d40h		;4a46
-l4a49h:
-	and b			;4a49
-	nop			;4a4a
-	ex af,af'			;4a4b
-	nop			;4a4c
-l4a4dh:
-	and b			;4a4d
+
+	call PLAY_BEEPER	;4a46 - Play sound
+l4a49h:	db $A0, $00, $08, $00	;4a49
+l4a4dh:	db $A0			;4a4d
+
 	nop			;4a4e
 	nop			;4a4f
-l4a50h:
-	ld a,(l4a13h)		;4a50
-	cp 001h		;4a53
+
+l4a50h:	ld a,(l4a13h)		;4a50
+	cp 001h			;4a53
 	jr nz,l4a88h		;4a55
+
 	ld a,(l4a15h)		;4a57
 	inc a			;4a5a
 	and 003h		;4a5b
 	ld (l4a15h),a		;4a5d
+
 	ld hl,00a00h		;4a60
 	and a			;4a63
 	jr z,l4a75h		;4a64
+
 	ld hl,00b00h		;4a66
 	dec a			;4a69
 	jr z,l4a75h		;4a6a
+
 	ld hl,00a00h		;4a6c
 	dec a			;4a6f
 	jr z,l4a75h		;4a70
+
 	ld hl,00f00h		;4a72
-l4a75h:
-	ld a,002h		;4a75
-	out (AY_REG_PORT),a		;4a77
+
+l4a75h:	ld a,002h		;4a75
+	out (AY_REG_PORT),a	;4a77
 	ld a,l			;4a79
-	out (AY_DAT_PORT),a		;4a7a
+	out (AY_DAT_PORT),a	;4a7a
 	ld a,003h		;4a7c
-	out (AY_REG_PORT),a		;4a7e
+	out (AY_REG_PORT),a	;4a7e
 	ld a,h			;4a80
-	out (AY_DAT_PORT),a		;4a81
+	out (AY_DAT_PORT),a	;4a81
+
 	ret			;4a83
+
 	nop			;4a84
 	nop			;4a85
 	nop			;4a86
 	nop			;4a87
-l4a88h:
-	ld a,009h		;4a88
+
+l4a88h:	ld a,AY_VOL_2		;4a88
 	out (AY_REG_PORT),a	;4a8a
 	ld a,(l4a13h)		;4a8c
 	out (AY_DAT_PORT),a	;4a8f
+	
 	ret			;4a91
 	nop			;4a92
 	nop			;4a93
