@@ -243,6 +243,9 @@ l3d3fh:	db %10001011		;3d3f - Seed for random-number generator
 	;;     Param 2 - Duration (combined with Param 0)
 	;;     Param 3 - Not used
 	;;     Param 4 - Tone limit
+	;;
+	;; Operation of the Ace beeper is described (briefly) at
+	;; https://k1.spdns.de/Vintage/Sinclair/80/Jupiter%20Ace/ROMs/io.txt
 PLAY_BEEPER:
 	ex (sp),ix		;3d40 - Retrieve return address
 
@@ -626,13 +629,12 @@ sub_3f28h:
 	ret			;3f3e
 
 	;; Fire laser
-l3f3fh:
-	ld bc,(l3f12h)		;3f3f
+l3f3fh:	ld bc,(l3f12h)		;3f3f
 	dec b			;3f43
 	jp l3f92h		;3f44
 	nop			;3f47
-l3f48h:
-	call sub_3d18h		;3f48
+
+l3f48h:	call sub_3d18h		;3f48
 	cp 006h		;3f4b
 	jp z,l3f60h		;3f4d 
 	
@@ -647,13 +649,13 @@ l3f58h:
 	pop af			;3f5d
 	ret			;3f5e
 	nop			;3f5f
-l3f60h:
-	ld a,000h		;3f60
+
+l3f60h:	ld a,000h		;3f60
 	call sub_3d00h		;3f62
 	dec b			;3f65
 	jp z,l3f55h		;3f66
-l3f69h:
-	call sub_3d18h		;3f69
+
+l3f69h:	call sub_3d18h		;3f69
 	cp 000h		;3f6c
 	jp nz,l3f79h		;3f6e
 	ld a,006h		;3f71
@@ -671,11 +673,11 @@ l3f79h:
 l3f8ah:
 	call sub_3d00h		;3f8a
 	jp l3f55h		;3f8d
-l3f90h:
-	inc de			;3f90
-	dec b			;3f91
-l3f92h:
-	call sub_3f98h		;3f92
+
+l3f90h:	dw 0x0513		; 3f90 - Bullet in flight
+
+	;; Arrive her from fire laser (0x3F44)
+l3f92h:	call sub_3f98h		;3f92
 	jp l3f69h		;3f95
 
 sub_3f98h:
@@ -2419,32 +2421,52 @@ sub_4980h:
 	nop			;4996
 	nop			;4997
 
-l4998h:
-	call WRITE_TO_AY	;4998
-	dec c			;499b
-	nop			;499c
+	;; Play laser sound (internal speaker and AY)
+	;;
+	;; Arrive here from fire laser (0x3F98)
+	;;
+	;; Looks to use content of ROM addresses 0x0000--0x0018 to
+	;; create a white-noise-like laser sound
+	;;
+	;; On entry:
+	;;
+	;; On exit:
+	;; 
+
+l4998h:	call WRITE_TO_AY	;4998
+	db AY_ENV_SH, 0x00	;499b
+	
 sub_499dh:
+	;; Save registers
 	push bc			;499d
 	push de			;499e
 	push af			;499f
-	ld bc,0fefeh		;49a0
-	ld de,00018h		;49a3
-l49a6h:
-	ld a,(de)			;49a6
-	ld b,a			;49a7
-	ld a,AY_DAT_PORT		;49a8
+
+	ld bc,0fefeh		;49a0 - Port for built-in beeper
+	ld de,00018h		;49a3 - Point to random-ish data in ROM?
+
+l49a6h:	ld a,(de)		;49a6
+	ld b,a			;49a7 - Set duration of sound wave
+
+	ld a,$FF		;49a8
 	out (c),a		;49aa
-l49ach:
-	djnz l49ach		;49ac
+
+l49ach:	djnz l49ach		;49ac - Pause for B iterations
+
 	ld a,000h		;49ae
 	out (c),a		;49b0
 	in a,(c)		;49b2
-	dec e			;49b4
-	jr nz,l49a6h		;49b5
+
+	dec e			;49b4 - Decrement loop counter and
+	jr nz,l49a6h		;49b5   repeat (if not done).
+
+	;; Restore registers
 	pop af			;49b7
 	pop de			;49b8
 	pop bc			;49b9
+
 	ret			;49ba
+	
 	nop			;49bb
 	nop			;49bc
 	nop			;49bd
