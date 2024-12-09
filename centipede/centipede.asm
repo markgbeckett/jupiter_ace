@@ -2443,7 +2443,7 @@ sub_499dh:
 	push af			;499f
 
 	ld bc,0fefeh		;49a0 - Port for built-in beeper
-	ld de,00018h		;49a3 - Point to random-ish data in ROM?
+	ld de,00000h		;49a3 - Point to random-ish data in ROM?
 
 l49a6h:	ld a,(de)		;49a6
 	ld b,a			;49a7 - Set duration of sound wave
@@ -2794,6 +2794,8 @@ l4af2h:
 	nop			;4b23
 	nop			;4b24
 
+END:
+	
 	;; FORTH WORD CENTIPEDE
 ;; 	ld b,e			;4b25
 ;; 	ld b,l			;4b26
