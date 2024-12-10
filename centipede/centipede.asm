@@ -15,20 +15,16 @@ AY_ENV_SH:	equ 0x0D
 AY_MIN_VOL:	equ 0x00	; Minimum volume for sound card
 AY_MAX_VOL:	equ 0x0F	; Maximum volume for sound card
 AY_MAX_CHANNEL:	equ 0x03	; Three channels
-DEF_TEMPO:	equ 7920/120	; 120 beats per minute @ 3.5 MHz
-DEF_ENV:	equ 8000	; Default envelope period
-DEF_ENV_SH:	equ 0		; Default envelope shape
-AY_WAIT_UNIT:	equ 0x0042	; Unit of duration (calibrate to clock)
 	
-AY_REG_PORT:	db 0fdh
-AY_DAT_PORT:	db 0ffh
+AY_REG_PORT:	equ 0fdh
+AY_DAT_PORT:	equ 0ffh
 
 DISPLAY:	equ 0x2400	; Start of display buffer
 FRAMES:		equ 0x3C2B
 	
 	org	03c5ch
 
-	nop			;3c5c
+START:	nop			;3c5c
 	nop			;3c5d
 	nop			;3c5e
 	nop			;3c5f
@@ -2443,7 +2439,7 @@ sub_499dh:
 	push af			;499f
 
 	ld bc,0fefeh		;49a0 - Port for built-in beeper
-	ld de,00000h		;49a3 - Point to random-ish data in ROM?
+	ld de,00018h		;49a3 - Point to random-ish data in ROM?
 
 l49a6h:	ld a,(de)		;49a6
 	ld b,a			;49a7 - Set duration of sound wave
@@ -2809,7 +2805,7 @@ END:
 ;; 	push bc			;4b2d
 ;; 	rrca			;4b2e
 ;; 	nop			;4b2f
-;; 	ld l,049h		;4b30
+;; 	ld l,049h		;4b30 - Link field
 ;; 	add hl,bc			;4b32
 ;; 	jp 0110eh		;4b33
 ;; 	djnz l4b98h		;4b36
