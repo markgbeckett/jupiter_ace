@@ -608,7 +608,7 @@ sub_3f28h:
 	push bc			;3f29
 
 	;; Check for in-flight bullet
-	ld bc,(l3f90h)		;3f2a
+	ld bc,(BULLET_COORD)		;3f2a - Retrieve bullet coordinates
 	ld a,b			;3f2e
 	or c			;3f2f
 	jp nz,l3f48h		;3f30
@@ -630,47 +630,51 @@ l3f3fh:	ld bc,(l3f12h)		;3f3f
 	jp l3f92h		;3f44
 	nop			;3f47
 
-l3f48h:	call sub_3d18h		;3f48
-	cp 006h		;3f4b
-	jp z,l3f60h		;3f4d 
+	;; Deal with bullet in flight
+l3f48h:	call sub_3d18h		;3f48 - Retrieve character at B,C
+	cp 006h			;3f4b - Check is bullet
+	jp z,l3f60h		;3f4d - Move on, if so
 	
-l3f50h:
-	ld a,006h		;3f50
+l3f50h:	ld a,006h		;3f50
 	call sub_3d00h		;3f52
 l3f55h:
 	ld bc,00000h		;3f55
 l3f58h:
-	ld (l3f90h),bc		;3f58
+	ld (BULLET_COORD),bc		;3f58
 	pop bc			;3f5c
 	pop af			;3f5d
 	ret			;3f5e
 	nop			;3f5f
 
-l3f60h:	ld a,000h		;3f60
+l3f60h:	ld a,000h		;3f60 - Clear bullet
 	call sub_3d00h		;3f62
-	dec b			;3f65
-	jp z,l3f55h		;3f66
+	dec b			;3f65 - Move bullet up screen
+	jp z,l3f55h		;3f66 - Check if bullet has hit something
 
-l3f69h:	call sub_3d18h		;3f69
-	cp 000h		;3f6c
-	jp nz,l3f79h		;3f6e
-	ld a,006h		;3f71
-	call sub_3d00h		;3f73
-	jp l3f58h		;3f76
-l3f79h:
-	cp 005h		;3f79
-	jp nc,l3f50h		;3f7b
-	dec a			;3f7e
-	jp nz,l3f8ah		;3f7f
+l3f69h:	call sub_3d18h		;3f69 - Check if something in new cell
+	cp 000h			;3f6c
+	jp nz,l3f79h		;3f6e - Jump forward if so
+	ld a,006h		;3f71 - Otherwise display bullet at new locn
+	call sub_3d00h		;3f73 
+	jp l3f58h		;3f76 - And wrap up routine
+
+l3f79h:	cp 005h			;3f79 - Check if mushroom
+	jp nc,l3f50h		;3f7b - If not move on
+	dec a			;3f7e - Damage mushroom
+	jp nz,l3f8ah		;3f7f - Skip forward if not yet destroyed
+
+	;; Update score (having destroyed mushroom)
 	push hl			;3f82
 	ld hl,00100h		;3f83
 	call sub_3fc0h		;3f86
 	pop hl			;3f89
-l3f8ah:
-	call sub_3d00h		;3f8a
-	jp l3f55h		;3f8d
 
-l3f90h:	dw 0x0513		; 3f90 - Bullet in flight
+l3f8ah:	call sub_3d00h		;3f8a - Print new character 
+	jp l3f55h		;3f8d - Wrap up, clearing bullet
+				;       coordinate first
+
+BULLET_COORD:
+	db 0x13, 0x05	; 3f90 - Coordinate of bullet (row, col)
 
 	;; Arrive her from fire laser (0x3F44)
 l3f92h:	call sub_3f98h		;3f92
@@ -702,52 +706,68 @@ sub_3fa0h:
 	nop			;3fb5
 	nop			;3fb6
 	nop			;3fb7
-l3fb8h:
-	nop			;3fb8
-	nop			;3fb9
-l3fbah:
-	ld e,b			;3fba
-l3fbbh:
-	inc sp			;3fbb
+
+SCORE:	
+l3fb8h:	db 0x00, 0x00		;3fb8
+l3fbah:	db 0x58			;3fba
+l3fbbh: db 0x33			;3fbb
+
 l3fbch:
 	nop			;3fbc
 l3fbdh:
 	ex af,af'			;3fbd
 	inc h			;3fbe
 	nop			;3fbf
+
+	;; Update score
+	;;
+	;; On entry:
+	;;   HL - score increment
+	;;
+	;; On exit:
+	;;   
 sub_3fc0h:
 	push bc			;3fc0
 	push de			;3fc1
 	push hl			;3fc2
 	push af			;3fc3
-	ld de,l3fbbh		;3fc4
-	ld a,(de)			;3fc7
+
+	ld de,SCORE+0x03	;3fc4 - Final digit of score
+	ld a,(de)		;3fc7
 	add a,h			;3fc8
 	daa			;3fc9
-	ld (de),a			;3fca
+	ld (de),a		;3fca
 	dec de			;3fcb
-	ld a,(de)			;3fcc
+	ld a,(de)		;3fcc
 	adc a,l			;3fcd
 	daa			;3fce
-	ld (de),a			;3fcf
-	call c,sub_4048h		;3fd0
+	ld (de),a		;3fcf
+
+	call c,sub_4048h	;3fd0
+
 	dec de			;3fd3
-	ld a,(de)			;3fd4
+	ld a,(de)		;3fd4
 	adc a,000h		;3fd5
 	daa			;3fd7
-	ld (de),a			;3fd8
+	ld (de),a		;3fd8
 	dec de			;3fd9
-	ld a,(de)			;3fda
+	ld a,(de)		;3fda
 	adc a,000h		;3fdb
 	daa			;3fdd
-	ld (de),a			;3fde
+	ld (de),a		;3fde
+
 	call sub_3fe8h		;3fdf
+
 	pop af			;3fe2
 	pop hl			;3fe3
 	pop de			;3fe4
 	pop bc			;3fe5
+
 	ret			;3fe6
 	nop			;3fe7
+
+
+	;; Do something to score
 sub_3fe8h:
 	ld hl,02780h		;3fe8
 	ld de,l3fb8h		;3feb
@@ -788,9 +808,9 @@ l401ch:
 	ld bc,00008h		;4022
 	ldir		;4025
 	ret			;4027
-l4028h:
-	ld bc,00000h		;4028
-	ld (l3f90h),bc		;402b
+
+l4028h:	ld bc,00000h		;4028
+	ld (BULLET_COORD),bc	;402b - Set bullet coordinate to 00,00
 	ld (l3fb8h),bc		;402f
 	ld (l3fbah),bc		;4033
 	push af			;4037
@@ -1810,7 +1830,7 @@ l45e0h:
 	call sub_3d00h		;45fe
 	ld (l3f12h),bc		;4601
 	ld bc,00000h		;4605
-	ld (l3f90h),bc		;4608
+	ld (BULLET_COORD),bc		;4608
 	jp l3c78h		;460c
 	nop			;460f
 	nop			;4610
