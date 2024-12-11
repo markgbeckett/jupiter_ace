@@ -379,42 +379,42 @@ sub_3de0h:
 	nop			;3def
 
 	;; Graphics characters (extends as far as 3E48h)
-l3df0h:	nop			;3df0 - Quarter mushroom
+l3df0h:	nop			;3df0 - Quarter mushroom (char 1)
 	ld a,h			;3df1
 	jp nz,0122ah		;3df2
 	nop			;3df5
 	nop			;3df6
 	nop			;3df7
-	nop			;3df8 - Half mushroom
+	nop			;3df8 - Half mushroom (char 2)
 	ld a,h			;3df9
 	add a,d			;3dfa
 	add a,d			;3dfb
 	xor d			;3dfc
 	djnz l3dffh		;3dfd
 l3dffh:	nop			;3dff
-	nop			;3e00 - Three-quarter mushroom
+	nop			;3e00 - Three-quarter mushroom (char 3)
 	ld a,h			;3e01
 	add a,d			;3e02
 	add a,d			;3e03
 	add a,0aah		;3e04
 	jr nc,l3e28h		;3e06
-	nop			;3e08 - Full mushroom
+	nop			;3e08 - Full mushroom (char 4)
 	ld a,h			;3e09
 	add a,d			;3e0a
 	add a,d			;3e0b
 	add a,0aah		;3e0c
 	jr z,l3e48h		;3e0e
-	djnz l3e22h		;3e10 - Space ship
+	djnz l3e22h		;3e10 - Space ship (char 5)
 	jr c,$+86		;3e12
 	sub 0feh		;3e14
 	ld a,h			;3e16
 	jr c,l3e29h		;3e17
-	db $10			;3198 - Laser
+	db $10			;3198 - Laser (char 6)
 	db $10			;3e19
 	djnz $+18		;3e1b
 	djnz l3e2fh		;3e1d
 	db $10			;3e1f
-	db $3c			;3e20 - Centipede body
+	db $3c			;3e20 - Centipede body (char 7)
 	ld a,(hl)		;3e21
 l3e22h:
 	sbc a,c			;3e22
@@ -424,7 +424,7 @@ l3e22h:
 	ld b,d			;3e26
 	inc h			;3e27
 
-l3e28h:	inc a			;3e28 - Centipede head
+l3e28h:	inc a			;3e28 - Centipede head (char 8)
 
 l3e29h:	ld b,d			;3e29
 	cp l			;3e2a
@@ -587,8 +587,8 @@ l3ef9h:
 	pop bc			;3f0f
 	pop af			;3f10
 	ret			;3f11
-l3f12h:
-	dw $160B		; Parameter related to fire function
+
+l3f12h:	dw $160B		; Parameter related to fire function
 	nop			;3f14
 	nop			;3f15
 	nop			;3f16
@@ -608,10 +608,11 @@ sub_3f28h:
 	push bc			;3f29
 
 	;; Check for in-flight bullet
-	ld bc,(BULLET_COORD)		;3f2a - Retrieve bullet coordinates
-	ld a,b			;3f2e
-	or c			;3f2f
-	jp nz,l3f48h		;3f30
+	ld bc,(BULLET_COORD)	;3f2a - Retrieve bullet coordinates
+	ld a,b			;3f2e - Non-zero coordinate indicates
+	or c			;3f2f   a bullet is in flight
+	jp nz,l3f48h		;3f30 - Jump forward to move bullet, if
+				;       so
 
 	;; No in-flight bullet, so check if fire being pressed
 	ld a,0fdh		;3f33
@@ -631,37 +632,56 @@ l3f3fh:	ld bc,(l3f12h)		;3f3f
 	nop			;3f47
 
 	;; Deal with bullet in flight
+	;;
+	;; On entry:
+	;;   BC - Coordinates of bullet (row and col)
 l3f48h:	call sub_3d18h		;3f48 - Retrieve character at B,C
 	cp 006h			;3f4b - Check is bullet
 	jp z,l3f60h		;3f4d - Move on, if so
-	
+
+	;; Display bullet at current coordinate (assume this is then
+	;; handled by another routine)
 l3f50h:	ld a,006h		;3f50
 	call sub_3d00h		;3f52
-l3f55h:
-	ld bc,00000h		;3f55
-l3f58h:
-	ld (BULLET_COORD),bc		;3f58
+
+l3f55h:	ld bc,00000h		;3f55 -  Cancel bullet
+
+	;; Update bullet coordinate
+l3f58h:	ld (BULLET_COORD),bc	;3f58
+
+	;; Restore registers and exit
 	pop bc			;3f5c
 	pop af			;3f5d
+
 	ret			;3f5e
 	nop			;3f5f
 
-l3f60h:	ld a,000h		;3f60 - Clear bullet
-	call sub_3d00h		;3f62
+l3f60h:	ld a,000h		;3f60 - Clear bullet from current 
+	call sub_3d00h		;3f62   location
 	dec b			;3f65 - Move bullet up screen
-	jp z,l3f55h		;3f66 - Check if bullet has hit something
+
+	jp z,l3f55h		;3f66 - If reach top of screen, delete
+				;       bullet and done
 
 l3f69h:	call sub_3d18h		;3f69 - Check if something in new cell
 	cp 000h			;3f6c
 	jp nz,l3f79h		;3f6e - Jump forward if so
+
 	ld a,006h		;3f71 - Otherwise display bullet at new locn
 	call sub_3d00h		;3f73 
-	jp l3f58h		;3f76 - And wrap up routine
 
+	jp l3f58h		;3f76 - ... and wrap up routine
+
+	;; Bullet has hit something
 l3f79h:	cp 005h			;3f79 - Check if mushroom
-	jp nc,l3f50h		;3f7b - If not move on
+	jp nc,l3f50h		;3f7b - If not, replace object (flea or
+				;       centipede segment) by bullet and
+				;       let another routine deal with
+				;       consequences
+
 	dec a			;3f7e - Damage mushroom
-	jp nz,l3f8ah		;3f7f - Skip forward if not yet destroyed
+	jp nz,l3f8ah		;3f7f - Skip forward if mushroom not yet
+				;       destroyed
 
 	;; Update score (having destroyed mushroom)
 	push hl			;3f82
@@ -669,19 +689,26 @@ l3f79h:	cp 005h			;3f79 - Check if mushroom
 	call sub_3fc0h		;3f86
 	pop hl			;3f89
 
-l3f8ah:	call sub_3d00h		;3f8a - Print new character 
-	jp l3f55h		;3f8d - Wrap up, clearing bullet
-				;       coordinate first
+l3f8ah:	call sub_3d00h		;3f8a - Print new character (either
+				;       partial mushroom or space, if
+				;       destroyed)
+
+	jp l3f55h		;3f8d - Cancel bullet and wrap up
 
 BULLET_COORD:
-	db 0x13, 0x05	; 3f90 - Coordinate of bullet (row, col)
+	db 0x13, 0x05	; 3f90 - Coordinate of bullet (row,
+			; col). N.B. This define is based on the values
+			; at these memory locations in the TAP file
+			; though, in practice, these values are zeroed
+			; when the game starts
 
+	
 	;; Arrive her from fire laser (0x3F44)
 l3f92h:	call sub_3f98h		;3f92
 	jp l3f69h		;3f95
 
 sub_3f98h:
-	jp l4998h		;3f98
+	jp l4998h		;3f98 - Play laser sound (and return)
 	nop			;3f9b
 	nop			;3f9c
 	nop			;3f9d
