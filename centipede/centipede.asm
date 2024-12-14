@@ -21,6 +21,10 @@ AY_DAT_PORT:	equ 0ffh
 
 DISPLAY:	equ 0x2400	; Start of display buffer
 FRAMES:		equ 0x3C2B
+
+SHIP_CHR:	equ 0x05	; Character code of ship graphic
+CENB_CHR:	equ 0x07	; Centipede body
+CENH_CHR:	equ 0x08	; Centipede head
 	
 	org	03c5ch
 
@@ -171,7 +175,7 @@ WRITE_TO_AY:
 	nop			;3cff
 
 	;; Store character in A at screen location B,C
-sub_3d00h:
+PUT_CHR:
 	push hl			;3d00
 	push bc			;3d01
 	ld hl,02400h		;3d02
@@ -191,7 +195,7 @@ sub_3d00h:
 
 
 	;; Retrieve character at screen location B,C
-sub_3d18h:
+GET_CHAR:
 	push hl			;3d18
 	push bc			;3d19
 	ld hl,02400h		;3d1a
@@ -473,88 +477,111 @@ l3e48h:	nop			;3e48
 	nop			;3e55
 	nop			;3e56
 	nop			;3e57
-l3e58h:
-	jp l4540h		;3e58
+
+
+	;; Arrive here if player moves spaceship into enemy (centipede
+	;; or flea).
+l3e58h:	jp l4540h		;3e58
+
 	nop			;3e5b
 	nop			;3e5c
 l3e5dh:
 	nop			;3e5d
 	nop			;3e5e
 	nop			;3e5f
+
+
+	;; Check if direction controls pressed and move ship
 sub_3e60h:
 	push af			;3e60
+
+	;; Port 0xDFFE reads keyboard half-row "Y", ..., "P"
 	ld a,0dfh		;3e61
 	in a,(0feh)		;3e63
-	bit 2,a		;3e65
-	jp nz,l3e80h		;3e67
-	ld a,b			;3e6a
-	cp 010h		;3e6b
-	jp z,l3e80h		;3e6d
-	dec b			;3e70
-	call sub_3d18h		;3e71
-	and a			;3e74
-	jp z,l3e80h		;3e75
-	cp 007h		;3e78
-	jp nc,l3e58h		;3e7a
-	inc b			;3e7d
+	bit 2,a			;3e65 - Check if "I" pressed
+	jp nz,l3e80h		;3e67 - Move on if not
+
+	;; Try to move up
+	ld a,b			;3e6a - Retrieve row 
+	cp 010h			;3e6b - Check if upper limit
+	jp z,l3e80h		;3e6d - Skip forward if so
+	dec b			;3e70 - Otherwise try to move ship up
+	call GET_CHAR		;3e71 - Check if obstruction
+	and a			;3e74 
+	jp z,l3e80h		;3e75 - Skip forward if not, as done
+	cp CENB_CHR		;3e78 - Check if mushroom or laser
+	jp nc,l3e58h		;3e7a - If not, must be centipede or flea
+	inc b			;3e7d - Otherwise reverse move, as blocked
 	nop			;3e7e
 	nop			;3e7f
-l3e80h:
-	ld a,0bfh		;3e80
+
+	;; Port 0xBFFE reads keyboard half-row "H", ..., "Enter"
+l3e80h:	ld a,0bfh		;3e80
 	in a,(0feh)		;3e82
-	bit 1,a		;3e84
-	jp nz,l3ea0h		;3e86
-	ld a,c			;3e89
-	cp 01fh		;3e8a
-	jp z,l3ea0h		;3e8c
-	inc c			;3e8f
-	call sub_3d18h		;3e90
-	and a			;3e93
+	bit 1,a			;3e84 - Check if "L" pressed
+	jp nz,l3ea0h		;3e86 - Move on, if not
+
+	;; Try to move right
+	ld a,c			;3e89 - Retrieve column
+	cp 01fh			;3e8a - Check if at right-hand limit
+	jp z,l3ea0h		;3e8c - Move on, if so
+	inc c			;3e8f - Attempt to move right
+	call GET_CHAR		;3e90 - Check for obstruction
+	and a			;3e93 - Move on, if none
 	jp z,l3ea0h		;3e94
-	cp 005h		;3e97
-	jp nc,l3e58h		;3e99
-	dec c			;3e9c
+	cp SHIP_CHR		;3e97 - Check if mushroom
+	jp nc,l3e58h		;3e99 - If not, must be centipede or flea
+	dec c			;3e9c - Otherwise, reverse move as blocked
 	nop			;3e9d
 	nop			;3e9e
 	nop			;3e9f
-l3ea0h:
-	ld a,0bfh		;3ea0
+
+	;; Port 0xBFFE reads keyboard half-row "H", ..., "Enter"
+l3ea0h:	ld a,0bfh		;3ea0
 	in a,(0feh)		;3ea2
-	bit 3,a		;3ea4
-	jp nz,l3ec0h		;3ea6
-	ld a,c			;3ea9
-	cp 000h		;3eaa
-	jp z,l3ec0h		;3eac
-	dec c			;3eaf
-	call sub_3d18h		;3eb0
-	and a			;3eb3
+	bit 3,a			;3ea4 - Check if "J" prssed
+	jp nz,l3ec0h		;3ea6 - Move on if not
+
+	;; Try to move left
+	ld a,c			;3ea9 - Retrieve row
+	cp 000h			;3eaa - Check if at left-hand limit
+	jp z,l3ec0h		;3eac - Move on, if so
+	dec c			;3eaf - Attempt to move left
+	call GET_CHAR		;3eb0 - Check for obstruction
+	and a			;3eb3 - Move on, if none
 	jp z,l3ec0h		;3eb4
-	cp 005h		;3eb7
-	jp nc,l3e58h		;3eb9
-	inc c			;3ebc
+	cp SHIP_CHR		;3eb7 - Check if mushroom
+	jp nc,l3e58h		;3eb9 - If not, must be centipede or flea
+	inc c			;3ebc - Otherwise, reverse move as blocked
 	nop			;3ebd
 	nop			;3ebe
 	nop			;3ebf
-l3ec0h:
-	ld a,07fh		;3ec0
+
+	;; Port 0x7FFE reads keyboard half-row "V", ..., "Space"
+l3ec0h:	ld a,07fh		;3ec0
 	in a,(0feh)		;3ec2
-	bit 1,a		;3ec4
-	jp nz,l3eddh		;3ec6
-	ld a,b			;3ec9
-	cp 016h		;3eca
-	jp z,l3eddh		;3ecc
-	inc b			;3ecf
-	call sub_3d18h		;3ed0
-	and a			;3ed3
+	bit 1,a			;3ec4 - Check if "M" pressed
+	jp nz,l3eddh		;3ec6 - Move on, if not
+
+	;; Attempt to move down
+	ld a,b			;3ec9 - Retrieve row
+	cp 016h			;3eca - Check if bottom of screen
+	jp z,l3eddh		;3ecc - Move on, if so
+	inc b			;3ecf - Attempt to move down
+	call GET_CHAR		;3ed0 - Check for obstruction
+	and a			;3ed3 - Move on, if none
 	jp z,l3eddh		;3ed4
-	cp 005h		;3ed7
-	jp nc,l3e58h		;3ed9
-	dec b			;3edc
-l3eddh:
-	pop af			;3edd
+	cp 005h			;3ed7 - Check if mushroom
+	jp nc,l3e58h		;3ed9 - If not, must be centipede or flea
+	dec b			;3edc - Otherwise, reverse move as blocked
+
+	;; Done
+l3eddh:	pop af			;3edd
 	ret			;3ede
+
 	nop			;3edf
 
+	
 	;; Game routine #2 - Play sounds
 sub_3ee0h:
 	jp l4940h		;3ee0 - If flee active, make sound
@@ -570,25 +597,41 @@ sub_3eedh:
 	nop			;3eed
 	nop			;3eee
 	nop			;3eef
+
+
+	;; Game routine #3 - Check for direction keys
 sub_3ef0h:
 	push af			;3ef0
 	push bc			;3ef1
-	ld bc,(l3f12h)		;3ef2
-	call sub_3d18h		;3ef6
-l3ef9h:
-	cp 005h		;3ef9
-	jp nz,l3e58h		;3efb
+
+	ld bc,(SHIP_COORD)	;3ef2 - Retrieve current ship coord
+	call GET_CHAR		;3ef6 - Retrieve character at spaceship
+				;       location
+
+l3ef9h:	cp SHIP_CHR		;3ef9 - Check if is ship
+
+	jp nz,l3e58h		;3efb - Jump forward if not
+
+	;; Clear ship
 	ld a,000h		;3efe
-	call sub_3d00h		;3f00
+	call PUT_CHR		;3f00
+
+	;; Check if direction controls pressed and move ship
 	call sub_3e60h		;3f03
-	ld a,005h		;3f06
-	call sub_3d00h		;3f08
-	ld (l3f12h),bc		;3f0b
+
+	;; Redisplay ship
+	ld a,SHIP_CHR		;3f06
+	call PUT_CHR		;3f08
+	
+	ld (SHIP_COORD),bc	;3f0b
+
 	pop bc			;3f0f
 	pop af			;3f10
+
 	ret			;3f11
 
-l3f12h:	dw $160B		; Parameter related to fire function
+SHIP_COORD:
+	dw $160B		; Coordinate of ship (row, col)
 	nop			;3f14
 	nop			;3f15
 	nop			;3f16
@@ -598,11 +641,11 @@ sub_3f18h:
 	push bc			;3f18
 	ld bc,0160fh		;3f19
 	ld a,005h		;3f1c
-	call sub_3d00h		;3f1e
-	ld (l3f12h),bc		;3f21
+	call PUT_CHR		;3f1e
+	ld (SHIP_COORD),bc		;3f21
 	jp l4028h		;3f25
 
-	;; Check for fire
+	;; Check for fire button being pressed
 sub_3f28h:
 	push af			;3f28
 	push bc			;3f29
@@ -626,23 +669,25 @@ sub_3f28h:
 	ret			;3f3e
 
 	;; Fire laser
-l3f3fh:	ld bc,(l3f12h)		;3f3f
-	dec b			;3f43
+l3f3fh:	ld bc,(SHIP_COORD)		;3f3f - Possibly space ship coordinate?
+	dec b			;3f43 - Move one square up to where
+				;       bullet will first appear
 	jp l3f92h		;3f44
+	
 	nop			;3f47
 
 	;; Deal with bullet in flight
 	;;
 	;; On entry:
 	;;   BC - Coordinates of bullet (row and col)
-l3f48h:	call sub_3d18h		;3f48 - Retrieve character at B,C
+l3f48h:	call GET_CHAR		;3f48 - Retrieve character at B,C
 	cp 006h			;3f4b - Check is bullet
 	jp z,l3f60h		;3f4d - Move on, if so
 
 	;; Display bullet at current coordinate (assume this is then
 	;; handled by another routine)
 l3f50h:	ld a,006h		;3f50
-	call sub_3d00h		;3f52
+	call PUT_CHR		;3f52
 
 l3f55h:	ld bc,00000h		;3f55 -  Cancel bullet
 
@@ -657,18 +702,18 @@ l3f58h:	ld (BULLET_COORD),bc	;3f58
 	nop			;3f5f
 
 l3f60h:	ld a,000h		;3f60 - Clear bullet from current 
-	call sub_3d00h		;3f62   location
+	call PUT_CHR		;3f62   location
 	dec b			;3f65 - Move bullet up screen
 
 	jp z,l3f55h		;3f66 - If reach top of screen, delete
 				;       bullet and done
 
-l3f69h:	call sub_3d18h		;3f69 - Check if something in new cell
+l3f69h:	call GET_CHAR		;3f69 - Check if something in new cell
 	cp 000h			;3f6c
 	jp nz,l3f79h		;3f6e - Jump forward if so
 
 	ld a,006h		;3f71 - Otherwise display bullet at new locn
-	call sub_3d00h		;3f73 
+	call PUT_CHR		;3f73 
 
 	jp l3f58h		;3f76 - ... and wrap up routine
 
@@ -686,10 +731,10 @@ l3f79h:	cp 005h			;3f79 - Check if mushroom
 	;; Update score (having destroyed mushroom)
 	push hl			;3f82
 	ld hl,00100h		;3f83
-	call sub_3fc0h		;3f86
+	call UPDATE_SCORE		;3f86
 	pop hl			;3f89
 
-l3f8ah:	call sub_3d00h		;3f8a - Print new character (either
+l3f8ah:	call PUT_CHR		;3f8a - Print new character (either
 				;       partial mushroom or space, if
 				;       destroyed)
 
@@ -704,8 +749,9 @@ BULLET_COORD:
 
 	
 	;; Arrive her from fire laser (0x3F44)
-l3f92h:	call sub_3f98h		;3f92
-	jp l3f69h		;3f95
+l3f92h:	call sub_3f98h		;3f92 - Play laser sound
+	jp l3f69h		;3f95 - Continue with checking if bullet
+				;       has hit anything
 
 sub_3f98h:
 	jp l4998h		;3f98 - Play laser sound (and return)
@@ -715,17 +761,18 @@ sub_3f98h:
 	nop			;3f9e
 	nop			;3f9f
 
-sub_3fa0h:
+	;; Regeneration sound for mushroom
+REGEN_SND:
 	call WRITE_TO_AY	;3fa0
 	db AY_NOISE_FREQ, $1F
 
 	call WRITE_TO_AY	;3fa5
 	db AY_ENV_P+1, $04
 
-	call WRITE_TO_AY		;3faa
+	call WRITE_TO_AY	;3faa
 	db AY_MIXER, %00111111
 
-	call WRITE_TO_AY		;3faf
+	call WRITE_TO_AY	;3faf
 	db AY_ENV_SH, $04
 
 	ret			;3fb4
@@ -739,11 +786,9 @@ l3fb8h:	db 0x00, 0x00		;3fb8
 l3fbah:	db 0x58			;3fba
 l3fbbh: db 0x33			;3fbb
 
-l3fbch:
-	nop			;3fbc
-l3fbdh:
-	ex af,af'			;3fbd
-	inc h			;3fbe
+NO_LIVES: db 0x00		;3fbc - Store for number of lives remaining
+NEXT_SHIP_LOCN:	dw 0x2408	;3fbd - Store for screen address of next
+				;       ship to use, if player dies
 	nop			;3fbf
 
 	;; Update score
@@ -753,7 +798,7 @@ l3fbdh:
 	;;
 	;; On exit:
 	;;   
-sub_3fc0h:
+UPDATE_SCORE:
 	push bc			;3fc0
 	push de			;3fc1
 	push hl			;3fc2
@@ -842,25 +887,25 @@ l4028h:	ld bc,00000h		;4028
 	ld (l3fbah),bc		;4033
 	push af			;4037
 	ld a,002h		;4038
-	ld (l3fbch),a		;403a
+	ld (NO_LIVES),a		;403a
 	pop af			;403d
 	ld bc,0240ah		;403e
-	ld (l3fbdh),bc		;4041
+	ld (NEXT_SHIP_LOCN),bc		;4041
 	pop bc			;4045
 	ret			;4046
 	nop			;4047
 sub_4048h:
 	push hl			;4048
 	push af			;4049
-	ld a,(l3fbch)		;404a
+	ld a,(NO_LIVES)		;404a
 	cp 00ah		;404d
 	jr z,l405eh		;404f
 	inc a			;4051
-	ld (l3fbch),a		;4052
-	ld hl,(l3fbdh)		;4055
+	ld (NO_LIVES),a		;4052
+	ld hl,(NEXT_SHIP_LOCN)		;4055
 	inc hl			;4058
 	ld (hl),005h		;4059
-	ld (l3fbdh),hl		;405b
+	ld (NEXT_SHIP_LOCN),hl		;405b
 l405eh:
 	pop af			;405e
 	pop hl			;405f
@@ -872,17 +917,29 @@ l405eh:
 	nop			;4065
 	nop			;4066
 	nop			;4067
-sub_4068h:
-	ld a,b			;4068
-	cp 017h		;4069
+
+	;; Invert character (as part of explosion when player dies)
+	;;
+	;; On entry:
+	;;   B - row coordinate of character
+	;;   C - column coordinate of character
+	;;
+	;; On exit:
+	;;   A - corrupt
+INVERT_CHR:
+	ld a,b			;4068 - Retrieve row
+	cp 017h			;4069 - Check is on-screen
 	ret nc			;406b
-	ld a,c			;406c
-	cp 020h		;406d
+	ld a,c			;406c - Retrieve column
+	cp 020h			;406d - Check is on-screen
 	ret nc			;406f
-	call sub_3d18h		;4070
-	xor 080h		;4073
-	call sub_3d00h		;4075
+
+	call GET_CHAR		;4070 - Retrieve characteter
+	xor 080h		;4073 - Invert character
+	call PUT_CHR		;4075 - Print character
+
 	ret			;4078
+	
 	nop			;4079
 	nop			;407a
 	nop			;407b
@@ -890,80 +947,134 @@ sub_4068h:
 	nop			;407d
 	nop			;407e
 	nop			;407f
+
+	;; Print step of explosion, which creates an effect by inverting
+	;; cells in the E, NE, N, NW, W, SW, S, and SE direction from
+	;; the spaceship
+	;;
+	;; On entry:
+	;;   B,C - Coordinates of epicentre of explosion
+	;;   L   - Distance out of step
+	;;
+	;; On exit
+	;;   A   - Corrupt
 sub_4080h:
-	push bc			;4080
-	ld a,c			;4081
-	add a,l			;4082
+	push bc			;4080 - Save coordinate
+
+	;;  Compute coordinate of right cell of explosion
+	ld a,c			;4081 - Retrieve column coord and add
+	add a,l			;4082   step
 	ld c,a			;4083
-	call sub_4068h		;4084
-	ld a,b			;4087
-	sub l			;4088
+	
+	call INVERT_CHR		;4084 - Invert it
+
+	;; Compute coordinate of top-right cell of explosion
+	ld a,b			;4087 - Retrieve row coord and subtract
+	sub l			;4088   step from it
 	ld b,a			;4089
-	call sub_4068h		;408a
-	ld a,c			;408d
-	sub l			;408e
+	
+	call INVERT_CHR		;408a - Invert it
+
+	;; Compute coordinate of top cell of explosion
+	ld a,c			;408d - Retrieve column coord and 
+	sub l			;408e   subtract step
 	ld c,a			;408f
-	call sub_4068h		;4090
-	ld a,c			;4093
-	sub l			;4094
+	
+	call INVERT_CHR		;4090 - Invert it
+
+	;; Compute coordinate of top-left cell
+	ld a,c			;4093 - Retrieve column coord and
+	sub l			;4094   subtract step
 	ld c,a			;4095
-	call sub_4068h		;4096
-	ld a,b			;4099
-	add a,l			;409a
+
+	call INVERT_CHR		;4096 - Invert it
+
+	;; Compute coordinate of left cell
+	ld a,b			;4099 - Retrieve column coord and
+	add a,l			;409a   add step
 	ld b,a			;409b
-	call sub_4068h		;409c
-	ld a,b			;409f
-	add a,l			;40a0
+	
+	call INVERT_CHR		;409c - Invert it
+
+	;; Compute coordinate of bottom-left cell
+	ld a,b			;409f - Retrieve row coord and
+	add a,l			;40a0   add step
 	ld b,a			;40a1
-	call sub_4068h		;40a2
-	ld a,c			;40a5
-	add a,l			;40a6
+	
+	call INVERT_CHR		;40a2 - Invert it
+
+	;; Compute coordinate of bottom cell
+	ld a,c			;40a5 - Retrieve column coord and
+	add a,l			;40a6   add step to it
 	ld c,a			;40a7
-	call sub_4068h		;40a8
-	ld a,c			;40ab
-	add a,l			;40ac
+	
+	call INVERT_CHR		;40a8 - Invert it
+
+	;; Compute coordinate of bottom-right cell
+	ld a,c			;40ab - Retrieve column coord and
+	add a,l			;40ac   add step to it
 	ld c,a			;40ad
-	call sub_4068h		;40ae
+	
+	call INVERT_CHR		;40ae - Invert it
+
+	;; Restore coordinates
 	pop bc			;40b1
+
+	;; Done
 	ret			;40b2
+
 	nop			;40b3
 	nop			;40b4
 	nop			;40b5
 	nop			;40b6
 	nop			;40b7
-sub_40b8h:
-	ld l,000h		;40b8
-l40bah:
-	call sub_4080h		;40ba
-	call sub_40d0h		;40bd
-	call sub_4080h		;40c0
-	inc l			;40c3
-	ld a,l			;40c4
-	cp 01fh		;40c5
-	jr nz,l40bah		;40c7
 
-	call WRITE_TO_AY		;40c9
+	;; Create explosion
+DISP_EXPLOSION:
+	ld l,000h		;40b8 - Set initial radius of explosion
+
+l40bah:	call sub_4080h		;40ba - Invert corner cells at current radius
+	call sub_40d0h		;40bd - Step of explosion sound
+	call sub_4080h		;40c0 - Revert corner cells at current
+				;       radius
+
+	inc l			;40c3 - Increase radius
+
+	ld a,l			;40c4 - Check if reached edge of screen
+	cp 01fh			;40c5
+
+	jr nz,l40bah		;40c7 - Repeat, if not
+
+	;; Reset Channel A volume
+	call WRITE_TO_AY	;40c9
 	db AY_VOL_1, $10
 
 	ret
 
 	nop			;40cf
 
+	;; Explosion sound and beeper
 sub_40d0h:
-	ld a,l			;40d0
-	ld (040eah),a		;40d1
-	call sub_49d0h		;40d4
+	ld a,l			;40d0 - Retrieve radius of explosion
+	ld (EXP_SND+1),a	;40d1 - Store it as AY output data
 
-	call WRITE_TO_AY		;40d7
+	call sub_49d0h		;40d4 - Call explosion beeper
+
+	;; Reset volume on AY channels A and B and turn on white noise
+	;; on channel B
+	call WRITE_TO_AY	;40d7
 	db AY_VOL_1, $0F
 
-	call WRITE_TO_AY		;40dc
+	call WRITE_TO_AY	;40dc
 	db AY_VOL_2, $0F
 	
-	call WRITE_TO_AY		;40e1
+	call WRITE_TO_AY	;40e1
 	db AY_MIXER, %00101111
-	
-	call WRITE_TO_AY		;40e6
+
+	;; White noise frequency is based on current radius of explosion
+	;; (set earlier in this subroutine)
+	call WRITE_TO_AY	;40e6
+EXP_SND:
 	db AY_NOISE_FREQ, $1E
 	
 	ret			;40eb
@@ -999,6 +1110,7 @@ l4100h:
 	;; 4141--411c - segment info
 	;;              Bit 0 - set for head, reset for body
 	;; 		Bit 5 - set if segment displayed
+	;;              Bit 6 - set if masked character???
 	;; 4161-416c - temporary store for background character
 	;; 
 	;; These are original values from TAP file, though they are
@@ -1314,7 +1426,7 @@ l4254h:
 	ld c,(ix+020h)		;4257
 
 	;; Retrieve any object at B,C into A
-	call sub_3d18h		;425a
+	call GET_CHAR		;425a
 	cp 005h			;425d - Check if space ship, bullet, flea, ...
 	jp nc,l4273h+1		;425f - Jump forward if is
 
@@ -1325,7 +1437,7 @@ l4254h:
 	jr nz,l4273h		;426f
 	ld a,008h		;4271 - Centipede head
 
-l4273h:	call sub_3d00h		;4273 - Display character
+l4273h:	call PUT_CHR		;4273 - Display character
 	inc ix			;4276 - Advance to next segment
 	dec d			;4278 - Check if any more segments
 	jp nz,l4254h		;4279 - Loop if so
@@ -1384,7 +1496,7 @@ l42b4h:
 l42cah:
 	ld b,(ix+000h)		;42ca
 	ld c,(ix+020h)		;42cd
-	call sub_3d18h		;42d0
+	call GET_CHAR		;42d0
 	cp 006h		;42d3
 	jp nz,l4310h		;42d5
 	call sub_41a0h		;42d8
@@ -1447,13 +1559,13 @@ l4310h:
 	bit 5,(ix+040h)		;4317
 	jr z,l4323h		;431b
 	ld a,(ix+060h)		;431d
-	call sub_3d00h		;4320
+	call PUT_CHR		;4320
 l4323h:
 	call sub_4300h		;4323
 	ld a,c			;4326
 	cp 020h		;4327
 	jr nc,l4360h		;4329
-	call sub_3d18h		;432b
+	call GET_CHAR		;432b
 	cp 000h		;432e
 	jr z,l433dh		;4330
 	cp 005h		;4332
@@ -1462,12 +1574,12 @@ l4323h:
 	jr z,l433dh		;4338
 	jp l4360h		;433a
 l433dh:
-	call sub_3d18h		;433d
+	call GET_CHAR		;433d
 	cp 007h		;4340
 	jr nc,l4352h		;4342
 	ld (ix+060h),a		;4344
 	ld a,007h		;4347
-	call sub_3d00h		;4349
+	call PUT_CHR		;4349
 	set 5,(ix+040h)		;434c
 	jr l4356h		;4350
 l4352h:
@@ -1540,7 +1652,7 @@ l43b5h:
 	nop			;43ce
 	nop			;43cf
 l43d0h:
-	call sub_3d18h		;43d0
+	call GET_CHAR		;43d0
 	cp 008h		;43d3
 	jr nz,l43e9h		;43d5
 	ld a,(ix+03fh)		;43d7
@@ -1551,12 +1663,12 @@ l43d0h:
 	nop			;43e1
 	nop			;43e2
 	ld a,(ix+060h)		;43e3
-	call sub_3d00h		;43e6
+	call PUT_CHR		;43e6
 l43e9h:
 	call sub_4440h		;43e9
 	ld b,(ix+001h)		;43ec
 	ld c,(ix+021h)		;43ef
-	call sub_3d18h		;43f2
+	call GET_CHAR		;43f2
 	cp 008h		;43f5
 	jr nz,l4401h		;43f7
 	ld a,(ix+061h)		;43f9
@@ -1566,7 +1678,7 @@ l4401h:
 	cp 007h		;4401
 	jr nz,l4416h		;4403
 	ld a,008h		;4405
-	call sub_3d00h		;4407
+	call PUT_CHR		;4407
 	ld a,(ix+061h)		;440a
 	ld (ix+060h),a		;440d
 	ld (ix+061h),008h		;4410
@@ -1576,7 +1688,7 @@ l4416h:
 	jr nc,l4423h		;4418
 	ld (ix+060h),a		;441a
 	ld a,008h		;441d
-	call sub_3d00h		;441f
+	call PUT_CHR		;441f
 	nop			;4422
 l4423h:
 	ld a,b			;4423
@@ -1640,12 +1752,12 @@ l4479h:
 	jr z,l4469h		;447d
 	ld b,(ix+000h)		;447f
 	ld c,(ix+020h)		;4482
-	call sub_3d18h		;4485
+	call GET_CHAR		;4485
 	cp 006h		;4488
 	jr nz,l44afh		;448a
 l448ch:
 	ld a,004h		;448c
-	call sub_3d00h		;448e
+	call PUT_CHR		;448e
 	res 6,(ix+040h)		;4491
 	ld hl,01000h		;4495
 	bit 0,(ix+040h)		;4498
@@ -1752,101 +1864,147 @@ l4533h:
 	nop			;453d
 	nop			;453e
 	nop			;453f
-l4540h:
-	call sub_40b8h		;4540
-	ld ix,l4101h		;4543
-l4547h:
-	bit 6,(ix+040h)		;4547
-	jr z,l455fh		;454b
-	bit 5,(ix+040h)		;454d
-	jr z,l455fh		;4551
-	ld b,(ix+000h)		;4553
-	ld c,(ix+020h)		;4556
-	ld a,(ix+060h)		;4559
-	call sub_3d00h		;455c
+
+	;; Arrive here if player moves spaceship into enemy (centipede
+	;; or flea). Arrive here from l3e58h:
+l4540h:	call DISP_EXPLOSION	;4540 - Display explosion
+
+	ld ix,l4101h		;4543 - Pointer to centipede
+
+	;; Delete centipede
+l4547h:	bit 6,(ix+040h)		;4547 - Check if ???
+	jr z,l455fh		;454b 
+	bit 5,(ix+040h)		;454d - Is segment visible
+	jr z,l455fh		;4551 - Jump forward if not
+
+	;; Restore masked character (from under centipede)
+	ld b,(ix+000h)		;4553 - Row value of segment
+	ld c,(ix+020h)		;4556 - Column value of segment
+	ld a,(ix+060h)		;4559 - Masked character
+
+	call PUT_CHR		;455c
 l455fh:
-	inc ix		;455f
-	push ix		;4561
+	inc ix			;455f - Move to next segment
+	push ix			;4561
 	pop bc			;4563
+
+	;; Check if done (i.e., all segments deleted), otherwise repeat.
 	ld a,c			;4564
-	cp 01fh		;4565
+	cp 01fh			;4565
 	jr nz,l4547h		;4567
-	ld hl,02420h		;4569
-l456ch:
-	ld a,(hl)			;456c
-	cp 005h		;456d
-	jr c,l4573h		;456f
-	ld (hl),000h		;4571
-l4573h:
-	inc hl			;4573
-	ld a,l			;4574
-	cp 0e0h		;4575
-	jr nz,l456ch		;4577
-	ld a,h			;4579
-	cp 026h		;457a
-	jr nz,l456ch		;457c
-	ld c,000h		;457e
-l4580h:
-	ld b,016h		;4580
-l4582h:
-	call sub_3d18h		;4582
-	and a			;4585
-	jr z,l459ch		;4586
-	cp 004h		;4588
-	jr nc,l459ch		;458a
-	call sub_3d18h		;458c
+
+	;; Delete everything other than mushrooms from game board
+	ld hl,02420h		;4569 - Move to start of game board (row
+				;       1, column 0)
+l456ch:	ld a,(hl)		;456c - Retrieve character and check if
+	cp 005h			;456d   mushroom
+	jr c,l4573h		;456f - Jump forward if is
+	ld (hl),000h		;4571 - Otherwise delete
+
+l4573h:	inc hl			;4573 - Move to next cell
+
+	;; Check if reach row 23 = (2*8+7)
+	ld a,l			;4574 - Check if low part of row 
+	cp 0e0h			;4575   coordinate is 7 
+	jr nz,l456ch		;4577 - Repeat if not
+	ld a,h			;4579 - Check if high part of row
+	cp 026h			;457a   coordinate is 2 (0x26-0x24 = 0x02)
+	jr nz,l456ch		;457c - Repeat if not
+
+	;; Replace any partial mushrooms with whole mushrooms, updating
+	;; score for any partial mushrooms found. Because there is at
+	;; most one partial mushroom per column (the first one a laser
+	;; would hit), only need to search up from the bottom of each
+	;; row until we find a partial mushroom/ whole mushroom)
+	ld c,000h		;457e - Start at bottom-left corner
+l4580h:	ld b,016h		;4580
+
+	;; Find mushroom
+l4582h:	call GET_CHAR		;4582 - Retrieve character
+	and a			;4585 - If nothing there, move on
+	jr z,l459ch		;4586   to check next cell
+
+	cp 004h			;4588 - If not partial mushroom, move on
+	jr nc,l459ch		;458a   to check next cell *** could
+				;       probably move to next column
+				;       here ***
+
+	call GET_CHAR		;458c - Invert character
 	xor 080h		;458f
-	call sub_3d00h		;4591
+	call PUT_CHR		;4591
+
 	call sub_45b8h		;4594
-	ld a,004h		;4597
-	call sub_3d00h		;4599
-l459ch:
-	djnz l4582h		;459c
-	inc c			;459e
-	ld a,c			;459f
-	cp 020h		;45a0
-	jr nz,l4580h		;45a2
-	ld sp,(SP_STR)		;45a4
+
+	ld a,004h		;4597 - Replace character with whole mushroom
+	call PUT_CHR		;4599
+
+l459ch:	djnz l4582h		;459c - Advance to next cell up (if any
+				;       more)
+
+	;; Adavance to next column (if anymore)
+	inc c			;459e - Increment column
+	ld a,c			;459f - Check if reached righthand side
+	cp 020h			;45a0   of screen
+	jr nz,l4580h		;45a2 - Repeat if not
+
+	;; *** GOT THIS FAR ***
+	ld sp,(SP_STR)		;45a4 - Restore stack pointer ???
+
 	ld a,000h		;45a8
 	ld (l46e0h),a		;45aa
-	call sub_41a0h		;45ad
+
+	call sub_41a0h		;45ad - Restore Forth environment
+
 	jp l45d0h		;45b0
 	nop			;45b3
 	nop			;45b4
 	nop			;45b5
 	nop			;45b6
 	nop			;45b7
+
+	;; Play mushroom regeneration sound and update score
+	;; 
+	;; Called from routine (0x4594) to regenerate mushrooms after
+	;; player has died
 sub_45b8h:
-	call sub_3fa0h		;45b8
-	call sub_49c5h		;45bb
+	call REGEN_SND		;45b8
+	call REGEN_BPR		;45bb
+
+	;; Pause
 	ld hl,03000h		;45be
-l45c1h:
-	dec hl			;45c1
+
+l45c1h:	dec hl			;45c1
 	ld a,h			;45c2
 	or l			;45c3
 	jr nz,l45c1h		;45c4
+
+	;; Add 5 to score
 	ld hl,00500h		;45c6
-	call sub_3fc0h		;45c9
+	call UPDATE_SCORE		;45c9
+
 	ret			;45cc
+
 	nop			;45cd
 	nop			;45ce
 	nop			;45cf
-l45d0h:
-	ld a,(l3fbch)		;45d0
-	and a			;45d3
-	jp nz,l45e0h		;45d4
-	call sub_41a0h		;45d7
+
+	;; Check if out of lives
+l45d0h:	ld a,(NO_LIVES)		;45d0 - Retrieve number of lives
+	and a			;45d3 - Check if zero
+	jp nz,l45e0h		;45d4 - Move on, if not
+	call sub_41a0h		;45d7 - Otherwise, end game
 	jp l4800h		;45da
 	nop			;45dd
 	nop			;45de
 	nop			;45df
-l45e0h:
-	dec a			;45e0
-	ld (l3fbch),a		;45e1
-	ld hl,(l3fbdh)		;45e4
+
+	;; Decrease number of lives and reset level
+l45e0h:	dec a			;45e0
+	ld (NO_LIVES),a		;45e1
+	ld hl,(NEXT_SHIP_LOCN)	;45e4
 	ld (hl),000h		;45e7
 	dec hl			;45e9
-	ld (l3fbdh),hl		;45ea
+	ld (NEXT_SHIP_LOCN),hl	;45ea
 	ld a,000h		;45ed
 	ld (l4180h),a		;45ef
 	ld a,(l4180h+6)		;45f2
@@ -1854,8 +2012,8 @@ l45e0h:
 	ld (l4180h+6),a		;45f6
 	ld bc,0160fh		;45f9
 	ld a,005h		;45fc
-	call sub_3d00h		;45fe
-	ld (l3f12h),bc		;4601
+	call PUT_CHR		;45fe
+	ld (SHIP_COORD),bc		;4601
 	ld bc,00000h		;4605
 	ld (BULLET_COORD),bc		;4608
 	jp l3c78h		;460c
@@ -2049,10 +2207,10 @@ l471dh:
 	ld (l46e1h),bc		;472c
 	ld a,001h		;4730
 	ld (l46e0h),a		;4732 - ??? Flea is active
-	call sub_3d18h		;4735
+	call GET_CHAR		;4735
 	ld (l46e5h+1),a		;4738
 	ld a,00bh		;473b
-	call sub_3d00h		;473d
+	call PUT_CHR		;473d
 	ld l,001h		;4740
 	call sub_3d30h		;4742
 	and h			;4745
@@ -2074,13 +2232,13 @@ l4750h:
 	jp z,l4711h		;4761
 l4764h:
 	ld bc,(l46e1h)		;4764
-	call sub_3d18h		;4768
+	call GET_CHAR		;4768
 	cp 006h		;476b
 	jp nz,l4783h		;476d
 	ld a,004h		;4770
-	call sub_3d00h		;4772
+	call PUT_CHR		;4772
 	ld hl,00005h		;4775
-	call sub_3fc0h		;4778
+	call UPDATE_SCORE		;4778
 	ld a,000h		;477b
 	ld (l46e0h),a		;477d
 	jp l4711h		;4780
@@ -2103,21 +2261,21 @@ l4794h:
 l479fh:
 	ld a,h			;479f
 l47a0h:
-	call sub_3d00h		;47a0
+	call PUT_CHR		;47a0
 	inc b			;47a3
-	call sub_3d18h		;47a4
+	call GET_CHAR		;47a4
 	ld (l46e5h+1),a		;47a7
 	ld a,b			;47aa
 	cp 017h		;47ab
 	jr nz,l47bbh		;47ad
 	ld a,000h		;47af
 	dec b			;47b1
-	call sub_3d00h		;47b2
+	call PUT_CHR		;47b2
 	ld (l46e0h),a		;47b5
 	jp l4711h		;47b8
 l47bbh:
 	ld a,00bh		;47bb
-	call sub_3d00h		;47bd
+	call PUT_CHR		;47bd
 	ld (l46e1h),bc		;47c0
 	jp l4711h		;47c4
 	nop			;47c7
@@ -2351,7 +2509,7 @@ l4905h:
 	nop			;4906
 	nop			;4907
 sub_4908h:
-	call sub_3fc0h		;4908
+	call UPDATE_SCORE	;4908
 l490bh:
 	bit 4,(ix+040h)		;490b
 	ret z			;490f
@@ -2520,30 +2678,36 @@ l49ach:	djnz l49ach		;49ac - Pause for B iterations
 	nop			;49c2
 	nop			;49c3
 	nop			;49c4
-sub_49c5h:
-	call sub_499dh		;49c5
-	call sub_499dh		;49c8
+
+
+REGEN_BPR:	
+	call sub_499dh		;49c5 - Laser beeper
+	call sub_499dh		;49c8 - Laser beeper
+
 	ret			;49cb
+
 	nop			;49cc
 	nop			;49cd
 	nop			;49ce
 	nop			;49cf
+
+	;; Play explosion beeper
 sub_49d0h:
-	ld a,l			;49d0
-	scf			;49d1
+	ld a,l			;49d0 - Retrieve radius and work out
+	scf			;49d1   2*RADIUS+1
 	rla			;49d2
-	add a,080h		;49d3
+	add a,080h		;49d3 - Add 0x80
 	nop			;49d5
 	nop			;49d6
 	nop			;49d7
-	ld (l49e1h),a		;49d8
-	ld (l49e5h),a		;49db
+	ld (EXP_BPR),a		;49d8 - Store in beeper routine params
+	ld (EXP_BPR+4),a	;49db
 
-	call PLAY_BEEPER		;49de
-l49e1h: db $BD, $40, $05, $00
-l49e5h:	db $BD
+	call PLAY_BEEPER	;49de - Call beeper routine
+EXP_BPR: db $BD, $40, $05, $00, $BD
 
 	ret			;49e6
+
 	nop			;49e7
 	nop			;49e8
 	nop			;49e9
