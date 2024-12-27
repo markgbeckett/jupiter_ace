@@ -419,7 +419,7 @@ l3dffh:	nop			;3dff
 	djnz $+18		;3e1b
 	djnz l3e2fh		;3e1d
 	db $10			;3e1f
-	db $3c			;3e20 - Centipede body (char 7)
+	db $3c			;3e20 - Centipede head (char 7)
 	ld a,(hl)		;3e21
 l3e22h:
 	sbc a,c			;3e22
@@ -429,7 +429,7 @@ l3e22h:
 	ld b,d			;3e26
 	inc h			;3e27
 
-l3e28h:	inc a			;3e28 - Centipede head (char 8)
+l3e28h:	inc a			;3e28 - Centipede body (char 8)
 
 l3e29h:	ld b,d			;3e29
 	cp l			;3e2a
@@ -1114,9 +1114,10 @@ l4100h:
 	;; 		Bit 1 - set if centipede moving right/ reset if
 	;; 		        moving left
 	;;              Bit 2 - set if moving down screen, otherwise up
+	;; 		Bit 3 - set if double-speed segment	
 	;;              Bit 4 - ???
 	;; 		Bit 5 - set if segment displayed
-	;;              Bit 6 - set if masked character???
+	;;              Bit 6 - set if active segment
 	;; 4161-416c - temporary store for background character
 	;; 
 	;; These are original values from TAP file, though they are
@@ -1251,8 +1252,8 @@ l4101h:
 
 	;; 8-byte buffer, initialised at beginning of game so, likely,
 	;; does not matter what is here
-l4180h:	db 0x07
-	db 0x05
+SEGMENT_CNT:	db 0x07
+BOTTOM_ROW_CNT:	db 0x05 	; *** GOT THIS FAR ***
 	db 0x00
 	db $3E
 	db $60
@@ -1311,7 +1312,7 @@ sub_41a0h:
 	;; Initialisation routine #2
 sub_41b0h:
 	ld hl,l41c0h		;41b0 - Write 8 bytes from 41c0 to 4180
-	ld de,l4180h		;41b3
+	ld de,SEGMENT_CNT		;41b3
 	ld bc,00008h		;41b6
 	ldir		;41b9
 
@@ -1322,6 +1323,7 @@ sub_41b0h:
 	nop			;41be
 	nop			;41bf
 
+	;; Initial centipede parameters
 l41c0h: db $0c, $00, $00, $00, $00, $00, $01, $00
 
 	;; Game routine #1 - not used
@@ -1363,8 +1365,8 @@ sub_41e8h:
 	;; Reset bit 6 of memory locations 4141, ..., 415f inclusive
 	ld hl,04141h		;41ee
 	ld b,01fh		;41f1
-l41f3h:
-	res 6,(hl)		;41f3
+
+l41f3h:	res 6,(hl)		;41f3
 	inc hl			;41f5
 	djnz l41f3h		;41f6
 
@@ -1373,11 +1375,11 @@ l41f3h:
 	ld ix,l4101h		;41f8 - Start of centipede storage
 	ld b,00ch		;41fc - Centipede has 12 segments
 	ld c,000h		;41fe - First segment is in column 0
-	ld h,046h		;4200 - ??? 
-	ld a,(l4180h+7)		;4202
+	ld h,%01000110		;4200 - Segment status
+	ld a,(SEGMENT_CNT+7)	;4202
 	and a			;4205
 	jr z,l420ah		;4206
-	set 3,h		;4208 - H=$4E
+	set 3,h			;4208 - H=$4E
 l420ah:	ld (ix+000h),001h	;420a - Set row coordinate to 01 for all
 				;       segments
 	ld (ix+020h),c		;420e - Set column coordinate
@@ -1391,7 +1393,7 @@ l420ah:	ld (ix+000h),001h	;420a - Set row coordinate to 01 for all
 
 	;; Check if centipede needs to be split
 	ld ix,l4101h		;421f
-	ld a,(l4180h+6)		;4223
+	ld a,(SEGMENT_CNT+6)	;4223
 	ld b,a			;4226
 l4227h:	dec b			;4227
 	jp z,l4240h		;4228
@@ -1411,7 +1413,9 @@ l4240h:
 	pop de			;4242
 	pop bc			;4243
 	pop ix		;4244
+
 	ret			;4246
+
 	nop			;4247
 
 
@@ -1463,57 +1467,65 @@ l4273h:	call PUT_CHR		;4273 - Display character
 	nop			;4287
 
 sub_4288h:
-	call sub_41e8h		;4288
-	call sub_4248h		;428b
+	call sub_41e8h		;4288 - Initialise centipede storage
+	call sub_4248h		;428b - Display centipede
+	
 	ret			;428e
 	nop			;428f
 
 sub_4290h:
-	push ix		;4290
+	push ix			;4290
 	push bc			;4292
 	push de			;4293
 	push hl			;4294
 	push af			;4295
 
-	ld ix,l4100h		;4296 - Point to beginning of centipede
-				;       data
-	ld a,(l4180h+5)		;429a
+	ld ix,l4100h		;4296 - Point to address immediately
+				;before beginning of centipede data
+				;(means first INC IX below works)
+
+	;; Toggle bit 0 of SEGMENT_CNT+5, which is simple one-bit flag
+	;; that determines if the centipede should move on this game
+	;; loop
+	ld a,(SEGMENT_CNT+5)	;429a
 	xor 001h		;429d
-	ld (l4180h+5),a		;429f
+	ld (SEGMENT_CNT+5),a	;429f
 
-l42a2h:	inc ix		;42a2
+l42a2h:	inc ix		;42a2 - Advance to next segment
 
-	;; Check if done all segments
+	;; Check if have handled all segments
 	push ix		;42a4
 	pop bc		;42a6
 	ld a,c		;42a7
 	cp 01fh		;42a8
+	jp nz,l42b4h	;42aa - Proceed with main routine, if not
 
-	jp nz,l42b4h	;42aa - Jump to extra code, if not
-
+	;; Return to Game Routine #5, if done
 	pop af			;42ad
 	pop hl			;42ae
 	pop de			;42af
 	pop bc			;42b0
-	pop ix		;42b1
+	pop ix			;42b1
 
 	ret			;42b3
 
-l42b4h:
-	bit 6,(ix+040h)		;42b4 - Check if body
-	jp z,l42a2h		;42b8 - Continue to next segment, if so
+l42b4h:	bit 6,(ix+040h)		;42b4 - Check if active segment
+	jp z,l42a2h		;42b8 - Continue to next segment, if not
 
-	ld a,(l4180h+5)		;42bb
-	cp 001h			;42be
-	jp z,l42cah		;42c0
-	bit 3,(ix+040h)		;42c3
-	jp z,l42a2h		;42c7 - Continue to next segment
+	;; Check if segment moves on this game loop -- if
+	;; (SEGMENT_CNT+5) = 1 or if double-speed segment
+	ld a,(SEGMENT_CNT+5)	;42bb - Check if (SEGMENT_CNT+5)=1
+	cp 001h			;42be 
+	jp z,l42cah		;42c0 - If so, move segment
+
+	;; May still move, if double-speed segment
+	bit 3,(ix+040h)		;42c3 - Is double-speed segment?
+	jp z,l42a2h		;42c7 - Continue to next segment, if not
 
 l42cah:	ld b,(ix+000h)		;42ca - Retrieve coordinates of current
-				;       (head) segment
-	ld c,(ix+020h)		;42cd
+	ld c,(ix+020h)		;42cd   segment
 
-	;; Check if laser at current location
+	;; Check if laser at current location ???
 	call GET_CHAR		;42d0
 	cp 006h			;42d3
 	jp nz,l4310h		;42d5
@@ -1594,21 +1606,24 @@ l4310h:	bit 0,(ix+040h)		;4310 - Check if head segment
 	ld a,(ix+060h)		;431d - Reinstate masked character
 	call PUT_CHR		;4320
 
-l4323h:	call sub_4300h		;4323 - Move centipede coordinate left/
-				;       right
+l4323h:	call sub_4300h		;4323 - Move centipede head left/ right,
+				;       according to which direction it
+				;       is facing
 
 	ld a,c			;4326 - Retrieve column coord
-	cp 020h			;4327 - Check if at right edge of screen
-	jr nc,l4360h		;4329 - Jump on, if so
+	cp 020h			;4327 - Check if at right (or left) edge
+				;       of screen
+	jr nc,l4360h		;4329 - Jump on, to change direction if
+				;       so
 
 	;; Check centipede can move into space
 	call GET_CHAR		;432b
 	cp 000h			;432e - Is it a space?
-	jr z,l433dh		;4330
+	jr z,l433dh		;4330 - Continue, if so
 	cp 005h			;4332 - Is it spaceship?
-	jr z,l433dh		;4334
+	jr z,l433dh		;4334 - Continue, if so
 	cp 006h			;4336 - Is it a laser?
-	jr z,l433dh		;4338
+	jr z,l433dh		;4338 - Continue, if so
 	jp l4360h		;433a - Otherwise change direction
 
 	;; Update new centipede segment location
@@ -1625,45 +1640,61 @@ l433dh:	call GET_CHAR		;433d
 l4352h:	res 5,(ix+040h)		;4352 - Confirm segment not displayed
 l4356h:	ld (ix+000h),b		;4356 - Store new location
 	ld (ix+020h),c		;4359
+
 	jp l42a2h		;435c - Move on to next segment
 	
 	nop			;435f
 
-	;; 
-l4360h:	ld a,%00000010		;4360 - Change direction
-	xor (ix+040h)		;4362
+	;; Centipede has hit obstacle or edge of screen so need to move
+	;; down (or up a row) and change direction
+
+	;; Change direction
+l4360h:	ld a,%00000010		;4360 - Bit 1 of segment status indicates
+	xor (ix+040h)		;4362   horizontal direction
 	ld (ix+040h),a		;4365
 
 	call sub_4300h		;4368 - Move centipede right/ left
 
 	;;  Check if going up the screen or down
-	bit 2,(ix+040h)		;436b
-	jr nz,l4374h		;436f
+	bit 2,(ix+040h)		;436b - Bit 2 of segment status indicates
+	jr nz,l4374h		;436f   vertical direction
 
 	dec b			;4371 - Move up
 	jr l4375h		;4372
 	
 l4374h:	inc b			;4374 - Move down
 
+	;; Check if at row 0x10 and, if so, set centiped to bead down
+	;; screen (deals with case of centipede moving back up screen)
 l4375h:	ld a,b			;4375
 	cp 010h			;4376
 	jr nz,l437eh		;4378
 	set 2,(ix+040h)		;437a
 
-	;; Check if reached bottom of screen and set centipede to start
-	;; moving up screen, if so
+	;; Check if reached bottom of screen and, if so, set centipede
+	;; to start moving up screen
 l437eh:	cp 016h			;437e
-	jp nz,l433dh		;4380 - Update segment
-	res 2,(ix+040h)		;4383
-	bit 4,(ix+040h)		;4387
-	jr nz,l4395h		;438b
+	jp nz,l433dh		;4380 - Move on to update segment, if
+				;       not.
+	res 2,(ix+040h)		;4383 - Otherwise, set centipede segment
+				;       to move up screen
 
-	ld hl,l4180h+1		;438d
+	;; Check if segment has been near bottom of screen before
+	bit 4,(ix+040h)		;4387 - Bit 4 of segment status
+				;       indicates if so
+	jr nz,l4395h		;438b - If so, move on
+
+	;;  Increase number ofof centipede segments that have been near
+	;;  bottom of screen
+	ld hl,BOTTOM_ROW_CNT		;438d
 	inc (hl)			;4390
+
 	set 4,(ix+040h)		;4391
 
+	;; Randomly choose whether centipede moves left or right
 l4395h:	call RND		;4395
-	and 002h		;4398
+	and %00000010		;4398 - Bit 1 on segment status
+				;       indicates horizontal direction
 	xor (ix+040h)		;439a
 	ld (ix+040h),a		;439d
 
@@ -1707,71 +1738,93 @@ l43b5h:	res 1,(ix+040h)		;43b5 - Set centipede to move left
 	nop			;43cf
 
 	;; Move centipede body segment
+	;;
+	;; On entry:
+	;;   BC - location of segment
+	;;   IX - points to segment in centipede data structure
 l43d0h:	call GET_CHAR		;43d0
-	cp 008h			;43d3
-	jr nz,l43e9h		;43d5
+	cp 008h			;43d3 - Check if body segment displayed
+	jr nz,l43e9h		;43d5 - Jump forward, if not
 
-	;; Check if previous segment is masked head
+	;; Check if previous segment is active and body
 	ld a,(ix+03fh)		;43d7
 	and %01000001		;43da
 	cp 040h			;43dc
-	jr z,l43e9h		;43de
+	jr z,l43e9h		;43de - Jump forward, if so
 	
 	nop			;43e0
 	nop			;43e1
 	nop			;43e2
+
+	;; Restore previous character
 	ld a,(ix+060h)		;43e3
 	call PUT_CHR		;43e6
 
-	;; *** GOT THIS FAR ***
-l43e9h:	call sub_4440h		;43e9
-	ld b,(ix+001h)		;43ec
-	ld c,(ix+021h)		;43ef
+l43e9h:	call sub_4440h		;43e9 - copy (most) of status from next
+				;       segment into current
+
+	ld b,(ix+001h)		;43ec - retrieve coordinates of next
+	ld c,(ix+021h)		;43ef   segment and character there
 	call GET_CHAR		;43f2
 
-	cp 008h		;43f5
-	jr nz,l4401h		;43f7
-	ld a,(ix+061h)		;43f9
-	ld (ix+060h),a		;43fc
+	cp 008h			;43f5 - Check if body segment displayed
+	jr nz,l4401h		;43f7   and jump forward if not.
+
+	ld a,(ix+061h)		;43f9 - Move masked character from next 
+	ld (ix+060h),a		;43fc   segment into current
 
 	jr l4423h		;43ff
 
-l4401h:	cp 007h		;4401
-	jr nz,l4416h		;4403
+l4401h:	cp 007h			;4401 - Check if head
+	jr nz,l4416h		;4403 - Jump forward, if not
+
+	;; Print body character
 	ld a,008h		;4405
 	call PUT_CHR		;4407
+
 	ld a,(ix+061h)		;440a
 	ld (ix+060h),a		;440d
-	ld (ix+061h),008h		;4410
+	ld (ix+061h),008h	;4410
+
 	jr l4423h		;4414
 
-l4416h:	cp 007h		;4416
+l4416h:	cp 007h			;4416
 	jr nc,l4423h		;4418
+
 	ld (ix+060h),a		;441a
 	ld a,008h		;441d
 	call PUT_CHR		;441f
+
 	nop			;4422
 
-l4423h:	ld a,b			;4423
-	cp 016h		;4424
+l4423h:	ld a,b			;4423 - Check if on bottom row
+	cp 016h			;4424
 	jr nz,l4436h		;4426
-	bit 4,(ix+040h)		;4428
-	jr nz,l4436h		;442c
-	ld hl,l4180h+1		;442e
-	inc (hl)			;4431
+
+	;; Check if first time at bottom of screen?
+	bit 4,(ix+040h)		;4428 - Check if Bit 4 of status is set
+	jr nz,l4436h		;442c - Move on, if so
+
+	ld hl,BOTTOM_ROW_CNT	;442e - Increase counter and set Bit 4 of
+	inc (hl)		;4431   segment's status register
 	set 4,(ix+040h)		;4432
-l4436h:
-	ld (ix+000h),b		;4436
+
+	;; Update coordinates and move on to next segment
+l4436h:	ld (ix+000h),b		;4436
 	ld (ix+020h),c		;4439
+
 	jp l42a2h		;443c
+
 	nop			;443f
 
 sub_4440h:
-	ld a,(ix+040h)		;4440
+	ld a,(ix+040h)		;4440 - Extract and save value of Bit 4 of
+				;       segment status
 	and %00010000		;4443
 	ld h,a			;4445
+	
 	ld a,(ix+041h)		;4446
-	and %11101110		;4449
+	and %11101110		;4449 - Mask off head and bit 4 
 	or h			;444b
 	ld (ix+040h),a		;444c
 
@@ -1843,7 +1896,7 @@ l448ch:	ld a,004h		;448c - Replace character with mushroom
 
 l44a1h:	call sub_4908h		;44a1 - Update score and ???
 	set 0,(ix+03fh)		;44a4 - Set previous segment to be head
-	ld hl,l4180h		;44a8
+	ld hl,SEGMENT_CNT		;44a8
 	dec (hl)		;44ab
 	jp l4469h		;44ac - Continue to next segment
 	
@@ -1878,7 +1931,7 @@ l44b8h:	push af
 
 	ret			;44d0
 
-l44d1h:	nop			;44d1
+NEW_CENT_TIMER:	nop			;44d1
 	nop			;44d2
 	nop			;44d3
 	nop			;44d4
@@ -1887,13 +1940,17 @@ l44d1h:	nop			;44d1
 	nop			;44d7
 
 
-	;; Called from Game Routine #5 (44e8)
+	;; Service centipede -- called from Game Routine #5 (44e8)
 sub_44d8h:
 	call sub_4460h		;44d8 - Check if centipede hit by laser
-	call l44b8h		;44db - Move centipede legs
-	call sub_4290h		;44de
-	call sub_4630h		;44e1
+	call l44b8h		;44db - Animate centipede's legs
+	call sub_4290h		;44de - Move centipede
+	call sub_4630h		;44e1 - Deal with special cases, like
+				;       all of centipede near bottom of screen
+				;       ???
+
 	ret			;44e4
+
 	nop			;44e5
 	nop			;44e6
 	nop			;44e7
@@ -1903,9 +1960,13 @@ sub_44d8h:
 sub_44e8h:
 	push af			;44e8
 
-	ld a,(l4180h)		;44e9
+	;; Check if centipede is visible
+	ld a,(SEGMENT_CNT)	;44e9
 	and a			;44ec
-	jp z,l44f8h		;44ed
+	jp z,l44f8h		;44ed - Jump forward to new-centipede
+				;       timer, if no centipede
+
+	;; Otherwise, move centipede
 	call sub_44d8h		;44f0
 
 	pop af			;44f3
@@ -1914,43 +1975,64 @@ sub_44e8h:
 
 	nop			;44f5
 	nop			;44f6
-l44f7h:
-	nop			;44f7
+l44f7h:	nop			;44f7
 
-l44f8h:	ld a,(l44d1h)		;44f8
+	;; Check if time to introduce new centipede which, when a
+	;; centipede is destroyed or after player loses a life, on a
+	;; count of 40h
+l44f8h:	ld a,(NEW_CENT_TIMER)	;44f8
 	and a			;44fb
-	jp nz,l4508h		;44fc
+	jp nz,l4508h		;44fc - Could be JR NZ
+
+	;; If zero (from previous use), reset timer
 	ld a,040h		;44ff
-	ld (l44d1h),a		;4501
+	ld (NEW_CENT_TIMER),a	;4501
+
+	;; Balance stack and done
 	pop af			;4504
-	ret			;4505
+
+	ret			;4505 - return to main game loop
+
 	nop			;4506
 	nop			;4507
-l4508h:
-	dec a			;4508
-	ld (l44d1h),a		;4509
-	jr z,l4510h		;450c
+
+	;; Decrement new-centipede timer and check if time to release
+	;; new centipede
+l4508h:	dec a			;4508
+	ld (NEW_CENT_TIMER),a	;4509
+
+	jr z,l4510h		;450c - Jump forward if timer reaches zero
+
+	;; Balance stack and done
 	pop af			;450e
-	ret			;450f
-l4510h:
-	ld a,(l41c0h)		;4510
-	ld (l4180h),a		;4513
+
+	ret			;450f - return to main game loop
+
+	;; Initialise new centipede
+l4510h:	ld a,(l41c0h)		;4510
+	ld (SEGMENT_CNT),a	;4513
+
 	ld a,000h		;4516
-	ld (l4180h+1),a		;4518
-	ld (l4180h+2),a		;451b
-	ld a,(l4180h+6)		;451e
+	ld (BOTTOM_ROW_CNT),a	;4518
+	ld (SEGMENT_CNT+2),a	;451b
+
+	ld a,(SEGMENT_CNT+6)	;451e
 	inc a			;4521
-	cp 00dh		;4522
+	cp 00dh			;4522
 	jr z,l452bh		;4524
-	ld (l4180h+6),a		;4526
+	ld (SEGMENT_CNT+6),a	;4526
+
 	jr l4533h		;4529
-l452bh:
-	ld a,001h		;452b
-	ld (l4180h+6),a		;452d
-	ld (l4180h+7),a		;4530
-l4533h:
-	call sub_4288h		;4533
+
+	;; ????
+l452bh:	ld a,001h		;452b
+	ld (SEGMENT_CNT+6),a	;452d
+	ld (SEGMENT_CNT+7),a	;4530
+	
+l4533h:	call sub_4288h		;4533 - Initialise and display centipede
+
 	pop af			;4536
+
 	ret			;4537
 	nop			;4538
 	nop			;4539
@@ -2103,10 +2185,12 @@ l45e0h:	dec a			;45e0
 	dec hl			;45e9
 	ld (NEXT_SHIP_LOCN),hl	;45ea
 	ld a,000h		;45ed
-	ld (l4180h),a		;45ef
-	ld a,(l4180h+6)		;45f2
+	ld (SEGMENT_CNT),a		;45ef
+
+	ld a,(SEGMENT_CNT+6)		;45f2
 	dec a			;45f5
-	ld (l4180h+6),a		;45f6
+	ld (SEGMENT_CNT+6),a		;45f6
+
 	ld bc,0160fh		;45f9
 	ld a,005h		;45fc
 	call PUT_CHR		;45fe
@@ -2131,7 +2215,7 @@ sub_4618h:
 	and 00ah		;461c
 	or 045h		;461e
 	ld (ix+040h),a		;4620
-	ld a,(l4180h+7)		;4623
+	ld a,(SEGMENT_CNT+7)		;4623
 	cp 001h		;4626
 	jr nz,l462eh		;4628
 	set 3,(ix+040h)		;462a
@@ -2142,22 +2226,29 @@ l462eh:
 sub_4630h:
 	push hl			;4630
 	push af			;4631
-	ld a,(l4180h+2)		;4632
-	cp 001h		;4635
+
+	;; Check if centipede is visible ??? indicated by (SEGMENT_CNT+2)=0
+	ld a,(SEGMENT_CNT+2)	;4632
+	cp 001h			;4635
 	jp z,l4658h		;4637
-	ld a,(l4180h)		;463a
+
+	;; Check if all of centipede is on bottom of screen ???
+	ld a,(SEGMENT_CNT)	;463a
 	ld h,a			;463d
-	ld a,(l4180h+1)		;463e
+	ld a,(BOTTOM_ROW_CNT)	;463e
 	cp h			;4641
 	jr z,l4647h		;4642
+
 	pop af			;4644
 	pop hl			;4645
+	
 	ret			;4646
-l4647h:
-	ld a,001h		;4647
-	ld (l4180h+2),a		;4649
+
+	;;  All segments are near bottom of screen ???
+l4647h:	ld a,001h		;4647
+	ld (SEGMENT_CNT+2),a	;4649
 	ld hl,06060h		;464c
-	ld (l4180h+3),hl		;464f
+	ld (SEGMENT_CNT+3),hl	;464f
 l4652h:
 	pop af			;4652
 	pop hl			;4653
@@ -2165,19 +2256,19 @@ l4652h:
 	nop			;4655
 	nop			;4656
 	nop			;4657
-l4658h:
-	ld a,(l4180h+3)		;4658
+
+l4658h:	ld a,(SEGMENT_CNT+3)	;4658
 	dec a			;465b
-	ld (l4180h+3),a		;465c
+	ld (SEGMENT_CNT+3),a	;465c
 	jr nz,l4652h		;465f
-	ld a,(l4180h+4)		;4661
-	cp 020h		;4664
+	ld a,(SEGMENT_CNT+4)	;4661
+	cp 020h			;4664
 	jr z,l466ah		;4666
 	sub 008h		;4668
 l466ah:
-	ld (l4180h+3),a		;466a
-	ld (l4180h+4),a		;466d
-	push ix		;4670
+	ld (SEGMENT_CNT+3),a	;466a
+	ld (SEGMENT_CNT+4),a	;466d
+	push ix			;4670
 	ld ix,l4100h		;4672
 l4676h:
 	inc ix		;4676
@@ -2200,7 +2291,7 @@ l4685h:
 	jr nz,l469dh		;4698
 	ld hl,04f00h		;469a
 l469dh:
-	ld a,(l4180h+7)		;469d
+	ld a,(SEGMENT_CNT+7)		;469d
 	cp 001h		;46a0
 	jr z,l46abh		;46a2
 	call RND		;46a4
@@ -2210,9 +2301,9 @@ l469dh:
 l46abh:
 	ld (ix+040h),h		;46ab
 	ld (ix+020h),l		;46ae
-	ld a,(l4180h)		;46b1
+	ld a,(SEGMENT_CNT)		;46b1
 	inc a			;46b4
-	ld (l4180h),a		;46b5
+	ld (SEGMENT_CNT),a		;46b5
 	ld (ix+060h),000h		;46b8
 	pop ix		;46bc
 	pop af			;46be
@@ -2271,25 +2362,29 @@ sub_46e8h:
 	nop			;46f5
 	nop			;46f6
 	nop			;46f7
+
+
 sub_46f8h:
 	push bc			;46f8
 	push de			;46f9
 	push hl			;46fa
 	push af			;46fb
+
 	ld a,(l46e0h)		;46fc
 	and a			;46ff
 	jp nz,l4750h		;4700
 	ld a,(l46e2h+1)		;4703
 	and a			;4706
 	jp nz,l471dh		;4707
-	ld a,(l4180h+6)		;470a
-	cp 002h		;470d
+	ld a,(SEGMENT_CNT+6)	;470a
+	cp 002h			;470d
 	jr z,l4716h		;470f
-l4711h:
-	pop af			;4711
+
+l4711h:	pop af			;4711
 	pop hl			;4712
 	pop de			;4713
 	pop bc			;4714
+
 	ret			;4715
 l4716h:
 	ld a,001h		;4716
@@ -2319,8 +2414,7 @@ l471dh:
 	nop			;474d
 	nop			;474e
 	nop			;474f
-l4750h:
-	ld a,(l46e5h)		;4750
+l4750h:	ld a,(l46e5h)		;4750
 	xor 001h		;4753
 	ld (l46e5h),a		;4755
 	ld h,a			;4758
@@ -2580,8 +2674,9 @@ sub_4908h:
 l490bh:
 	bit 4,(ix+040h)		;490b
 	ret z			;490f
-	ld hl,l4180h+1		;4910
 
+	;; Reduce number of active centipede segments
+	ld hl,BOTTOM_ROW_CNT		;4910
 	dec (hl)			;4913
 
 	ret			;4914
