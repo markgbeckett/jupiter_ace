@@ -51,8 +51,8 @@ START:	nop			;3c5c
 	nop			;3c75
 	nop			;3c76
 	nop			;3c77
-l3c78h:
-	call sub_3ca8h		;3c78 - Initialise sound card
+
+l3c78h:	call sub_3ca8h		;3c78 - Initialise sound card
 	nop			;3c7b
 	nop			;3c7c
 	nop			;3c7d
@@ -1252,11 +1252,17 @@ l4101h:
 
 	;; 8-byte buffer, initialised at beginning of game so, likely,
 	;; does not matter what is here
-SEGMENT_CNT:	db 0x07
-BOTTOM_ROW_CNT:	db 0x05 	; *** GOT THIS FAR ***
-	db 0x00
-	db $3E
-	db $60
+SEGMENT_CNT:	db 0x07		; Count of number of centipede segments
+				; on screen
+BOTTOM_ROW_CNT:	db 0x05 	; Count of number of centipede segments
+				; that have reached bottom of screen
+XTRA_CENT_FLAG:	db 0x00 	; Flag indicating if new-centipede timer
+				; active
+XTRA_CENT_TIMER: db $3E, $60	; Timer and initial-timer value for
+				; introducing extra centipedes, if
+				; player does not complete level quickly
+				; enough
+
 	db $01
 	db $04			; Used when initialising centipede
 	db $00
@@ -1931,7 +1937,7 @@ l44b8h:	push af
 
 	ret			;44d0
 
-NEW_CENT_TIMER:	nop			;44d1
+NEW_CENT_TIMER:	nop		;44d1
 	nop			;44d2
 	nop			;44d3
 	nop			;44d4
@@ -1945,9 +1951,8 @@ sub_44d8h:
 	call sub_4460h		;44d8 - Check if centipede hit by laser
 	call l44b8h		;44db - Animate centipede's legs
 	call sub_4290h		;44de - Move centipede
-	call sub_4630h		;44e1 - Deal with special cases, like
-				;       all of centipede near bottom of screen
-				;       ???
+	call sub_4630h		;44e1 - Check if should add new
+				;one-segment centipede
 
 	ret			;44e4
 
@@ -2014,7 +2019,7 @@ l4510h:	ld a,(l41c0h)		;4510
 
 	ld a,000h		;4516
 	ld (BOTTOM_ROW_CNT),a	;4518
-	ld (SEGMENT_CNT+2),a	;451b
+	ld (XTRA_CENT_FLAG),a	;451b
 
 	ld a,(SEGMENT_CNT+6)	;451e
 	inc a			;4521
@@ -2223,92 +2228,149 @@ l462eh:
 	pop af			;462e
 	ret			;462f
 
+	;; Check if time to introduce extra, one-segment centipede. Once
+	;; all centipede segments have visited bottom row of screen,
+	;; additional one-segment centipedes are introduced one by one
+	;; after set amounts of time. The time until each extra
+	;; centipede appears reduces as each new centipede appears.
 sub_4630h:
+	;; Save registers
 	push hl			;4630
 	push af			;4631
 
-	;; Check if centipede is visible ??? indicated by (SEGMENT_CNT+2)=0
-	ld a,(SEGMENT_CNT+2)	;4632
+	;; Check if new-centipede timer is active and, if so, move on to
+	;; service timer
+	ld a,(XTRA_CENT_FLAG)	;4632
 	cp 001h			;4635
-	jp z,l4658h		;4637
 
-	;; Check if all of centipede is on bottom of screen ???
+	jp z,l4658h		;4637 - Move on to service timer
+
+	;; Check if all of centipede segments have now visited is on
+	;; bottom of screen and, if so, initialise new-centipede timer
 	ld a,(SEGMENT_CNT)	;463a
 	ld h,a			;463d
 	ld a,(BOTTOM_ROW_CNT)	;463e
 	cp h			;4641
-	jr z,l4647h		;4642
+	
+	jr z,l4647h		;4642 - Move on to set timer
 
 	pop af			;4644
 	pop hl			;4645
 	
 	ret			;4646
 
-	;;  All segments are near bottom of screen ???
+	;;  Initialise new-centipede timer
 l4647h:	ld a,001h		;4647
-	ld (SEGMENT_CNT+2),a	;4649
-	ld hl,06060h		;464c
-	ld (SEGMENT_CNT+3),hl	;464f
-l4652h:
-	pop af			;4652
+	ld (XTRA_CENT_FLAG),a	;4649 - Confirms timer is active
+	ld hl,06060h		;464c - Intially, timer is set to 60
+				;       game loops, (plus timer-length
+				;       set to 60 game loops)
+	ld (XTRA_CENT_TIMER),hl	;464f - Initial value for timer
+
+l4652h:	pop af			;4652
 	pop hl			;4653
+
 	ret			;4654
 	nop			;4655
 	nop			;4656
 	nop			;4657
 
-l4658h:	ld a,(SEGMENT_CNT+3)	;4658
+	;; Service new-centipede timer
+
+l4658h:	ld a,(XTRA_CENT_TIMER)	;4658 - Decrement timer byte
 	dec a			;465b
-	ld (SEGMENT_CNT+3),a	;465c
-	jr nz,l4652h		;465f
-	ld a,(SEGMENT_CNT+4)	;4661
+	ld (XTRA_CENT_TIMER),a	;465c
+
+	jr nz,l4652h		;465f - If not zero, done
+
+	;; Reduce start-length of extra-centipede timer, unless has
+	;; already dropped to 20 game loops
+	ld a,(XTRA_CENT_TIMER+1)	;4661
 	cp 020h			;4664
 	jr z,l466ah		;4666
+
 	sub 008h		;4668
-l466ah:
-	ld (SEGMENT_CNT+3),a	;466a
-	ld (SEGMENT_CNT+4),a	;466d
-	push ix			;4670
-	ld ix,l4100h		;4672
-l4676h:
-	inc ix		;4676
-	push ix		;4678
+
+	;; Reset timer and store new start-length of timer
+l466ah:	ld (XTRA_CENT_TIMER),a	;466a
+	ld (XTRA_CENT_TIMER+1),a ;466d
+
+	;; Search through existing segments, looking for an inactive
+	;; segment that can be used for extra, one-segment centipede
+	push ix			;4670 - Save IX
+
+	ld ix,l4100h		;4672 - Immediately before start of
+				;       centipede dataset
+
+l4676h:	inc ix			;4676 - Advance to next segment
+
+	;; Check if done (all segments)
+	push ix			;4678
 	pop hl			;467a
 	ld a,l			;467b
-	cp 01fh		;467c
-	jr nz,l4685h		;467e
-	pop ix		;4680
+	cp 01fh			;467c
+
+	jr nz,l4685h		;467e - Move forward, if not
+
+	;; Restore registers
+	pop ix			;4680
 	pop af			;4682
 	pop hl			;4683
+
+	;; Done
 	ret			;4684
-l4685h:
-	bit 6,(ix+040h)		;4685
-	jp nz,l4676h		;4689
-	ld (ix+000h),010h		;468c
-	ld hl,04d1fh		;4690
+
+	;; Find first inactive centipede segment and use to create new
+	;; one-segment centipede
+l4685h:	bit 6,(ix+040h)		;4685 - Bit 6 determines if centipede is
+				;       active
+	jp nz,l4676h		;4689 - Loop if segment is active
+
+	;; Once found, activate new, one-cell centipede
+	ld (ix+000h),010h	;468c - Set starting row to 0x10
+
+	;; Randomly set HL to be 0x4D1F or 0x4F00 (H - segment status; L
+	;; - column)
+	ld hl,04d1fh		;4690 - 0x4D = %01001101 (head, facing
+				;       left, moving down, double-speed,
+				;       segment active)
 	call RND		;4693
 	and 001h		;4696
 	jr nz,l469dh		;4698
-	ld hl,04f00h		;469a
-l469dh:
-	ld a,(SEGMENT_CNT+7)		;469d
-	cp 001h		;46a0
+	ld hl,04f00h		;469a - 0x4F = %01001111 (head, facing
+				;       right, moving down, double-speed,
+				;       segment active)
+
+	;; Check if double-speed is option
+l469dh:	ld a,(SEGMENT_CNT+7)	;469d
+	cp 001h			;46a0
 	jr z,l46abh		;46a2
+
+	;; Randomly set status bit 3 (set indicates double-speed centipede)
 	call RND		;46a4
 	and 008h		;46a7
 	xor h			;46a9
 	ld h,a			;46aa
-l46abh:
-	ld (ix+040h),h		;46ab
-	ld (ix+020h),l		;46ae
-	ld a,(SEGMENT_CNT)		;46b1
+
+l46abh:	ld (ix+040h),h		;46ab - Set status
+	ld (ix+020h),l		;46ae - Set column coordinate
+
+	;; Count additional centipede segment
+	ld a,(SEGMENT_CNT)	;46b1
 	inc a			;46b4
-	ld (SEGMENT_CNT),a		;46b5
-	ld (ix+060h),000h		;46b8
-	pop ix		;46bc
+	ld (SEGMENT_CNT),a	;46b5
+
+	;; Set mask to be blank
+	ld (ix+060h),000h	;46b8
+
+	;; Restore registers
+	pop ix			;46bc
 	pop af			;46be
 	pop hl			;46bf
+
+	;; Done
 	ret			;46c0
+
 	nop			;46c1
 	nop			;46c2
 	nop			;46c3
