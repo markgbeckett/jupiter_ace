@@ -40,7 +40,7 @@ START:	nop			;3c5c
 	call sub_41b0h		;3c63 - Initialise buffer at 4180h
 	call sub_3d90h		;3c66 - Initialise game screen
 	call sub_4288h		;3c69 - Initialise centipede store and
-				;       display it
+				;       display centipede
 	call sub_46e8h		;3c6c - Zero some variables
 	nop			;3c6f
 	nop			;3c70
@@ -61,14 +61,16 @@ l3c78h:	call sub_3ca8h		;3c78 - Initialise sound card
 
 	;; Main game loop
 l3c80h:	call 041c8h		;3c80 - Does nothing
-	call sub_3ee0h		;3c83 - Play sound
+	call sub_3ee0h		;3c83 - Play game sound
 	call sub_3f28h		;3c86 - Check for fire
-	call sub_3ee0h		;3c89 - Play sound
+	call sub_3ee0h		;3c89 - Play game sound
 	call sub_3f28h		;3c8c - Check for fire
-	call sub_3ef0h		;3c8f - Check for keyboard directions
-	call sub_44e8h		;3c92 - Check centipede
-	call sub_46f8h		;3c95 - Move centipede?
+	call sub_3ef0h		;3c8f - Check for direction keys
+	call sub_44e8h		;3c92 - Service centipede
+	call sub_46f8h		;3c95 - Service flea 
+
 	jp l3c80h		;3c98 - Jump back to start
+
 	nop			;3c9b
 	nop			;3c9c
 	nop			;3c9d
@@ -362,7 +364,7 @@ l3dabh:
 	ret			;3dbf
 
 	;; Top line of game screen
-l3dc0h: db 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04 ; Score
+l3dc0h: db 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x30 ; Score
 	db 0x00
 l3dc9h:	db 0x05, 0x05		; Lives
 	db 0x00, 0x00, 0x00, 0x00, 0x00
@@ -771,7 +773,7 @@ REGEN_SND:
 	db AY_ENV_P+1, $04
 
 	call WRITE_TO_AY	;3faa
-	db AY_MIXER, %00111111
+	db AY_MIXER, %00110111
 
 	call WRITE_TO_AY	;3faf
 	db AY_ENV_SH, $04
@@ -1070,7 +1072,7 @@ sub_40d0h:
 	db AY_VOL_2, $0F
 	
 	call WRITE_TO_AY	;40e1
-	db AY_MIXER, %00101111
+	db AY_MIXER, %00100111
 
 	;; White noise frequency is based on current radius of explosion
 	;; (set earlier in this subroutine)
@@ -2132,8 +2134,9 @@ l459ch:	djnz l4582h		;459c - Advance to next cell up (if any
 
 	ld sp,(SP_STR)		;45a4 - Restore stack pointer ???
 
+	;; Disable flea
 	ld a,000h		;45a8
-	ld (l46e0h),a		;45aa
+	ld (FLEA_FLAG),a	;45aa
 
 	call sub_41a0h		;45ad - Restore Forth environment
 
@@ -2398,23 +2401,22 @@ l46d0h:	ld a,(ix+060h)		;46d0 - Retrieve masked bit
 	nop			;46dd
 	nop			;46de
 	nop			;46df
-l46e0h:
+FLEA_FLAG:
 	db 0x00			;46e0 - Flea is active
-l46e1h:
-	dec c			;46e1
-l46e2h:
-	ld d,001h		;46e2
-l46e4h:
-	nop			;46e4
-l46e5h:
-	ld bc,00020h		;46e5
-
+FLEA_COORD:	dec c			;46e1 - Flea column number
+l46e2h:	ld d,001h		;46e2 - Flee row number
+l46e4h:	nop			;46e4
+l46e5h:	db 0x01			;46e5
+CHAR_SAVE:
+	db 0x20
+	db 0x00
+	
 	;; Initialisation #5 - Zero some variables
 sub_46e8h:
 	push af			;46e8
 	ld a,000h		;46e9
-	ld (l46e0h),a		;46eb - Flee is not active
-	ld (l46e2h+1),a		;46ee
+	ld (FLEA_FLAG),a		;46eb - Flee is not active
+	ld (l46e2h+1),a		;46ee - Set to level 0
 	pop af			;46f1
 	
 	ret			;46f2
@@ -2426,18 +2428,31 @@ sub_46e8h:
 	nop			;46f7
 
 
+	;; Game Routine #6 - Service Flea
+	;;
+	;; On all levels other than first, fleas randomly drop down from
+	;; top of screen, depositing new mushrooms as they go.
+	;;
+	;; This routine checks if there is an active flea and, if so,
+	;; moves it. If no flea, the routine potentially introduces a
+	;; flea.
 sub_46f8h:
 	push bc			;46f8
 	push de			;46f9
 	push hl			;46fa
 	push af			;46fb
 
-	ld a,(l46e0h)		;46fc
+	;; Check if flea is active and move it, if so
+	ld a,(FLEA_FLAG)	;46fc
 	and a			;46ff
 	jp nz,l4750h		;4700
+
+	;; Check if past first level. If so, maybe introduce flea
 	ld a,(l46e2h+1)		;4703
 	and a			;4706
 	jp nz,l471dh		;4707
+
+	;; Check number of active centipedes?
 	ld a,(SEGMENT_CNT+6)	;470a
 	cp 002h			;470d
 	jr z,l4716h		;470f
@@ -2448,58 +2463,81 @@ l4711h:	pop af			;4711
 	pop bc			;4714
 
 	ret			;4715
-l4716h:
-	ld a,001h		;4716
+
+l4716h:	ld a,001h		;4716
 	ld (l46e2h+1),a		;4718
 	jr l4711h		;471b
-l471dh:
-	call RND		;471d
+
+l471dh:	call RND		;471d - RND(4) with zero indicating
+				;       introduction of flea
 	and 03fh		;4720
-	jr nz,l4711h		;4722
-	ld b,001h		;4724
-	call RND		;4726
-	and 01fh		;4729
+	jr nz,l4711h		;4722 - If non-zero, done
+	
+	ld b,001h		;4724 - Set flea row-count to top of
+				;       screen
+	call RND		;4726 - Compute random column for flea 
+	and 01fh		;4729   in 0,...,31
 	ld c,a			;472b
-	ld (l46e1h),bc		;472c
+	ld (FLEA_COORD),bc	;472c - Save flea coordinate
 	ld a,001h		;4730
-	ld (l46e0h),a		;4732 - ??? Flea is active
+	ld (FLEA_FLAG),a	;4732 - Note flea is active
+
+	;; Check and save the character at new flea's location
 	call GET_CHAR		;4735
-	ld (l46e5h+1),a		;4738
+	ld (CHAR_SAVE),a	;4738
+
+	;; Print flea
 	ld a,00bh		;473b
 	call PUT_CHR		;473d
+
+	;; ??? This doesn't appear to do anything (plus not clear what
+	;; initial value of h will be)
 	ld l,001h		;4740
 	call RND		;4742
 	and h			;4745
 	xor h			;4746
 	ld (l46e4h),a		;4747
-	jp l4711h		;474a
+
+	jp l4711h		;474a - Done
 	nop			;474d
 	nop			;474e
 	nop			;474f
+
+	;; Service flea
 l4750h:	ld a,(l46e5h)		;4750
 	xor 001h		;4753
 	ld (l46e5h),a		;4755
+
 	ld h,a			;4758
 	ld a,(l46e4h)		;4759
 	and a			;475c
 	jp nz,l4764h		;475d
 	or h			;4760
-	jp z,l4711h		;4761
-l4764h:
-	ld bc,(l46e1h)		;4764
+	jp z,l4711h		;4761 - Done
+
+	;; Retrieve location of flea and check if hit by laser
+l4764h:	ld bc,(FLEA_COORD)		;4764
 	call GET_CHAR		;4768
-	cp 006h		;476b
-	jp nz,l4783h		;476d
+	cp 006h			;476b
+	jp nz,l4783h		;476d - Move on if not
+
+	;; Flea hit by laser, so replace by mushroom
 	ld a,004h		;4770
 	call PUT_CHR		;4772
+
+	;; Update score
 	ld hl,00005h		;4775
-	call UPDATE_SCORE		;4778
+	call UPDATE_SCORE	;4778
+
+	;; Deactivate flea
 	ld a,000h		;477b
-	ld (l46e0h),a		;477d
+	ld (FLEA_FLAG),a		;477d
+
+	;; Done
 	jp l4711h		;4780
-l4783h:
-	ld a,(l46e5h+1)		;4783
-	cp 000h		;4786
+
+l4783h:	ld a,(CHAR_SAVE)		;4783 - Retrieve character masked by flea
+	cp 000h			;4786
 	jr z,l4794h		;4788
 	cp 005h		;478a
 	jr nc,l4790h		;478c
@@ -2507,32 +2545,47 @@ l4783h:
 l4790h:
 	ld a,000h		;4790
 	jr l47a0h		;4792
-l4794h:
-	ld h,000h		;4794
-	call RND		;4796
+
+	;; Decide whether flea deposits mushroom (one in four chance)
+l4794h:	ld h,000h		;4794 - Assume space
+
+	call RND		;4796 - Compute RND(4)
 	and 003h		;4799
+	
 	jr nz,l479fh		;479b
-	ld h,004h		;479d
-l479fh:
-	ld a,h			;479f
-l47a0h:
-	call PUT_CHR		;47a0
+	ld h,004h		;479d - Set to mushroom if RND(4)=0
+
+l479fh:	ld a,h			;479f - Retrieve space/ mushroom and print it
+l47a0h:	call PUT_CHR		;47a0
+
+	;; Retrieve whatever is immediately below flea on screen and save it
 	inc b			;47a3
 	call GET_CHAR		;47a4
-	ld (l46e5h+1),a		;47a7
+	ld (CHAR_SAVE),a	;47a7
+
+	;; Check if at bottom of screen
 	ld a,b			;47aa
-	cp 017h		;47ab
+	cp 017h			;47ab
 	jr nz,l47bbh		;47ad
+
+	;; If so, make sure previous flea location is blank and set flea
+	;; as inactive
 	ld a,000h		;47af
 	dec b			;47b1
 	call PUT_CHR		;47b2
-	ld (l46e0h),a		;47b5
+	ld (FLEA_FLAG),a		;47b5
+
+	;; Done
 	jp l4711h		;47b8
-l47bbh:
-	ld a,00bh		;47bb
+
+	;; Print flea and store new flea coordinates
+l47bbh:	ld a,00bh		;47bb
 	call PUT_CHR		;47bd
-	ld (l46e1h),bc		;47c0
+	ld (FLEA_COORD),bc		;47c0
+
+	;; Done
 	jp l4711h		;47c4
+
 	nop			;47c7
 	nop			;47c8
 	nop			;47c9
@@ -2543,7 +2596,7 @@ l47bbh:
 	nop			;47ce
 	nop			;47cf
 	push af			;47d0
-l47d1h:	ld a,(l46e0h)		;47d1 - Check if flea active
+l47d1h:	ld a,(FLEA_FLAG)		;47d1 - Check if flea active
 	and a			;47d4
 	jr nz,l47e0h		;47d5 - Jump forward if so
 
@@ -2562,13 +2615,15 @@ l47e0h:	call WRITE_TO_AY		;47e0
 	call WRITE_TO_AY		;47e5
 	db AY_VOL_2, $0C
 
-	ld a,(l46e2h)		;47ea
-	add a,a			;47ed
+	;; Set tone for flea-drop based on row coordinate of flea
+	ld a,(l46e2h)		;47ea - Retrieve row number
+	add a,a			;47ed - Multiply by 8
 	add a,a			;47ee
 	add a,a			;47ef
 
-	call WRITE_TO_AY		;47f0
+	call WRITE_TO_AY	;47f0
 	db AY_TONE_2+1, $05
+
 	ld (l47fch),a		;47f5
 
 	call WRITE_TO_AY		;47f8
@@ -2781,18 +2836,20 @@ l490bh:
 	nop			;493e
 	nop			;493f
 
+	;; Play sound for flee, if flee is active
+	;; 
 	;; Accessed by Game routine #2
 l4940h:	push af			;4940
 
 	;; Check if flea is active
-	ld a,(l46e0h)		;4941
+	ld a,(FLEA_FLAG)		;4941
 	and a			;4944
 
 	;;  Jump forward, if not
 	jp z,l47d1h		;4945
 
-	;; A = -(A+40)  (01 -> BF)
-	ld a,(l46e2h)		;4948
+	;; A = -(A+40)
+	ld a,(l46e2h)		;4948 - Retrieve row number for flea
 	add a,040h		;494b
 	neg			;494d
 
@@ -2971,7 +3028,7 @@ l4a00h:	push af			;4a00
 	push hl			;4a01
 
 	;; Check if flea is active
-	ld a,(l46e0h)		;4a02
+	ld a,(FLEA_FLAG)	;4a02
 	and a			;4a05
 
 	;; Call subroutine if no flea
