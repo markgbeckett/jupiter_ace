@@ -222,14 +222,12 @@ GET_CHAR:
 	;;
 	;; On exit:
 	;;   A - random number
-RND:
-	push hl			;3d30
+RND:	push hl			;3d30
 	ld a,(l3d3fh)		;3d31
 	rlc a			;3d34
 	ld l,a			;3d36
 	ld a,r			;3d37 - Random number ?
-l3d39h:
-	add a,l			;3d39
+l3d39h:	add a,l			;3d39
 	ld (l3d3fh),a		;3d3a
 	pop hl			;3d3d
 
@@ -3288,5 +3286,4 @@ l4af2h:
 	nop			;4b22
 	nop			;4b23
 	nop			;4b24
-
 END:
