@@ -1,14 +1,29 @@
 ; z80dasm 1.1.6
 ; command line: z80dasm -g 15452 -a -l -o centipede.asm centipede.bin
 
+	;; Disassembly of the Jupiter Ace game 'Centipede', written by
+	;; Colin Dooley and published by Boldfield Computing in 1984.
+	;;
+	;; In an interview with the curator of the Jupiter Ace archive
+	;; (https://www.jupiter-ace.co.uk), Colin noted that he wrote
+	;; the game on an actual Jupiter Ace, hand-assembling code into
+	;; hex before entering it into the computer. To my mind, this is
+	;; an impresive feat of stamina and careful organisation, and is
+	;; the reason ehy there is quite a bit of unused space in the
+	;; code (filled with NOP commands). I suspect Colin laid out
+	;; the game code, by hand, and left space between routines to
+	;; allow for later changes without the need to relocate
+	;; significant amounts of existing code.
+
 	;; Register mappings for AY-3-8910/ AY-3-8912 card
-AY_TONE_1:	equ 0x00
-AY_TONE_2:	equ 0x02
-AY_TONE_3:	equ 0x04
+AY_TONE_A:	equ 0x00
+AY_TONE_B:	equ 0x02
+AY_TONE_C:	equ 0x04
 AY_NOISE_FREQ:	equ 0x06
 AY_MIXER:	equ 0x07
-AY_VOL_1:	equ 0x08
-AY_VOL_2:	equ 0x09
+AY_VOL_A:	equ 0x08
+AY_VOL_B:	equ 0x09
+AY_VOL_C:	equ 0x0A
 AY_ENV_P:	equ 0x0B
 AY_ENV_SH:	equ 0x0D
 
@@ -35,9 +50,9 @@ START:	nop			;3c5c
 	nop			;3c5f
 
 	;; Entry point for game
-	call sub_4188h		;3c60 - Save IX, IY, and SP to enable
+	call SAVE_FORTH		;3c60 - Save IX, IY, and SP to enable
 				;       return to Forth
-	call sub_41b0h		;3c63 - Initialise buffer at 4180h
+	call RESTORE_GAME_DEFAULTS		;3c63 - Initialise buffer at 4180h
 	call sub_3d90h		;3c66 - Initialise game screen
 	call sub_4288h		;3c69 - Initialise centipede store and
 				;       display centipede
@@ -91,13 +106,13 @@ sub_3ca8h:
 	db AY_MIXER, %00110101  ; Channel A noise; Channel B sound;
 				; Channel C off
 	call WRITE_TO_AY	;3cad - Set Channel A vol to wave pattern
-	db AY_VOL_1, $10
+	db AY_VOL_A, $10
 	call WRITE_TO_AY	; Set Envelope period (high byte)
 	db AY_ENV_P+1, $08
 	call WRITE_TO_AY	;3cb7 - Set noise period
 	db AY_NOISE_FREQ, $04
 	call WRITE_TO_AY	;3cbc - Set Channel B vol to 0
-	db AY_VOL_2, $00
+	db AY_VOL_B, $00
 
 	ret			;3cc1
 
@@ -178,41 +193,101 @@ WRITE_TO_AY:
 	nop			;3cff
 
 	;; Store character in A at screen location B,C
+	;;
+	;; On entry:
+	;;   A - character to print
+	;;   B - row coordinate of character
+	;;   C - column coordinate of character
+	;;
+	;; On exit:
+	;; 
 PUT_CHR:
+	;; Save registers used in routine
 	push hl			;3d00
 	push bc			;3d01
-	ld hl,02400h		;3d02
+
+	;; Compute address of location for character, which is
+	;; DISPLAY+0x20*B+C. Because low byte of display memory is 0x00
+	;; and because B is in range 0x00--0x16 (that is, only bits
+	;; 0,...,4 are relevant, can quickly multiply B by 0x20, by
+	;; copying bits 0, 1, and, 2 of B into bits 5, 6, and 7 of L and
+	;; bits 3 and 4 of B into bits 0 and 1 of H, which is what is
+	;; done here
+	ld hl,DISPLAY		;3d02 - Start of display
+
+	;; Move B0, B1, B2 into L5, L6, and L7 (also move B3 and B4 into
+	;; B0 and B1)
 	srl b			;3d05
 	rr l			;3d07
 	srl b			;3d09
 	rr l			;3d0b
 	srl b			;3d0d
 	rr l			;3d0f
+
+	;; Move B4 and B5 into H0 and H1 and add on C to make final
+	;; address
 	add hl,bc		;3d11
+
+	;; Deposit character
 	ld (hl),a		;3d12
+
+	;; Restore registers 
 	pop bc			;3d13
 	pop hl			;3d14
+
+	;; ... and done
 	ret			;3d15
+	
 	nop			;3d16
 	nop			;3d17
 
 
 	;; Retrieve character at screen location B,C
+	;;
+	;; On entry:
+	;;   B - row coordinate of character
+	;;   C - column coordinate of character
+	;;
+	;; On exit:
+	;;   A - character retrieved
+	;; 
 GET_CHAR:
+	;; Save registers used in routine
 	push hl			;3d18
 	push bc			;3d19
-	ld hl,02400h		;3d1a
+
+	;; Compute address of character, which is
+	;; DISPLAY+0x20*B+C. Because low byte of display memory is 0x00
+	;; and because B is in range 0x00--0x16 (that is, only bits
+	;; 0,...,4 are relevant, can quickly multiply B by 0x20, by
+	;; copying bits 0, 1, and, 2 of B into bits 5, 6, and 7 of L and
+	;; bits 3 and 4 of B into bits 0 and 1 of H, which is what is
+	;; done here
+	ld hl,DISPLAY	;3d1a - Start of display
+
+	;; Move B0, B1, B2 into L5, L6, and L7 (also move B3 and B4 into
+	;; B0 and B1)
 	srl b		;3d1d
 	rr l		;3d1f
 	srl b		;3d21
 	rr l		;3d23
 	srl b		;3d25
 	rr l		;3d27
+
+	;; Move B4 and B5 into H0 and H1 and add on C to make final
+	;; address
 	add hl,bc			;3d29
+
+	;; Retrieve character
 	ld a,(hl)			;3d2a
+
+	;; Restore registers 
 	pop bc			;3d2b
 	pop hl			;3d2c
+
+	;; ... and done
 	ret			;3d2d
+
 	nop			;3d2e
 	nop			;3d2f
 
@@ -1048,7 +1123,7 @@ l40bah:	call sub_4080h		;40ba - Invert corner cells at current radius
 
 	;; Reset Channel A volume
 	call WRITE_TO_AY	;40c9
-	db AY_VOL_1, $10
+	db AY_VOL_A, $10
 
 	ret
 
@@ -1064,10 +1139,10 @@ sub_40d0h:
 	;; Reset volume on AY channels A and B and turn on white noise
 	;; on channel B
 	call WRITE_TO_AY	;40d7
-	db AY_VOL_1, $0F
+	db AY_VOL_A, $0F
 
 	call WRITE_TO_AY	;40dc
-	db AY_VOL_2, $0F
+	db AY_VOL_B, $0F
 	
 	call WRITE_TO_AY	;40e1
 	db AY_MIXER, %00100111
@@ -1267,7 +1342,7 @@ XTRA_CENT_TIMER: db $3E, $60	; Timer and initial-timer value for
 	db $04			; Used when initialising centipede
 	db $00
 
-	;; Initialisation routine
+	;; Initialisation routine - Save Forth environment
 	;;
 	;; Save state for return to Forth interpretter, which requires
 	;; preserving IX, IY, and SP (see Steven Vickers, "Jupiter Ace
@@ -1277,16 +1352,22 @@ XTRA_CENT_TIMER: db $3E, $60	; Timer and initial-timer value for
 	;;
 	;; On exit:
 	;;   HL - corrupted
-sub_4188h:
-	pop hl			;4188 - Retrieve return address and
-				;  balance stack as at parent routine
-	ld (IX_STR),ix		;4189
-	ld (IY_STR),iy		;418d
-	ld (SP_STR),sp		;4191
-	jp (hl)			;4195 - Return
+SAVE_FORTH:
+	pop hl			;4188 - Retrieve return address so that
+				;       stack pointer is as in parent
+				;       routine
+	ld (IX_STR),ix		;4189 - Save IX
+	ld (IY_STR),iy		;418d - Save IY
+	ld (SP_STR),sp		;4191 - Save SP
+	
+	jp (hl)			;4195 - Return (HL contains return address
+
+	
 	nop			;4196
 	nop			;4197
-	
+
+	;; Storage for registers that need to be restored before
+	;; returning to Forth interpretter
 IX_STR:	dw 0x0000	
 IY_STR:	dw 0x0000
 SP_STR:	dw 0x0000
@@ -1306,31 +1387,41 @@ SP_STR:	dw 0x0000
 	;; On exit:
 	;;   HL - corrupted
 sub_41a0h:
-	pop hl			;41a0
-	ld ix,(IX_STR)		;41a1
-	ld iy,(IY_STR)		;41a5
-	ld sp,(SP_STR)		;41a9
-	jp (hl)			;41ad
+	pop hl			;41a0 - Retrieve return address before
+				;       resetting SP
+	ld ix,(IX_STR)		;41a1 - Restore IX
+	ld iy,(IY_STR)		;41a5 - Restore IY
+	ld sp,(SP_STR)		;41a9 - Restore SP
+
+	jp (hl)			;41ad - Return 
+
 	nop			;41ae
 	nop			;41af
 
 
 	;; Initialisation routine #2
-sub_41b0h:
-	ld hl,l41c0h		;41b0 - Write 8 bytes from 41c0 to 4180
-	ld de,SEGMENT_CNT		;41b3
-	ld bc,00008h		;41b6
-	ldir		;41b9
+	;;
+	;; Restore game status to defaults
+	;;
+	;; On entry:
+	;;
+	;; On exit:
+	;;   BC, DE, HL - corrupted
+RESTORE_GAME_DEFAULTS:
+	ld hl,GAME_STATS	;41b0 - Game status is represented by
+	ld de,SEGMENT_CNT	;41b3   8 bytes which can be initialised
+	ld bc,00008h		;41b6   from copy located immediatelly
+	ldir			;41b9   after this routine
 
-	ret			;41bb
+	ret			;41bb - Done
 
 	nop			;41bc
 	nop			;41bd
 	nop			;41be
 	nop			;41bf
 
-	;; Initial centipede parameters
-l41c0h: db $0c, $00, $00, $00, $00, $00, $01, $00
+	;; Initial game status
+GAME_STATS: db $0C, $00, $00, $00, $00, $00, $01, $00
 
 	;; Game routine #1 - not used
 	ret			;41c8
@@ -1341,13 +1432,13 @@ l41c0h: db $0c, $00, $00, $00, $00, $00, $01, $00
 	jr nc,l41d2h		;41ce
 	pop af			;41d0
 	ret			;41d1
-l41d2h:
-	call sub_41a0h		;41d2
+
+l41d2h:	call sub_41a0h		;41d2
 	ld de,l41ddh		;41d5
 	call 00979h		;41d8
-	jp (iy)		;41db
-l41ddh:
-	rlca			;41dd
+	jp (iy)			;41db
+
+l41ddh:	rlca			;41dd
 	nop			;41de
 	ld d,e			;41df
 	ld d,h			;41e0
@@ -2014,7 +2105,7 @@ l4508h:	dec a			;4508
 	ret			;450f - return to main game loop
 
 	;; Initialise new centipede
-l4510h:	ld a,(l41c0h)		;4510
+l4510h:	ld a,(GAME_STATS)	;4510
 	ld (SEGMENT_CNT),a	;4513
 
 	ld a,000h		;4516
@@ -2600,7 +2691,7 @@ l47d1h:	ld a,(FLEA_FLAG)		;47d1 - Check if flea active
 
 	;; Set Channel B volume to zero
 	call WRITE_TO_AY	;47d7
-	db AY_VOL_2, $00
+	db AY_VOL_B, $00
 	
 l47dch:	pop af			;47dc - Restore AF
 	jp l3ee3h		;47dd - Return to top level of Game
@@ -2611,7 +2702,7 @@ l47e0h:	call WRITE_TO_AY		;47e0
 	db AY_MIXER, %00110101
 	
 	call WRITE_TO_AY		;47e5
-	db AY_VOL_2, $0C
+	db AY_VOL_B, $0C
 
 	;; Set tone for flea-drop based on row coordinate of flea
 	ld a,(l46e2h)		;47ea - Retrieve row number
@@ -2620,12 +2711,12 @@ l47e0h:	call WRITE_TO_AY		;47e0
 	add a,a			;47ef
 
 	call WRITE_TO_AY	;47f0
-	db AY_TONE_2+1, $05
+	db AY_TONE_B+1, $05
 
 	ld (l47fch),a		;47f5
 
 	call WRITE_TO_AY		;47f8
-	db AY_TONE_2
+	db AY_TONE_B
 l47fch:	db $b0
 
 	jr l47dch		;47fd
@@ -3132,7 +3223,7 @@ l4a75h:	ld a,002h		;4a75
 	nop			;4a86
 	nop			;4a87
 
-l4a88h:	ld a,AY_VOL_2		;4a88
+l4a88h:	ld a,AY_VOL_B		;4a88
 	out (AY_REG_PORT),a	;4a8a
 	ld a,(l4a13h)		;4a8c
 	out (AY_DAT_PORT),a	;4a8f
