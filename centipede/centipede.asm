@@ -34,7 +34,9 @@ AY_MAX_CHANNEL:	equ 0x03	; Three channels
 AY_REG_PORT:	equ 0fdh
 AY_DAT_PORT:	equ 0ffh
 
+	;; Jupiter Ace Memory Map and System Variables
 DISPLAY:	equ 0x2400	; Start of display buffer
+CHARSET:	equ 0x2C00	; Start of character RAM 
 KEYCOD:		equ 0x3c26	; ASCII code of last key pressed
 FRAMES:		equ 0x3C2B
 
@@ -52,8 +54,9 @@ START:	nop			;3c5c
 	;; Entry point for game
 	call SAVE_FORTH		;3c60 - Save IX, IY, and SP to enable
 				;       return to Forth
-	call RESTORE_GAME_DEFAULTS		;3c63 - Initialise buffer at 4180h
-	call sub_3d90h		;3c66 - Initialise game screen
+	call RESTORE_GAME_DEFAULTS	;3c63 - Initialise buffer at 4180h
+	call INIT_GAME_SCREEN	;3c66 - Set up graphics and initialise
+				;       game screen
 	call sub_4288h		;3c69 - Initialise centipede store and
 				;       display centipede
 	call sub_46e8h		;3c6c - Zero some variables
@@ -400,44 +403,53 @@ l3d64h:	dec e			;3d64 - Decrement duration
 	nop		;3d8f
 
 	;; Initialisation routine #3 - Initialie game screen
-sub_3d90h:
+INIT_GAME_SCREEN:
 	call sub_3de0h		;3d90 - Set up graphics
 
-	;; Clear row 17h of the display
-	ld hl,DISPLAY+17h*20h-01h	;3d93 - Address 26DF = end of row 17
+	;; Clear bottom row of the display
+	ld hl,DISPLAY+17h*20h-01h	;3d93 - Address 26DF = end of row 21
 l3d96h:	ld (hl),000h		;3d96
 	dec hl			;3d98
 	ld a,l			;3d99
 	cp 0bfh			;3d9a
 	jr nz,l3d96h		;3d9c
 
-	;; Randomly distribute mushrooms
-l3d9eh:	call RND		;3d9e
-	and 00fh		;3da1
-	jr nz,l3da9h		;3da3
-	ld (hl),004h		;3da5 - Plot mushroom
+	;; Randomly place mushrooms onto the screen by visiting each
+	;; character cell in turn (starting at end of row 20 and working
+	;; right-to-left, bottom-to-top. For each cell, there is a
+	;; 1-in-16 chance a mushroom will be printed.
+l3d9eh:	call RND		;3d9e - Generate random number
+	and 00fh		;3da1 - Isolate low-order nibble, given
+				;       16 possible values
+	jr nz,l3da9h		;3da3 - Unless is zero skip forward to
+				;       print a blank square
+
+	ld (hl),004h		;3da5 - Display mushroom
 	jr l3dabh		;3da7
-l3da9h:
-	ld (hl),000h		;3da9 - Plot space
-l3dabh:
-	dec hl			;3dab
+
+l3da9h:	ld (hl),000h		;3da9 - Display space
+
+l3dabh:	dec hl			;3dab
 
 	;; Check if done (top-left of screen is HL=2400h)
-	ld a,h			;3dac
-	cp 023h			;3dad 
+	ld a,h			;3dac - Done when HL=23FF, which is
+	cp 023h			;3dad   first time that H drops to 0x23 
 	jr nz,l3d9eh		;3daf - Repeat if not
 
+	;; Print title row, inc. score, high score, and lives left
 	ld bc,00020h		;3db1
-	ld de,02400h		;3db4
-	ld hl,l3dc0h		;3db7
-	ldir		;3dba
+	ld de,DISPLAY
+	ld hl,SCORE_PANEL	;3db7
+	ldir			;3dba
 
-	call sub_3f18h		;3dbc
+	call sub_3f18h		;3dbc - Initialise bug buster, reset
+				;       score, dart location, and number
+				;       of lives
 
 	ret			;3dbf
 
 	;; Top line of game screen
-l3dc0h: db 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x30 ; Score
+SCORE_PANEL: db 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x30 ; Score
 	db 0x00
 l3dc9h:	db 0x05, 0x05		; Lives
 	db 0x00, 0x00, 0x00, 0x00, 0x00
@@ -446,97 +458,139 @@ l3dd4h:	db 0x41, 0x41, 0x41 	; Name of high-scoring player
 	db 0x00
 l3dd8h: db 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 ; High score
 
-	;; Set up graphics
+	;; Set up user-defined graphics
+	;;
+	;; On entry:
+	;;
+	;; One exit:
+	;;   BC, DE, HL - corrupted
 sub_3de0h:
-	ld bc,00058h		;3de0 - 11 characters
-	ld de,02c08h		;3de3 - Character 1
-	ld hl,l3df0h		;3de6 - 
-	ldir		;3de9
+	ld bc,11*8		;3de0 - 11 characters
+	ld de,CHARSET+0x08	;3de3 - Start of character with code 1
+	ld hl,UDG_DATA		;3de6 - Start of bitmap data
+
+	ldir			;3de9
+
 	ret			;3deb
+
 	nop			;3dec
 	nop			;3ded
 	nop			;3dee
 	nop			;3def
 
-	;; Graphics characters (extends as far as 3E48h)
-l3df0h:	nop			;3df0 - Quarter mushroom (char 1)
-	ld a,h			;3df1
-	jp nz,0122ah		;3df2
-	nop			;3df5
-	nop			;3df6
-	nop			;3df7
-	nop			;3df8 - Half mushroom (char 2)
-	ld a,h			;3df9
-	add a,d			;3dfa
-	add a,d			;3dfb
-	xor d			;3dfc
-	djnz l3dffh		;3dfd
-l3dffh:	nop			;3dff
-	nop			;3e00 - Three-quarter mushroom (char 3)
-	ld a,h			;3e01
-	add a,d			;3e02
-	add a,d			;3e03
-	add a,0aah		;3e04
-	jr nc,l3e28h		;3e06
-	nop			;3e08 - Full mushroom (char 4)
-	ld a,h			;3e09
-	add a,d			;3e0a
-	add a,d			;3e0b
-	add a,0aah		;3e0c
-	jr z,l3e48h		;3e0e
-	djnz l3e22h		;3e10 - Space ship (char 5)
-	jr c,$+86		;3e12
-	sub 0feh		;3e14
-	ld a,h			;3e16
-	jr c,l3e29h		;3e17
-	db $10			;3198 - Laser (char 6)
-	db $10			;3e19
-	djnz $+18		;3e1b
-	djnz l3e2fh		;3e1d
-	db $10			;3e1f
-	db $3c			;3e20 - Centipede head (char 7)
-	ld a,(hl)		;3e21
-l3e22h:
-	sbc a,c			;3e22
-	sbc a,c			;3e23
-	sbc a,c			;3e24
-	rst 38h			;3e25
-	ld b,d			;3e26
-	inc h			;3e27
+	;; Graphics characters bitmap data
 
-l3e28h:	inc a			;3e28 - Centipede body (char 8)
+	;; Quarter-mushroom (1)
+UDG_DATA:
+	db %00000000
+	db %01111100
+	db %11000010
+	db %00101010
+	db %00010010
+	db %00000000
+	db %00000000
+	db %00000000
 
-l3e29h:	ld b,d			;3e29
-	cp l			;3e2a
+	;; Half-mushroom (2)
+MROOM2:	db %00000000
+	db %01111100
+	db %10000010
+	db %10000010
+	db %10101010
+	db %00010000
+	db %00000000
+	db %00000000
 
-l3e2bh:	cp l			;3e2b
-	jp l42ffh		;3e2c
+MROOM3:	;; Three-quarter mushroom (3)
+	db %00000000
+	db %01111100
+	db %10000010
+	db %10000010
+	db %11000110
+	db %10101010
+	db %00110010
+	db %00100000
 
-l3e2fh:	inc h			;3e2f
-	inc h			;3e30 - Explosion ?
-	ld d,d			;3e31
-	adc a,d			;3e32
-	and a			;3e33
-	ld d,l			;3e34
-	adc a,l			;3e35
-	add a,a			;3e36
-	inc bc			;3e37
-	inc h			;3e38 - ?
-	ld c,d			;3e39
-	ld d,c			;3e3a
-	push hl			;3e3b
-	ld l,d			;3e3c
-	ld (hl),c		;3e3d
-	pop hl			;3e3e
-	ret nz			;3e3f
-	inc e			;3e40 - Square
-	ld a,04fh		;3e41
-	adc a,a			;3e43
-	rst 38h			;3e44
-	ld d,d			;3e45
-	sub d			;3e46
-	ld c,c			;3e47
+MROOM4:	;; Full mushroom (4)
+	db %00000000
+	db %01111100
+	db %10000010
+	db %10000010
+	db %11000110
+	db %10101010
+	db %00101000
+	db %00111000
 
+BBLAST:	;; Bug Blaster (5)
+	db %00010000
+	db %00010000
+	db %00111000
+	db %01010100
+	db %11010110
+	db %11111110
+	db %01111100
+	db %00111000
+
+	;; Dart (6)
+DART:	db %00010000
+	db %00010000
+	db %00010000
+	db %00010000
+	db %00010000
+	db %00010000
+	db %00010000
+	db %00010000
+	
+	;; Centipede head (7)
+HEAD:	db %00111100
+	db %01111110
+	db %10011001
+	db %10011001
+	db %10011001
+	db %11111111
+	db %01000010
+	db %00100100
+
+	;; Centipede body (8)
+l3e28h:	db %00111100
+	db %01000010
+	db %10111101
+	db %10111101
+	db %11000011
+	db %11111111
+	db %01000010
+	db %00100100
+
+	;; Spider left (9)
+	db %00100100
+	db %01010010
+	db %10001010
+	db %10100111
+	db %01010101
+	db %10001101
+	db %10000111
+	db %00000011
+
+	;; Spider right (10)
+	db %00100100
+	db %01001010
+	db %01010001
+	db %11100101
+	db %01101010
+	db %01110001
+	db %11100001
+	db %11000000
+
+	;; Flea (11)
+	db %00011100
+	db %00111110
+	db %01001111
+	db %10001111
+	db %11111111
+	db %01010010
+	db %10010010
+	db %01001001
+	
 l3e48h:	nop			;3e48
 	nop			;3e49
 	nop			;3e4a
@@ -553,7 +607,6 @@ l3e48h:	nop			;3e48
 	nop			;3e55
 	nop			;3e56
 	nop			;3e57
-
 
 	;; Arrive here if player moves spaceship into enemy (centipede
 	;; or flea).
@@ -712,14 +765,20 @@ SHIP_COORD:
 	nop			;3f15
 	nop			;3f16
 	nop			;3f17
-	
+
+	;; Print ship, reset number of lives, score, and set no dart in
+	;; flight
 sub_3f18h:
 	push bc			;3f18
-	ld bc,0160fh		;3f19
+
+	;; Display ship in starting location
+	ld bc,0160fh		;3f19 - Starting location is (22,15)
 	ld a,005h		;3f1c
 	call PUT_CHR		;3f1e
-	ld (SHIP_COORD),bc		;3f21
-	jp l4028h		;3f25
+	ld (SHIP_COORD),bc	;3f21 - Store location
+
+	jp l4028h		;3f25 - Continue with remainder of
+				;       routine
 
 	;; Check for fire button being pressed
 sub_3f28h:
@@ -806,8 +865,8 @@ l3f79h:	cp 005h			;3f79 - Check if mushroom
 
 	;; Update score (having destroyed mushroom)
 	push hl			;3f82
-	ld hl,00100h		;3f83
-	call UPDATE_SCORE		;3f86
+	ld hl,00100h		;3f83 - one point
+	call UPDATE_SCORE	;3f86
 	pop hl			;3f89
 
 l3f8ah:	call PUT_CHR		;3f8a - Print new character (either
@@ -869,8 +928,13 @@ NEXT_SHIP_LOCN:	dw 0x2408	;3fbd - Store for screen address of next
 
 	;; Update score
 	;;
+	;; Maximum possible score is 99,999,999, which is a very high
+	;; score
+	;;
 	;; On entry:
-	;;   HL - score increment
+	;;   HL - score increment (decimal with low digits in H and high
+	;;        digits in L). E.g., HL=0x1000 is 10 points and
+	;;        HL=0x0010 is 1,000 points
 	;;
 	;; On exit:
 	;;   
@@ -880,38 +944,47 @@ UPDATE_SCORE:
 	push hl			;3fc2
 	push af			;3fc3
 
-	ld de,SCORE+0x03	;3fc4 - Final digit of score
-	ld a,(de)		;3fc7
-	add a,h			;3fc8
-	daa			;3fc9
-	ld (de),a		;3fca
-	dec de			;3fcb
-	ld a,(de)		;3fcc
-	adc a,l			;3fcd
-	daa			;3fce
-	ld (de),a		;3fcf
+	ld de,SCORE+0x03	;3fc4 - Final digits of score (units and
+				;       tens)
+	ld a,(de)		;3fc7 - Retrieve digits
+	add a,h			;3fc8 - Add low part of score increment
+	daa			;3fc9   Adjust, as decimal calculation
+	ld (de),a		;3fca - Store it
+	dec de			;3fcb - Move to next digits (hundreds
+				;       and thousands)
+	ld a,(de)		;3fcc - Retrive digits and add high part
+	adc a,l			;3fcd   of score increment, including any
+				;       carry
+	daa			;3fce - Adjust, as decimal calculation
+	ld (de),a		;3fcf - Store it
 
-	call c,sub_4048h	;3fd0
+	;; If carry from thousands (i.e., have scored multiple of 10,000
+	;; points, award an extra life)
+	call c,INC_LIVES	;3fd0
 
-	dec de			;3fd3
-	ld a,(de)		;3fd4
-	adc a,000h		;3fd5
+	dec de			;3fd3 - Move on to next digit (10^4 and
+				;       10^5)
+	ld a,(de)		;3fd4 - Retrieve digit
+	adc a,000h		;3fd5 - Add any carry from previous calc
 	daa			;3fd7
-	ld (de),a		;3fd8
-	dec de			;3fd9
-	ld a,(de)		;3fda
-	adc a,000h		;3fdb
+	ld (de),a		;3fd8 - Store it
+	
+	dec de			;3fd9 - Move on to next digit (10^6 and 10^7)
+	ld a,(de)		;3fda - Retrieve digit
+	adc a,000h		;3fdb - Add any carry as decimal calc
 	daa			;3fdd
-	ld (de),a		;3fde
+	ld (de),a		;3fde - Store it
 
 	call sub_3fe8h		;3fdf
 
+	;; Restore registers and done
 	pop af			;3fe2
 	pop hl			;3fe3
 	pop de			;3fe4
 	pop bc			;3fe5
 
 	ret			;3fe6
+	
 	nop			;3fe7
 
 
@@ -957,35 +1030,63 @@ l401ch:
 	ldir		;4025
 	ret			;4027
 
+	;; Continuation of initialisation routine at 3F18
+
+	;; Initially no dart in flight, score is zero, and player has
+	;; two spare lives
 l4028h:	ld bc,00000h		;4028
 	ld (BULLET_COORD),bc	;402b - Set bullet coordinate to 00,00
-	ld (l3fb8h),bc		;402f
-	ld (l3fbah),bc		;4033
+	ld (SCORE),bc		;402f
+	ld (SCORE+2),bc		;4033
+
 	push af			;4037
 	ld a,002h		;4038
 	ld (NO_LIVES),a		;403a
 	pop af			;403d
-	ld bc,0240ah		;403e
-	ld (NEXT_SHIP_LOCN),bc		;4041
+
+	;; Set screen address where next bug-buster is printed
+	ld bc,DISPLAY+0x0A	;403e
+	ld (NEXT_SHIP_LOCN),bc	;4041
+
+	;; Restore BC ...
 	pop bc			;4045
+
+	;; ... and done
 	ret			;4046
+
 	nop			;4047
-sub_4048h:
+
+	;; Award extra life (noting player can have maximum of 10 spare
+	;; lives)
+	;;
+	;; On entry:
+	;;
+	;; On exit:
+	;; 
+INC_LIVES:
+	;; Save registers
 	push hl			;4048
 	push af			;4049
-	ld a,(NO_LIVES)		;404a
-	cp 00ah		;404d
-	jr z,l405eh		;404f
-	inc a			;4051
-	ld (NO_LIVES),a		;4052
-	ld hl,(NEXT_SHIP_LOCN)		;4055
+
+	ld a,(NO_LIVES)		;404a - Retrieve current lives count
+	cp 00ah			;404d - Check if 10 lives (maximum)
+	jr z,l405eh		;404f - Skip forward if so
+
+	inc a			;4051 - Increase lives by one and
+	ld (NO_LIVES),a		;4052   store it
+
+	;; Add another ship to display
+	ld hl,(NEXT_SHIP_LOCN)	;4055
 	inc hl			;4058
 	ld (hl),005h		;4059
-	ld (NEXT_SHIP_LOCN),hl		;405b
-l405eh:
-	pop af			;405e
+	ld (NEXT_SHIP_LOCN),hl	;405b
+
+	;; Restore registers
+l405eh:	pop af			;405e
 	pop hl			;405f
+
 	ret			;4060
+
 	nop			;4061
 	nop			;4062
 	nop			;4063
@@ -1986,15 +2087,17 @@ l448ch:	ld a,004h		;448c - Replace character with mushroom
 	call PUT_CHR		;448e
 
 	res 6,(ix+040h)		;4491 - Reset masked-segment flag
-	ld hl,01000h		;4495 - Score for hitting head
-	bit 0,(ix+040h)		;4498 - Though check if is head
+	ld hl,01000h		;4495 - Score for hitting body (10 pts)
+	bit 0,(ix+040h)		;4498 - Check if have hit head
 	jr z,l44a1h		;449c - Jump forward, if not
-	ld hl,00001h		;449e - Have hit body
+	ld hl,00001h		;449e - Have hit head (100 points)
+l44a1h:	call sub_4908h		;44a1 - Update score decrement active
+				;       segment count
 
-l44a1h:	call sub_4908h		;44a1 - Update score and ???
 	set 0,(ix+03fh)		;44a4 - Set previous segment to be head
 	ld hl,SEGMENT_CNT		;44a8
 	dec (hl)		;44ab
+	
 	jp l4469h		;44ac - Continue to next segment
 	
 l44afh:	jp l46d0h		;44af
@@ -2246,15 +2349,14 @@ sub_45b8h:
 
 	;; Pause
 	ld hl,03000h		;45be
-
 l45c1h:	dec hl			;45c1
 	ld a,h			;45c2
 	or l			;45c3
 	jr nz,l45c1h		;45c4
 
 	;; Add 5 to score
-	ld hl,00500h		;45c6
-	call UPDATE_SCORE		;45c9
+	ld hl,00500h		;45c6 - 5 points
+	call UPDATE_SCORE	;45c9
 
 	ret			;45cc
 
@@ -2615,7 +2717,7 @@ l4764h:	ld bc,(FLEA_COORD)		;4764
 	call PUT_CHR		;4772
 
 	;; Update score
-	ld hl,00005h		;4775
+	ld hl,00005h		;4775 - 500 points
 	call UPDATE_SCORE	;4778
 
 	;; Deactivate flea
