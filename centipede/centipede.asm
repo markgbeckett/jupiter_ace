@@ -57,9 +57,10 @@ START:	nop			;3c5c
 	call RESTORE_GAME_DEFAULTS	;3c63 - Initialise buffer at 4180h
 	call INIT_GAME_SCREEN	;3c66 - Set up graphics and initialise
 				;       game screen
-	call sub_4288h		;3c69 - Initialise centipede store and
+	call CREATE_CENTIPEDE		;3c69 - Initialise centipede store and
 				;       display centipede
-	call sub_46e8h		;3c6c - Zero some variables
+	call INIT_FLEA		;3c6c - Deactivate flea
+	
 	nop			;3c6f
 	nop			;3c70
 	nop			;3c71
@@ -1292,7 +1293,7 @@ l4100h:
 	;;              Bit 2 - set if moving down screen, otherwise up
 	;; 		Bit 3 - set if double-speed segment	
 	;;              Bit 4 - ???
-	;; 		Bit 5 - set if segment displayed
+	;; 		Bit 5 - set if segment masked another character
 	;;              Bit 6 - set if active segment
 	;; 4161-416c - temporary store for background character
 	;; 
@@ -1552,65 +1553,103 @@ l41ddh:	rlca			;41dd
 	nop			;41e7
 
 
-	;; Initialise centipede storage??
-sub_41e8h:
+	;; Initialise centipede data structure
+	;;
+	;; Centipede data structure has four, one-dimension arrays of 15
+	;; bytes (corresponding to fifteen potential centipede segments)
+	;;
+	;; 4101--4120 - Centipede row coordinate
+	;; 4121--4140 - Centipede column coordinate
+	;; 4141--4160 - Centipede status
+	;; 4161--4180 - Temporary store for masked character, when
+	;;              overwritten by a centipede segment
+	;;
+	;; On entry:
+	;;
+	;; On exit:
+	;; 
+INIT_CENTIPEDE:
+	;; Save registers
 	push ix			;41e8
 	push bc			;41ea
 	push de			;41eb
 	push hl			;41ec
 	push af			;41ed
 
-	;; Reset bit 6 of memory locations 4141, ..., 415f inclusive
-	ld hl,04141h		;41ee
-	ld b,01fh		;41f1
+	;; Start with all centipede segments inactive (bit 6 of
+	;; corresponding status entry reser)
+	ld hl,04141h		;41ee - Centipede status array
+	ld b,01fh		;41f1 - Fifteen segments
 
 l41f3h:	res 6,(hl)		;41f3
 	inc hl			;41f5
 	djnz l41f3h		;41f6
 
+
+	;; Centipede initially has 12 segments, running horizontally
+	;; from the top-left corner of the screen
+	;; 
 	;; Row number of each segment in 4101...410C, column number in
 	;; 4121...412C, body/head value in 4141...414C
 	ld ix,l4101h		;41f8 - Start of centipede storage
 	ld b,00ch		;41fc - Centipede has 12 segments
 	ld c,000h		;41fe - First segment is in column 0
-	ld h,%01000110		;4200 - Segment status
+	ld h,%01000110		;4200 - Segment status (bit 1 => moving
+				;       right; bit 2 => moving down; bit
+				;       6 => active)
+
+	;; Check if double-speed active
 	ld a,(SEGMENT_CNT+7)	;4202
 	and a			;4205
 	jr z,l420ah		;4206
-	set 3,h			;4208 - H=$4E
+	set 3,h			;4208 - Set double-speed
+
+	;; Initialise each segment in turn
 l420ah:	ld (ix+000h),001h	;420a - Set row coordinate to 01 for all
 				;       segments
 	ld (ix+020h),c		;420e - Set column coordinate
-	ld (ix+040h),h		;4211 - ??? 
+	ld (ix+040h),h		;4211 - Set status byte 
 	inc ix			;4214 - Next segment
 	inc c			;4216 - Increase column coordinate
 	djnz l420ah		;4217 - Repeat
 
-	dec ix			;4219 - Set last segment to be head
+	;; Set last segment to be head
+	dec ix			;4219 - IX was one past end of data
+				;       structure
 	set 0,(ix+040h)		;421b
 
 	;; Check if centipede needs to be split
 	ld ix,l4101h		;421f
-	ld a,(SEGMENT_CNT+6)	;4223
+	ld a,(SEGMENT_CNT+6)	;4223 - Retrieve number of centipedes
+
+	;; For each additional centipede, which are head only, convert
+	;; next tail segment into one-cell centipede randomly located on
+	;; row 2
 	ld b,a			;4226
+
 l4227h:	dec b			;4227
-	jp z,l4240h		;4228
+	jp z,l4240h		;4228 - Check if done
 
-	ld (ix+000h),002h	;422b
-	call RND		;422f - Get random number
-	and 01fh		;4232
+	;; Turn current segment into head-only centipede
+	ld (ix+000h),002h	;422b - Set row coordinate to 2
+	call RND		;422f - Randomly choose column coordinate
+	and 01fh		;4232 (could be duplicate column values
+				;     for multiple head-only centipedes)
 	ld (ix+020h),a		;4234
-	call sub_4618h		;4237
-	nop			;423a
-	inc ix		;423b
-	jp l4227h		;423d
 
-l4240h:
+	call sub_4618h		;4237 - Set status byte for head-only
+				;       centipede
+	
+	nop			;423a
+	inc ix			;423b - Advance to next segment
+	jp l4227h		;423d   and repeat
+
+l4240h:				; Restore registers
 	pop af			;4240
 	pop hl			;4241
 	pop de			;4242
 	pop bc			;4243
-	pop ix		;4244
+	pop ix			;4244
 
 	ret			;4246
 
@@ -1618,7 +1657,12 @@ l4240h:
 
 
 	;; Display centipede
-sub_4248h:
+	;;
+	;; On entry:
+	;;
+	;; On exit:
+	;; 
+DISP_CENTIPEDE:
 	;; Save registers
 	push ix			;4248
 	push bc			;424a
@@ -1628,34 +1672,44 @@ sub_4248h:
 
 	ld ix,l4101h		;424e - Start of centipede
 	ld d,00ch		;4252 - 12 segments
-l4254h:
-	;; Retrieve coordinates of current segment into B and C
+
+l4254h:	;; Retrieve coordinates of current segment into B and C
 	ld b,(ix+000h)		;4254
 	ld c,(ix+020h)		;4257
 
 	;; Retrieve any object at B,C into A
 	call GET_CHAR		;425a
 	cp 005h			;425d - Check if space ship, bullet, flea, ...
-	jp nc,l4273h+1		;425f - Jump forward if is
+	jp nc,l4273h		;425f - Jump forward if is (BUG: was 0x4274,
+				;       but that is mid-instruction)
 
-	set 5,(ix+040h)		;4262 - Comfirm is displayed
+	;; At this point, cell is either blank or contains a mushroom
+	set 5,(ix+040h)		;4262 - Set character-mask flag on cell
+				;       status
 	ld (ix+060h),a		;4266 - Save original character for later
+
+	;; Display centipede segment
 	ld a,007h		;4269 - Centipede body
 	bit 0,(ix+040h)		;426b - Is it the head?
 	jr nz,l4273h		;426f
 	ld a,008h		;4271 - Centipede head
 
 l4273h:	call PUT_CHR		;4273 - Display character
+
+	;; Advance to next segment
 	inc ix			;4276 - Advance to next segment
+
 	dec d			;4278 - Check if any more segments
 	jp nz,l4254h		;4279 - Loop if so
 
+	;; Restore registers
 	pop af			;427c
 	pop hl			;427d
 	pop de			;427e
 	pop bc			;427f
 	pop ix			;4280
 
+	;; Done
 	ret			;4282
 	
 	nop			;4283
@@ -1664,11 +1718,13 @@ l4273h:	call PUT_CHR		;4273 - Display character
 	nop			;4286
 	nop			;4287
 
-sub_4288h:
-	call sub_41e8h		;4288 - Initialise centipede storage
-	call sub_4248h		;428b - Display centipede
+	;; Initialisation routine #4 - set up centipede data structure
+CREATE_CENTIPEDE:
+	call INIT_CENTIPEDE	;4288 - Initialise centipede storage
+	call DISP_CENTIPEDE	;428b - Display centipede
 	
 	ret			;428e
+
 	nop			;428f
 
 sub_4290h:
@@ -2228,7 +2284,7 @@ l452bh:	ld a,001h		;452b
 	ld (SEGMENT_CNT+6),a	;452d
 	ld (SEGMENT_CNT+7),a	;4530
 	
-l4533h:	call sub_4288h		;4533 - Initialise and display centipede
+l4533h:	call CREATE_CENTIPEDE	;4533 - Initialise and display centipede
 
 	pop af			;4536
 
@@ -2408,18 +2464,36 @@ l45e0h:	dec a			;45e0
 	nop			;4617
 
 
+	;; Set initial status of head-only centipede
+	;;
+	;; On entry:
+	;;   IX - points to corresponding centipede segment
+	;;
+	;; On exit:
+	;; 
 sub_4618h:
 	push af			;4618
+
+	;; Create status byte for segment, possibly single-speed/
+	;; double-speed, moving left/ right, definitely moving down and
+	;; a head
 	call RND		;4619
-	and 00ah		;461c
-	or 045h		;461e
-	ld (ix+040h),a		;4620
-	ld a,(SEGMENT_CNT+7)		;4623
-	cp 001h		;4626
+	and %00001010		;461c - Randomly select moving left/
+				;right (bit 1) and double-speed (bit 3)
+				;double-speed
+	or %01000101		;461e - Set bit 6 (active), bit 3
+				;       (moving down), and bit 0 (head)
+	ld (ix+040h),a		;4620 - Store status
+
+	;; Check if should be double-speed
+	ld a,(SEGMENT_CNT+7)	;4623
+	cp 001h			;4626
 	jr nz,l462eh		;4628
 	set 3,(ix+040h)		;462a
-l462eh:
-	pop af			;462e
+
+	;; Restore register and done
+l462eh:	pop af			;462e
+
 	ret			;462f
 
 	;; Check if time to introduce extra, one-segment centipede. Once
@@ -2594,20 +2668,23 @@ l46d0h:	ld a,(ix+060h)		;46d0 - Retrieve masked bit
 	nop			;46df
 FLEA_FLAG:
 	db 0x00			;46e0 - Flea is active
-FLEA_COORD:	dec c			;46e1 - Flea column number
-l46e2h:	ld d,001h		;46e2 - Flee row number
-l46e4h:	nop			;46e4
+FLEA_COORD:	db 0x16, 0x0D	;46e1 - Flea column and ruw number
+FLEA_ENABLE:	db 0x01			;46e3 - Flea enable
+l46e4h:	db 0x00			;46e4
 l46e5h:	db 0x01			;46e5
+	
 CHAR_SAVE:
 	db 0x20
 	db 0x00
 	
-	;; Initialisation #5 - Zero some variables
-sub_46e8h:
+	;; Initialisation #5 - Initialise (and disable) flea
+INIT_FLEA:
 	push af			;46e8
+
 	ld a,000h		;46e9
-	ld (FLEA_FLAG),a		;46eb - Flee is not active
-	ld (l46e2h+1),a		;46ee - Set to level 0
+	ld (FLEA_FLAG),a	;46eb - Flea is not active
+	ld (FLEA_ENABLE),a	;46ee - Flea is disabled
+
 	pop af			;46f1
 	
 	ret			;46f2
@@ -2639,7 +2716,7 @@ sub_46f8h:
 	jp nz,l4750h		;4700
 
 	;; Check if past first level. If so, maybe introduce flea
-	ld a,(l46e2h+1)		;4703
+	ld a,(FLEA_ENABLE)		;4703
 	and a			;4706
 	jp nz,l471dh		;4707
 
@@ -2656,7 +2733,7 @@ l4711h:	pop af			;4711
 	ret			;4715
 
 l4716h:	ld a,001h		;4716
-	ld (l46e2h+1),a		;4718
+	ld (FLEA_ENABLE),a		;4718
 	jr l4711h		;471b
 
 l471dh:	call RND		;471d - RND(4) with zero indicating
@@ -2807,7 +2884,7 @@ l47e0h:	call WRITE_TO_AY		;47e0
 	db AY_VOL_B, $0C
 
 	;; Set tone for flea-drop based on row coordinate of flea
-	ld a,(l46e2h)		;47ea - Retrieve row number
+	ld a,(FLEA_COORD+1)		;47ea - Retrieve row number
 	add a,a			;47ed - Multiply by 8
 	add a,a			;47ee
 	add a,a			;47ef
@@ -3040,7 +3117,7 @@ l4940h:	push af			;4940
 	jp z,l47d1h		;4945
 
 	;; A = -(A+40)
-	ld a,(l46e2h)		;4948 - Retrieve row number for flea
+	ld a,(FLEA_COORD+1)		;4948 - Retrieve row number for flea
 	add a,040h		;494b
 	neg			;494d
 
