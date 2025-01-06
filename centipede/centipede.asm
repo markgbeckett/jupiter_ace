@@ -71,7 +71,7 @@ START:	nop			;3c5c
 	nop			;3c76
 	nop			;3c77
 
-l3c78h:	call sub_3ca8h		;3c78 - Initialise sound card
+l3c78h:	call INIT_AY		;3c78 - Initialise sound card
 	nop			;3c7b
 	nop			;3c7c
 	nop			;3c7d
@@ -79,10 +79,14 @@ l3c78h:	call sub_3ca8h		;3c78 - Initialise sound card
 	nop			;3c7f
 
 	;; Main game loop
-l3c80h:	call 041c8h		;3c80 - Does nothing
-	call sub_3ee0h		;3c83 - Play game sound
-	call sub_3f28h		;3c86 - Check for fire
-	call sub_3ee0h		;3c89 - Play game sound
+l3c80h:	call GAME_STEP_0	;3c80 - Does nothing
+	call GAME_STEP_1	;3c83 - Play game sound and synchronise
+				;       game by waiting for FRAMES to be
+				;       updated
+	call sub_3f28h		;3c86 - Check if fire has been pressed
+	call GAME_STEP_1	;3c89 - Play game sound and synchronise
+				;       game by waiting for FRAMES to be
+				;       updated
 	call sub_3f28h		;3c8c - Check for fire
 	call sub_3ef0h		;3c8f - Check for direction keys
 	call sub_44e8h		;3c92 - Service centipede
@@ -105,7 +109,13 @@ l3c80h:	call 041c8h		;3c80 - Does nothing
 	nop			;3ca7
 
 	;; Initialise AY sound card
-sub_3ca8h:
+	;;
+	;; On entry:
+	;;
+	;; On exit:
+	;;   - All registered preserved
+	;; 
+INIT_AY:
 	call WRITE_TO_AY	;3ca8 - Set mixer
 	db AY_MIXER, %00110101  ; Channel A noise; Channel B sound;
 				; Channel C off
@@ -176,6 +186,7 @@ sub_3ca8h:
 	;; On exit:
 	;; - Return address advanced two bytes
 	;; - All registers preserved
+	;; 
 WRITE_TO_AY:
 	ex (sp),hl		;3cf0 - Retrieve address from top of stack
 
@@ -204,6 +215,7 @@ WRITE_TO_AY:
 	;;   C - column coordinate of character
 	;;
 	;; On exit:
+  	;;   - All registered preserved
 	;; 
 PUT_CHR:
 	;; Save registers used in routine
@@ -254,6 +266,7 @@ PUT_CHR:
 	;;
 	;; On exit:
 	;;   A - character retrieved
+	;;   - All other registered preserved
 	;; 
 GET_CHAR:
 	;; Save registers used in routine
@@ -314,18 +327,24 @@ l3d39h:	add a,l			;3d39
 
 l3d3fh:	db %10001011		;3d3f - Seed for random-number generator
 
+	;; ------------------------------------------------------------
 	;; Play sound using built-in speaker
 	;;
 	;; On entry:
-	;;   Five sound parameters are stored immediately after call
+	;; - Five sound parameters are stored immediately after call
+	;;   instruction:
 	;;     Param 0 - Tone 
 	;;     Param 1 - Tone increment
 	;;     Param 2 - Duration (combined with Param 0)
 	;;     Param 3 - Not used
 	;;     Param 4 - Tone limit
 	;;
+	;; On exit:
+	;; - All registers preserved
+	;; 
 	;; Operation of the Ace beeper is described (briefly) at
 	;; https://k1.spdns.de/Vintage/Sinclair/80/Jupiter%20Ace/ROMs/io.txt
+	;; ------------------------------------------------------------
 PLAY_BEEPER:
 	ex (sp),ix		;3d40 - Retrieve return address
 
@@ -712,10 +731,25 @@ l3eddh:	pop af			;3edd
 	nop			;3edf
 
 	
-	;; Game routine #2 - Play sounds
-sub_3ee0h:
-	jp l4940h		;3ee0 - If flee active, make sound
-l3ee3h:	jp l4a00h		;3ee3 - Otherwise, play game sound
+	;; ------------------------------------------------------------
+	;; Game routine #1 - Play sounds and time synchronisation
+	;; ------------------------------------------------------------
+	;; This code is quite spaghetti-like. First jump is to a block
+	;; of code that checks if flea is active and, if so, plays sound
+	;; effect via beeper before jumping to second block of code
+	;; which, if flea is active, plays AY sound effect. Control
+	;; eventually returns to the second jump statement in this
+	;; top-level routine, which will -- if flea not active -- play a
+	;; background sound effect (on beeper any AY) before pausing
+	;; game until FRAMES is updated, effectivly fixing timing of
+	;; game loop for consistent play. Second routine RETurns to main
+	;; game loop.
+	;; ------------------------------------------------------------
+GAME_STEP_1:
+	jp l4940h		;3eea - If flee active, produce sound
+				;       effect
+l3ee3h:	jp l4a00h		;3ee3 - Otherwise, play background sound
+
 	nop			;3ee6
 	nop			;3ee7
 	nop			;3ee8
@@ -1525,9 +1559,17 @@ RESTORE_GAME_DEFAULTS:
 	;; Initial game status
 GAME_STATS: db $0C, $00, $00, $00, $00, $00, $01, $00
 
-	;; Game routine #1 - not used
+	;; Game routine #1 - not used;
+	;;
+	;; On entry:
+	;;
+	;; On exit:
+	;;   - All registered preserved
+	;; 
+GAME_STEP_0:
 	ret			;41c8
 
+	
 	ld a,07fh		;41c9
 	in a,(0feh)		;41cb
 	rra			;41cd
@@ -2863,42 +2905,52 @@ l47bbh:	ld a,00bh		;47bb
 	nop			;47cd
 	nop			;47ce
 	nop			;47cf
-	push af			;47d0
-l47d1h:	ld a,(FLEA_FLAG)		;47d1 - Check if flea active
+	
+	;; ------------------------------------------------------------
+	;; Play flea-dropping sound effect on AY chip
+	;; ------------------------------------------------------------
+	push af			;47d0 - Does not seem to be used: entry
+				;       point is usually at next command
+				;       with AF already stacked
+
+l47d1h:	ld a,(FLEA_FLAG)	;47d1 - Check if flea active
 	and a			;47d4
 	jr nz,l47e0h		;47d5 - Jump forward if so
 
-	;; Set Channel B volume to zero
-	call WRITE_TO_AY	;47d7
+	call WRITE_TO_AY	;47d7 - Otherwise mute channel B
 	db AY_VOL_B, $00
 	
-l47dch:	pop af			;47dc - Restore AF
-	jp l3ee3h		;47dd - Return to top level of Game
+l47dch:	pop af			;47dc - Restore A
+	
+	jp l3ee3h		;47dd - Move on to next part of Game
 				;       Routine #2
 
-	;; Make flea-dropping sound effect
-l47e0h:	call WRITE_TO_AY		;47e0
-	db AY_MIXER, %00110101
-	
-	call WRITE_TO_AY		;47e5
+l47e0h:	call WRITE_TO_AY	;47e0
+	db AY_MIXER, %00110101	; Channel A - sound; Channel B - noise;
+				; Channel C - off
+
+	;; Set volumne for Channel B
+	call WRITE_TO_AY	;47e5
 	db AY_VOL_B, $0C
 
 	;; Set tone for flea-drop based on row coordinate of flea
-	ld a,(FLEA_COORD+1)		;47ea - Retrieve row number
-	add a,a			;47ed - Multiply by 8
+	ld a,(FLEA_COORD+1)	;47ea - Retrieve row number
+	add a,a			;47ed - A = 8*A
 	add a,a			;47ee
 	add a,a			;47ef
 
-	call WRITE_TO_AY	;47f0
+	call WRITE_TO_AY	;47f0 - Set coarse tone for channel B
 	db AY_TONE_B+1, $05
 
-	ld (l47fch),a		;47f5
-
-	call WRITE_TO_AY		;47f8
+	ld (l47fch),a		;47f5 - Set fine tone for Channel B,
+				;       based on A
+	call WRITE_TO_AY	;47f8 - 
 	db AY_TONE_B
 l47fch:	db $b0
 
-	jr l47dch		;47fd
+	jr l47dch		;47fd - Jump back to wrap-up for routine
+
+	
 	nop			;47ff
 
 l4800h:	call sub_4968h		;4800
@@ -3104,21 +3156,28 @@ l490bh:
 	nop			;493e
 	nop			;493f
 
-	;; Play sound for flee, if flee is active
+	;; Play sound for flea, if is active
 	;; 
 	;; Accessed by Game routine #2
+	;;
+	;; 
 l4940h:	push af			;4940
 
 	;; Check if flea is active
-	ld a,(FLEA_FLAG)		;4941
+	ld a,(FLEA_FLAG)	;4941
 	and a			;4944
 
-	;;  Jump forward, if not
-	jp z,l47d1h		;4945
+	;;  Proceed to next part of routine, if not
+	jp z,l47d1h		;4945 - BUG: This doesn't look to be
+				;useful, as the routine at 47d1h makes
+				;the same check as here, before
+				;proceeding to next part of Game Routine
+				;#2.
 
-	;; A = -(A+40)
-	ld a,(FLEA_COORD+1)		;4948 - Retrieve row number for flea
-	add a,040h		;494b
+	;; Retrieve row coordinate of flea and use it to determine tone
+	;; of beeper sound to play
+	ld a,(FLEA_COORD+1)	;4948 - Retrieve row number for flea
+	add a,040h		;494b - A = -(A+40)
 	neg			;494d
 
 	ld (l4958h),a		;494f
@@ -3128,7 +3187,8 @@ l4940h:	push af			;4940
 l4958h: db $AA, $00, $08, $00
 l495ch:	db $AA
 
-	jp l47d1h		;495d
+	jp l47d1h		;495d - Proceeed to routine, which plays
+				;       AY sound of flea
 	nop			;4960
 	nop			;4961
 	nop			;4962
@@ -3292,6 +3352,7 @@ l49fah:
 	nop			;49ff
 
 
+	;; Continuation of Game Step Routine #2 
 l4a00h:	push af			;4a00
 	push hl			;4a01
 
@@ -3299,48 +3360,62 @@ l4a00h:	push af			;4a00
 	ld a,(FLEA_FLAG)	;4a02
 	and a			;4a05
 
-	;; Call subroutine if no flea
-	call z,sub_4a18h	;4a06
+	;; If no flea, play background game sound
+	call z,BACKGROUND_SOUND	;4a06
 
+	;; Set game timing by waiting for next frame
 	ld hl,FRAMES		;4a09
 	ld a,(hl)		;4a0c
 
-	;; Wait for next frame
 l4a0dh:	cp (hl)			;4a0d
 	jr z,l4a0dh		;4a0e
 
+	;; Restore registers
 	pop hl			;4a10
 	pop af			;4a11
 
+	;; Done
 	ret			;4a12
 
-l4a13h:	db 0x04			;4a13
-l4a14h: db 0xA0			;4a14
-l4a15h:	ld (bc),a		;4a15
+BS_TIMER:	db 0x04			;4a13 - Timer for background sound
+BS_BEEPER_TONE: db 0xA0			;4a14 - Tone for background sound
+BS_AY_TONE:	ld (bc),a		;4a15
 	nop			;4a16
 	nop			;4a17
 
-	;; Play background sound (if no flea on screen)
-sub_4a18h:
-	;; Check timer #1, which counts down from 0F t0 00, playing a
+	;; ------------------------------------------------------------
+	;; Play background sound (only called if no flea on screen)
+	;;
+	;; Sound effect played first via Beeper and then via AY sound
+	;; card
+	;;
+	;; On entry:
+	;;
+	;; On exit:
+	;;   A and HL corrupt
+	;; ------------------------------------------------------------
+BACKGROUND_SOUND:
+	;; Check timer, which counts down from 0F to 00, playing a
 	;; sound when counter reaches 00, or reducing the volume based
 	;; on the value otherwise
-	ld a,(l4a13h)		;4a18
+	ld a,(BS_TIMER)		;4a18
 	dec a			;4a1b
-	ld (l4a13h),a		;4a1c
+	ld (BS_TIMER),a		;4a1c
 
 	jr nz,l4a50h		;4a1f
 
-	;; Check timer #2, which steps through four tone values
-	ld a,(l4a14h)		;4a21
+	;; Cycle tone to next value in sequence 0x0A, 0x0C, 0x0E, 0x0A,
+	;; ...
+	ld a,(BS_BEEPER_TONE)	;4a21
 	add a,020h		;4a24
 	cp 000h			;4a26
 	jr nz,l4a2ch		;4a28
-	ld a,0a0h		;4a2a - Reset counter
+	ld a,0A0h		;4a2a - Reset counter
+l4a2ch:	ld (BS_BEEPER_TONE),a	;4a2c
 
-l4a2ch:	ld (l4a14h),a		;4a2c
+	;; Reset timer
 	ld a,00fh		;4a2f
-	ld (l4a13h),a		;4a31
+	ld (BS_TIMER),a		;4a31
 	nop			;4a34
 	nop			;4a35
 	nop			;4a36
@@ -3350,11 +3425,9 @@ l4a2ch:	ld (l4a14h),a		;4a2c
 	nop			;4a3a
 	nop			;4a3b
 	nop			;4a3c
-	ld a,(l4a14h)		;4a3d
-
-	;; Update tone for speaker sound in parameters below
-	ld (l4a49h),a		;4a40
-	ld (l4a4dh),a		;4a43
+	ld a,(BS_BEEPER_TONE)		;4a3d - Retrieve tone value
+	ld (l4a49h),a		;4a40   and use to populate parameters 
+	ld (l4a4dh),a		;4a43   for call to beeper below
 
 	call PLAY_BEEPER	;4a46 - Play sound
 l4a49h:	db $A0, $00, $08, $00	;4a49
@@ -3363,29 +3436,35 @@ l4a4dh:	db $A0			;4a4d
 	nop			;4a4e
 	nop			;4a4f
 
-l4a50h:	ld a,(l4a13h)		;4a50
-	cp 001h			;4a53
-	jr nz,l4a88h		;4a55
+	;; Cycle through 4-step AY sound effect, with each tone value
+	;; playing for 15 frames with a reducing volume from 15 to 1
+l4a50h:	ld a,(BS_TIMER)		;4a50 - Retrieve timer and check if 
+	cp 001h			;4a53   has reached 1
+	jr nz,l4a88h		;4a55 - Skip forward to set volume for
+				;       sound effect if not
 
-	ld a,(l4a15h)		;4a57
+	;; Cycle AY tone parameter through 0, 1, 2, and 3
+	ld a,(BS_AY_TONE)	;4a57
 	inc a			;4a5a
 	and 003h		;4a5b
-	ld (l4a15h),a		;4a5d
+	ld (BS_AY_TONE),a	;4a5d
 
-	ld hl,00a00h		;4a60
+	;; Set tone based on value of tone parameter
+	ld hl,00a00h		;4a60 - Tone if A = 0
 	and a			;4a63
 	jr z,l4a75h		;4a64
 
-	ld hl,00b00h		;4a66
+	ld hl,00b00h		;4a66 - Tone if A = 1
 	dec a			;4a69
 	jr z,l4a75h		;4a6a
 
-	ld hl,00a00h		;4a6c
+	ld hl,00a00h		;4a6c - Tone if A = 2
 	dec a			;4a6f
 	jr z,l4a75h		;4a70
 
-	ld hl,00f00h		;4a72
+	ld hl,00f00h		;4a72 - Tone if A = 3
 
+	;; Write tone to AY chip
 l4a75h:	ld a,002h		;4a75
 	out (AY_REG_PORT),a	;4a77
 	ld a,l			;4a79
@@ -3395,19 +3474,21 @@ l4a75h:	ld a,002h		;4a75
 	ld a,h			;4a80
 	out (AY_DAT_PORT),a	;4a81
 
-	ret			;4a83
+	ret			;4a83 - Done
 
 	nop			;4a84
 	nop			;4a85
 	nop			;4a86
 	nop			;4a87
 
+	;; Set volume of channel B based on timer
 l4a88h:	ld a,AY_VOL_B		;4a88
 	out (AY_REG_PORT),a	;4a8a
-	ld a,(l4a13h)		;4a8c
+	ld a,(BS_TIMER)		;4a8c
 	out (AY_DAT_PORT),a	;4a8f
 	
-	ret			;4a91
+	ret			;4a91 - Done
+	
 	nop			;4a92
 	nop			;4a93
 	nop			;4a94
@@ -3504,8 +3585,8 @@ l4a88h:	ld a,AY_VOL_B		;4a88
 	nop			;4aef
 	nop			;4af0
 	nop			;4af1
-l4af2h:
-	nop			;4af2
+
+l4af2h:	nop			;4af2
 	nop			;4af3
 	nop			;4af4
 	nop			;4af5
