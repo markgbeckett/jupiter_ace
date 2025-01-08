@@ -83,12 +83,12 @@ l3c80h:	call GAME_STEP_0	;3c80 - Does nothing
 	call GAME_STEP_1	;3c83 - Play game sound and synchronise
 				;       game by waiting for FRAMES to be
 				;       updated
-	call sub_3f28h		;3c86 - Check if fire has been pressed
+	call GAME_STEP_2	;3c86 - Check if fire has been pressed
 	call GAME_STEP_1	;3c89 - Play game sound and synchronise
 				;       game by waiting for FRAMES to be
 				;       updated
-	call sub_3f28h		;3c8c - Check for fire
-	call sub_3ef0h		;3c8f - Check for direction keys
+	call GAME_STEP_2	;3c8c - Check for fire
+	call GAME_STEP_3		;3c8f - Check for direction keys
 	call sub_44e8h		;3c92 - Service centipede
 	call sub_46f8h		;3c95 - Service flea 
 
@@ -628,8 +628,8 @@ l3e48h:	nop			;3e48
 	nop			;3e56
 	nop			;3e57
 
-	;; Arrive here if player moves spaceship into enemy (centipede
-	;; or flea).
+	;; Arrive here if player moves bug-buster into enemy (centipede
+	;; or flea) or enemy moves into bug-buster.
 l3e58h:	jp l4540h		;3e58
 
 	nop			;3e5b
@@ -652,15 +652,17 @@ sub_3e60h:
 
 	;; Try to move up
 	ld a,b			;3e6a - Retrieve row 
-	cp 010h			;3e6b - Check if upper limit
-	jp z,l3e80h		;3e6d - Skip forward if so
+	cp 010h			;3e6b - Check if top of patrol area
+	jp z,l3e80h		;3e6d - Skip forward, if so (no move)
 	dec b			;3e70 - Otherwise try to move ship up
 	call GET_CHAR		;3e71 - Check if obstruction
 	and a			;3e74 
 	jp z,l3e80h		;3e75 - Skip forward if not, as done
-	cp CENB_CHR		;3e78 - Check if mushroom or laser
-	jp nc,l3e58h		;3e7a - If not, must be centipede or flea
+	cp CENB_CHR		;3e78 - Check if mushroom or dart
+	jp nc,l3e58h		;3e7a - If not, must be centipede or
+				;       flea, which will mean life lost
 	inc b			;3e7d - Otherwise reverse move, as blocked
+
 	nop			;3e7e
 	nop			;3e7f
 
@@ -679,8 +681,10 @@ l3e80h:	ld a,0bfh		;3e80
 	and a			;3e93 - Move on, if none
 	jp z,l3ea0h		;3e94
 	cp SHIP_CHR		;3e97 - Check if mushroom
-	jp nc,l3e58h		;3e99 - If not, must be centipede or flea
+	jp nc,l3e58h		;3e99 - If not, must be centipede or
+				;       flea, which will mean life lost
 	dec c			;3e9c - Otherwise, reverse move as blocked
+
 	nop			;3e9d
 	nop			;3e9e
 	nop			;3e9f
@@ -692,7 +696,7 @@ l3ea0h:	ld a,0bfh		;3ea0
 	jp nz,l3ec0h		;3ea6 - Move on if not
 
 	;; Try to move left
-	ld a,c			;3ea9 - Retrieve row
+	ld a,c			;3ea9 - Retrieve column
 	cp 000h			;3eaa - Check if at left-hand limit
 	jp z,l3ec0h		;3eac - Move on, if so
 	dec c			;3eaf - Attempt to move left
@@ -700,7 +704,8 @@ l3ea0h:	ld a,0bfh		;3ea0
 	and a			;3eb3 - Move on, if none
 	jp z,l3ec0h		;3eb4
 	cp SHIP_CHR		;3eb7 - Check if mushroom
-	jp nc,l3e58h		;3eb9 - If not, must be centipede or flea
+	jp nc,l3e58h		;3eb9 - If not, must be centipede or
+				;       flea, which will mean life lost
 	inc c			;3ebc - Otherwise, reverse move as blocked
 	nop			;3ebd
 	nop			;3ebe
@@ -714,18 +719,20 @@ l3ec0h:	ld a,07fh		;3ec0
 
 	;; Attempt to move down
 	ld a,b			;3ec9 - Retrieve row
-	cp 016h			;3eca - Check if bottom of screen
+	cp 016h			;3eca - Check if bottom of patrol area
 	jp z,l3eddh		;3ecc - Move on, if so
 	inc b			;3ecf - Attempt to move down
 	call GET_CHAR		;3ed0 - Check for obstruction
 	and a			;3ed3 - Move on, if none
 	jp z,l3eddh		;3ed4
 	cp 005h			;3ed7 - Check if mushroom
-	jp nc,l3e58h		;3ed9 - If not, must be centipede or flea
+	jp nc,l3e58h		;3ed9 - If not, must be centipede or
+				;       flea, which will mean life lost
 	dec b			;3edc - Otherwise, reverse move as blocked
 
 	;; Done
 l3eddh:	pop af			;3edd
+
 	ret			;3ede
 
 	nop			;3edf
@@ -763,35 +770,53 @@ sub_3eedh:
 	nop			;3eef
 
 
+	;; ------------------------------------------------------------
 	;; Game routine #3 - Check for direction keys
-sub_3ef0h:
+	;; ------------------------------------------------------------
+	;; Check if bug-buster has collided by an enemy (centipede or
+	;; flea), then check if any direction keys are pressed. Move
+	;; bug-buster, if possible, and check again has not collided
+	;; with any enemies.
+	;; 
+	;; On entry:
+	;;
+	;; On exit:
+	;; - All registers preserved
+	;; ------------------------------------------------------------
+GAME_STEP_3:
+	;; Save registers
 	push af			;3ef0
 	push bc			;3ef1
 
-	ld bc,(SHIP_COORD)	;3ef2 - Retrieve current ship coord
-	call GET_CHAR		;3ef6 - Retrieve character at spaceship
+	ld bc,(SHIP_COORD)	;3ef2 - Retrieve current bug-buster
+				;       coordinates
+	call GET_CHAR		;3ef6 - Retrieve character at bug-buster
 				;       location
 
-l3ef9h:	cp SHIP_CHR		;3ef9 - Check if is ship
-
-	jp nz,l3e58h		;3efb - Jump forward if not
+l3ef9h:	cp SHIP_CHR		;3ef9 - Check if is bug-buster
+	jp nz,l3e58h		;3efb - Life lost if not, as bug-buster
+				;	must have collided with an enemy
 
 	;; Clear ship
 	ld a,000h		;3efe
 	call PUT_CHR		;3f00
 
-	;; Check if direction controls pressed and move ship
+	;; Check if direction controls pressed and update bug-buster
+	;; coordinates
 	call sub_3e60h		;3f03
 
-	;; Redisplay ship
+	;; Redisplay bug-buster
 	ld a,SHIP_CHR		;3f06
 	call PUT_CHR		;3f08
-	
+
+	;; Save new bug-buster coordinates
 	ld (SHIP_COORD),bc	;3f0b
 
+	;; Restore registers
 	pop bc			;3f0f
 	pop af			;3f10
 
+	;; Done
 	ret			;3f11
 
 SHIP_COORD:
@@ -815,112 +840,131 @@ sub_3f18h:
 	jp l4028h		;3f25 - Continue with remainder of
 				;       routine
 
-	;; Check for fire button being pressed
-sub_3f28h:
+	;; ------------------------------------------------------------
+	;; Game routine #2 - Check for fire button
+	;; ------------------------------------------------------------
+	;; ------------------------------------------------------------
+GAME_STEP_2:
+	;; Save registers
 	push af			;3f28
 	push bc			;3f29
 
-	;; Check for in-flight bullet
-	ld bc,(BULLET_COORD)	;3f2a - Retrieve bullet coordinates
+	;; Check for in-flight dart
+	ld bc,(DART_COORD)	;3f2a - Retrieve dart coordinates
 	ld a,b			;3f2e - Non-zero coordinate indicates
-	or c			;3f2f   a bullet is in flight
-	jp nz,l3f48h		;3f30 - Jump forward to move bullet, if
+	or c			;3f2f   dart is in flight
+	jp nz,l3f48h		;3f30 - Jump forward to move dart, if
 				;       so
 
-	;; No in-flight bullet, so check if fire being pressed
-	ld a,0fdh		;3f33
-	in a,(0feh)		;3f35 - Read from port FDFEh (keys 'A',...'G')
+	;; No in-flight dart, so check if fire being pressed
+	ld a,0fdh		;3f33 - Read from port FDFEh 
+	in a,(0feh)		;3f35   (keys 'A',...'G')
 	bit 0,a			;3f37 - Check if 'A' pressed
-	jp z,l3f3fh		;3f39 - If so, fire laser
+	jp z,l3f3fh		;3f39 - If so, fire dart
 
 	;; Otherwise, done
 	pop bc			;3f3c
 	pop af			;3f3d
+	
 	ret			;3f3e
 
-	;; Fire laser
-l3f3fh:	ld bc,(SHIP_COORD)		;3f3f - Possibly space ship coordinate?
-	dec b			;3f43 - Move one square up to where
-				;       bullet will first appear
+	;; Fire dart
+l3f3fh:	ld bc,(SHIP_COORD)	;3f3f - Retrieve coordinates of bug-blaster
+	dec b			;3f43 - Move up one square to where
+				;       dart will first appear
 	jp l3f92h		;3f44
 	
 	nop			;3f47
 
-	;; Deal with bullet in flight
+	;; Deal with dart in flight and, if no dart, check if fire is
+	;; pressed.
 	;;
 	;; On entry:
-	;;   BC - Coordinates of bullet (row and col)
+	;;   BC - Coordinates of dart (row and col)
+	;;
+	;; On exit:
+	;;   All registers preserved
+	;; 
 l3f48h:	call GET_CHAR		;3f48 - Retrieve character at B,C
-	cp 006h			;3f4b - Check is bullet
+	cp 006h			;3f4b - Check if is dart
 	jp z,l3f60h		;3f4d - Move on, if so
 
-	;; Display bullet at current coordinate (assume this is then
-	;; handled by another routine)
+	;; Display dart at current coordinate (should be picked up by
+	;; routine that handles other object)
 l3f50h:	ld a,006h		;3f50
 	call PUT_CHR		;3f52
 
-l3f55h:	ld bc,00000h		;3f55 -  Cancel bullet
-
-	;; Update bullet coordinate
-l3f58h:	ld (BULLET_COORD),bc	;3f58
+	;; End dart in flight, by resetting coordinates
+l3f55h:	ld bc,00000h		;3f55 
+l3f58h:	ld (DART_COORD),bc	;3f58
 
 	;; Restore registers and exit
 	pop bc			;3f5c
 	pop af			;3f5d
 
 	ret			;3f5e
+
 	nop			;3f5f
 
-l3f60h:	ld a,000h		;3f60 - Clear bullet from current 
+	;; Move dart up one square
+l3f60h:	ld a,000h		;3f60 - Clear dart from current 
 	call PUT_CHR		;3f62   location
-	dec b			;3f65 - Move bullet up screen
+	dec b			;3f65 - Move dart up screen
 
 	jp z,l3f55h		;3f66 - If reach top of screen, delete
-				;       bullet and done
+				;       dart and done
 
-l3f69h:	call GET_CHAR		;3f69 - Check if something in new cell
-	cp 000h			;3f6c
+	;; Check if dart has hit something
+l3f69h:	call GET_CHAR		;3f69 - Check if something at (new)
+	cp 000h			;3f6c   dart location
 	jp nz,l3f79h		;3f6e - Jump forward if so
 
-	ld a,006h		;3f71 - Otherwise display bullet at new locn
+	ld a,006h		;3f71 - Otherwise display dart at new locn
 	call PUT_CHR		;3f73 
 
 	jp l3f58h		;3f76 - ... and wrap up routine
 
-	;; Bullet has hit something
+	;; Dart has hit something
 l3f79h:	cp 005h			;3f79 - Check if mushroom
 	jp nc,l3f50h		;3f7b - If not, replace object (flea or
-				;       centipede segment) by bullet and
+				;       centipede segment) by dart and
 				;       let another routine deal with
 				;       consequences
 
+	;; Damage mushroom and check if destroyed
 	dec a			;3f7e - Damage mushroom
 	jp nz,l3f8ah		;3f7f - Skip forward if mushroom not yet
 				;       destroyed
 
 	;; Update score (having destroyed mushroom)
 	push hl			;3f82
+	
 	ld hl,00100h		;3f83 - one point
 	call UPDATE_SCORE	;3f86
+	
 	pop hl			;3f89
 
-l3f8ah:	call PUT_CHR		;3f8a - Print new character (either
+l3f8ah:	call PUT_CHR		;3f8a - Print new mushroom (either
 				;       partial mushroom or space, if
 				;       destroyed)
 
-	jp l3f55h		;3f8d - Cancel bullet and wrap up
+	jp l3f55h		;3f8d - Cancel dart and wrap up
 
-BULLET_COORD:
-	db 0x13, 0x05	; 3f90 - Coordinate of bullet (row,
+DART_COORD:
+	db 0x13, 0x05	; 3f90 - Coordinate of dart (row,
 			; col). N.B. This define is based on the values
 			; at these memory locations in the TAP file
 			; though, in practice, these values are zeroed
 			; when the game starts
 
 	
-	;; Arrive her from fire laser (0x3F44)
-l3f92h:	call sub_3f98h		;3f92 - Play laser sound
-	jp l3f69h		;3f95 - Continue with checking if bullet
+	;; Arrive her from firing dart (0x3F44)
+	;;
+	;; On entry:
+	;; - BC holds coordinates of new dart
+l3f92h:	call sub_3f98h		;3f92 - Play dart sound
+
+	jp l3f69h		;3f95 - Continue with checking if dart
 				;       has hit anything
 
 sub_3f98h:
@@ -1070,7 +1114,7 @@ l401ch:
 	;; Initially no dart in flight, score is zero, and player has
 	;; two spare lives
 l4028h:	ld bc,00000h		;4028
-	ld (BULLET_COORD),bc	;402b - Set bullet coordinate to 00,00
+	ld (DART_COORD),bc	;402b - Set dart coordinate to 00,00
 	ld (SCORE),bc		;402f
 	ld (SCORE+2),bc		;4033
 
@@ -1326,7 +1370,8 @@ l4100h:
 	;; 		        moving left
 	;;              Bit 2 - set if moving down screen, otherwise up
 	;; 		Bit 3 - set if double-speed segment	
-	;;              Bit 4 - ???
+	;;              Bit 4 - set if segment has reached bottom of
+	;;                      screen
 	;; 		Bit 5 - set if segment masked another character
 	;;              Bit 6 - set if active segment
 	;; 4161-416c - temporary store for background character
@@ -1721,7 +1766,7 @@ l4254h:	;; Retrieve coordinates of current segment into B and C
 
 	;; Retrieve any object at B,C into A
 	call GET_CHAR		;425a
-	cp 005h			;425d - Check if space ship, bullet, flea, ...
+	cp 005h			;425d - Check if space ship, dart, flea, ...
 	jp nc,l4273h		;425f - Jump forward if is (BUG: was 0x4274,
 				;       but that is mid-instruction)
 
@@ -2098,12 +2143,14 @@ l4423h:	ld a,b			;4423 - Check if on bottom row
 	jr nz,l4436h		;4426
 
 	;; Check if first time at bottom of screen?
-	bit 4,(ix+040h)		;4428 - Check if Bit 4 of status is set
+	bit 4,(ix+040h)		;4428 - Check if segment has previously
+				;       reached bottom of screen
 	jr nz,l4436h		;442c - Move on, if so
 
 	ld hl,BOTTOM_ROW_CNT	;442e - Increase counter and set Bit 4 of
 	inc (hl)		;4431   segment's status register
-	set 4,(ix+040h)		;4432
+	set 4,(ix+040h)		;4432 - Set flag to indicate segment has
+				;       reached bottom of screen
 
 	;; Update coordinates and move on to next segment
 l4436h:	ld (ix+000h),b		;4436
@@ -2114,15 +2161,15 @@ l4436h:	ld (ix+000h),b		;4436
 	nop			;443f
 
 sub_4440h:
-	ld a,(ix+040h)		;4440 - Extract and save value of Bit 4 of
-				;       segment status
-	and %00010000		;4443
-	ld h,a			;4445
+	ld a,(ix+040h)		;4440 - Extract and save info as to whether 
+	and %00010000		;4443   segment has reached bottom of
+	ld h,a			;4445   screen
 	
 	ld a,(ix+041h)		;4446
-	and %11101110		;4449 - Mask off head and bit 4 
-	or h			;444b
-	ld (ix+040h),a		;444c
+	and %11101110		;4449 - Mask off head and reached-bottom-
+				;       of-screen bit
+	or h			;444b - Restore reached-bottom-of-screen
+	ld (ix+040h),a		;444c   bit from previous segment
 
 	ret			;444f
 
@@ -2189,11 +2236,12 @@ l448ch:	ld a,004h		;448c - Replace character with mushroom
 	bit 0,(ix+040h)		;4498 - Check if have hit head
 	jr z,l44a1h		;449c - Jump forward, if not
 	ld hl,00001h		;449e - Have hit head (100 points)
+
 l44a1h:	call sub_4908h		;44a1 - Update score decrement active
 				;       segment count
 
 	set 0,(ix+03fh)		;44a4 - Set previous segment to be head
-	ld hl,SEGMENT_CNT		;44a8
+	ld hl,SEGMENT_CNT	;44a8
 	dec (hl)		;44ab
 	
 	jp l4469h		;44ac - Continue to next segment
@@ -2340,30 +2388,31 @@ l4533h:	call CREATE_CENTIPEDE	;4533 - Initialise and display centipede
 	nop			;453e
 	nop			;453f
 
-	;; Arrive here if player moves spaceship into enemy (centipede
-	;; or flea). Arrive here from l3e58h:
+	;; Arrive here if player moves bug-buster into enemy (centipede
+	;; or flea) or enemy moves onto bug-buster. Arrive here from
+	;; l3e58h
 l4540h:	call DISP_EXPLOSION	;4540 - Display explosion
 
 	ld ix,l4101h		;4543 - Pointer to centipede
 
 	;; Delete centipede
-l4547h:	bit 6,(ix+040h)		;4547 - Check if ???
-	jr z,l455fh		;454b 
-	bit 5,(ix+040h)		;454d - Is segment visible
-	jr z,l455fh		;4551 - Jump forward if not
+l4547h:	bit 6,(ix+040h)		;4547 - Check if segment is active
+	jr z,l455fh		;454b - Jump forward, if not
+	bit 5,(ix+040h)		;454d - Check if segment masked another
+				;       character
+	jr z,l455fh		;4551 - Jump forward, if not
 
 	;; Restore masked character (from under centipede)
 	ld b,(ix+000h)		;4553 - Row value of segment
 	ld c,(ix+020h)		;4556 - Column value of segment
 	ld a,(ix+060h)		;4559 - Masked character
-
 	call PUT_CHR		;455c
-l455fh:
-	inc ix			;455f - Move to next segment
-	push ix			;4561
-	pop bc			;4563
+
+l455fh:	inc ix			;455f - Move to next segment
 
 	;; Check if done (i.e., all segments deleted), otherwise repeat.
+	push ix			;4561
+	pop bc			;4563
 	ld a,c			;4564
 	cp 01fh			;4565
 	jr nz,l4547h		;4567
@@ -2373,7 +2422,7 @@ l455fh:
 				;       1, column 0)
 l456ch:	ld a,(hl)		;456c - Retrieve character and check if
 	cp 005h			;456d   mushroom
-	jr c,l4573h		;456f - Jump forward if is
+	jr c,l4573h		;456f - Skip forward if is
 	ld (hl),000h		;4571 - Otherwise delete
 
 l4573h:	inc hl			;4573 - Move to next cell
@@ -2382,6 +2431,7 @@ l4573h:	inc hl			;4573 - Move to next cell
 	ld a,l			;4574 - Check if low part of row 
 	cp 0e0h			;4575   coordinate is 7 
 	jr nz,l456ch		;4577 - Repeat if not
+
 	ld a,h			;4579 - Check if high part of row
 	cp 026h			;457a   coordinate is 2 (0x26-0x24 = 0x02)
 	jr nz,l456ch		;457c - Repeat if not
@@ -2408,13 +2458,14 @@ l4582h:	call GET_CHAR		;4582 - Retrieve character
 	xor 080h		;458f
 	call PUT_CHR		;4591
 
-	call sub_45b8h		;4594
+	call REGEN_MUSHROOM	;4594 - Play mushroom regeneration sound
+				;       and add to score
 
-	ld a,004h		;4597 - Replace character with whole mushroom
-	call PUT_CHR		;4599
+	ld a,004h		;4597 - Replace (inverted) partial
+	call PUT_CHR		;4599   mushroom with whole mushroom
 
 l459ch:	djnz l4582h		;459c - Advance to next cell up (if any
-				;       more)
+				;       more) by decrementing B
 
 	;; Adavance to next column (if anymore)
 	inc c			;459e - Increment column
@@ -2428,9 +2479,12 @@ l459ch:	djnz l4582h		;459c - Advance to next cell up (if any
 	ld a,000h		;45a8
 	ld (FLEA_FLAG),a	;45aa
 
-	call sub_41a0h		;45ad - Restore Forth environment
+	call sub_41a0h		;45ad - Restore Forth environment (***
+				;       not needed as done in subsequemt
+				;       code block ***)
 
 	jp l45d0h		;45b0
+
 	nop			;45b3
 	nop			;45b4
 	nop			;45b5
@@ -2441,7 +2495,7 @@ l459ch:	djnz l4582h		;459c - Advance to next cell up (if any
 	;; 
 	;; Called from routine (0x4594) to regenerate mushrooms after
 	;; player has died
-sub_45b8h:
+REGEN_MUSHROOM:
 	call REGEN_SND		;45b8
 	call REGEN_BPR		;45bb
 
@@ -2467,8 +2521,11 @@ l45d0h:	ld a,(NO_LIVES)		;45d0 - Retrieve number of lives
 	and a			;45d3 - Check if zero
 	jp nz,l45e0h		;45d4 - Move on, if not
 	call sub_41a0h		;45d7 - Otherwise, restore Forth
-				;       environment
-	jp l4800h		;45da
+				;       environment *** This would be
+				;       better done in routine at
+				;       address 0x4900 ***
+
+	jp CHECK_HIGH_SCORE		;45da - Move on to check if high score
 	
 	nop			;45dd
 	nop			;45de
@@ -2477,24 +2534,37 @@ l45d0h:	ld a,(NO_LIVES)		;45d0 - Retrieve number of lives
 	;; Decrease number of lives and reset level
 l45e0h:	dec a			;45e0
 	ld (NO_LIVES),a		;45e1
+
+	;; Update number of spare bug-busters displayed at top of screen
 	ld hl,(NEXT_SHIP_LOCN)	;45e4
 	ld (hl),000h		;45e7
 	dec hl			;45e9
 	ld (NEXT_SHIP_LOCN),hl	;45ea
+
+	;; Restore centipede count to zero
 	ld a,000h		;45ed
-	ld (SEGMENT_CNT),a		;45ef
+	ld (SEGMENT_CNT),a	;45ef
 
-	ld a,(SEGMENT_CNT+6)		;45f2
+	;; Reduce difficulty???
+	ld a,(SEGMENT_CNT+6)	;45f2
 	dec a			;45f5
-	ld (SEGMENT_CNT+6),a		;45f6
+	ld (SEGMENT_CNT+6),a	;45f6
 
+	;; Reset bug-buster location to starting location
 	ld bc,0160fh		;45f9
 	ld a,005h		;45fc
 	call PUT_CHR		;45fe
-	ld (SHIP_COORD),bc		;4601
+	ld (SHIP_COORD),bc	;4601
+
+	;; Reset any in-flight darts
 	ld bc,00000h		;4605
-	ld (BULLET_COORD),bc		;4608
-	jp l3c78h		;460c
+	ld (DART_COORD),bc	;4608
+
+	jp l3c78h		;460c - Return to start of main game
+				;       loop (having first
+				;       re-initialised the AY sound
+				;       chip)
+	
 	nop			;460f
 	nop			;4610
 	nop			;4611
@@ -2953,7 +3023,16 @@ l47fch:	db $b0
 	
 	nop			;47ff
 
-l4800h:	call sub_4968h		;4800
+	;; ------------------------------------------------------------
+	;; End-game sequence
+	;; ------------------------------------------------------------
+	;; Player has run out of lives, so check if new high score,
+	;; before returning to Forth.
+	;; ------------------------------------------------------------
+CHECK_HIGH_SCORE:	
+	call sub_4968h		;4800 - Turn of AY sound and clear all
+				;       but top row of screen. On exit,
+				;       HL = DISPLAY-01
 
 	;; Check for high score???
 	ld de,02417h		;4803 - One less than largest possible
@@ -2965,7 +3044,7 @@ l4806h:	inc de			;4806 - Advance to next digit of high score
 	cp 009h			;4809
 	jr nz,l4810h		;480b - Jump forward if not
 
-l480dh:	jp l4900h		;480d - Move on, not a high score
+l480dh:	jp END_GAME		;480d - Move on, not a high score
 
 l4810h:	ld a,(de)		;4810 - Retrieve digit from high score
 	cp (hl)			;4811 - Compare to score
@@ -2986,7 +3065,8 @@ l4818h:	ld bc,00008h		;4818
 	ld hl,02400h		;4829
 	ldir			;482c
 
-	jp l4850h		;482e
+	jp GET_NAME		;482e - Jump forward to read player
+				;       initials
 
 	nop			;4831
 	nop			;4832
@@ -3023,7 +3103,8 @@ l4842h:	inc hl			;4842
 	nop			;484f
 
 	;; Print high-score message
-l4850h:	call 04838h		;4850 - *** Bug: was call 04830h ***
+GET_NAME:
+	call 04838h		;4850 - *** Bug: was call 04830h ***
 	db 0x24, 0xC5		; Screen location for message
 	dm "Well done! You got th"
 	db 0xE5
@@ -3099,24 +3180,29 @@ l48ech:	ld de,l3dd4h		;48ec
 	ldir			;48fd
 	nop			;48ff
 
-l4900h:	call sub_4980h		;4900 - Print Game Over
+END_GAME:
+	call sub_4980h		;4900 - Print Game Over
+
 	jp (iy)			;4903 - Return to Forth 
 	
 l4905h:	nop			;4905
 	nop			;4906
 	nop			;4907
 
+	;; Increase score for centipede segment destroyed and, if
+	;; necessary, adjust count of segments that have reached bottom
+	;; of playing area
 sub_4908h:
 	call UPDATE_SCORE	;4908
-l490bh:
-	bit 4,(ix+040h)		;490b
-	ret z			;490f
 
-	;; Reduce number of active centipede segments
-	ld hl,BOTTOM_ROW_CNT		;4910
-	dec (hl)			;4913
+l490bh:	bit 4,(ix+040h)		;490b - Check if segment had reached
+	ret z			;490f   bottom of playing area and return
+				;       if not
+	ld hl,BOTTOM_ROW_CNT	;4910 - Decrement count of segments that
+	dec (hl)		;4913   have reached bottom of playing
+				;       area
 
-	ret			;4914
+	ret			;4914 - Done
 
 	nop			;4915
 	nop			;4916
@@ -3198,10 +3284,13 @@ l495ch:	db $AA
 	nop			;4966
 	nop			;4967
 
-	;; Turn off sound and clear screen
+	;; Turn off sound and clear (all but top row of) screen
 	;;
+	;; On entry:
+	;; 
 	;; On exit:
 	;;   HL - 0x23FF (immediately before start of display)
+	;; 
 sub_4968h:
 	;; Turn off AY sound
 	call WRITE_TO_AY	;4968
@@ -3214,7 +3303,7 @@ sub_4968h:
 	ld bc,002deh		;4975
 	ldir			;4978
 
-	ld hl,023ffh		;497a
+	ld hl,DISPLAY-1		;497a
 
 	ret			;497d
 	
@@ -3238,7 +3327,7 @@ sub_4980h:
 	nop			;4996
 	nop			;4997
 
-	;; Play laser sound (internal speaker and AY)
+	;; Play dart-fire sound (internal speaker and AY)
 	;;
 	;; Arrive here from fire laser (0x3F98)
 	;;
@@ -3296,9 +3385,11 @@ l49ach:	djnz l49ach		;49ac - Pause for B iterations
 	nop			;49c4
 
 
+	;; Play sound effect for mushroom being regenerated when game
+	;; level is being reset
 REGEN_BPR:	
-	call sub_499dh		;49c5 - Laser beeper
-	call sub_499dh		;49c8 - Laser beeper
+	call sub_499dh		;49c5 - Dart-fired beeper
+	call sub_499dh		;49c8 - Dart-fired beeper
 
 	ret			;49cb
 
