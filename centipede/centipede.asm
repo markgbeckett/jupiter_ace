@@ -36,6 +36,7 @@ AY_DAT_PORT:	equ 0ffh
 
 	;; Jupiter Ace Memory Map and System Variables
 DISPLAY:	equ 0x2400	; Start of display buffer
+PAD:		equ 0x2701	; Pad - workspace for Forth
 CHARSET:	equ 0x2C00	; Start of character RAM 
 KEYCOD:		equ 0x3c26	; ASCII code of last key pressed
 FRAMES:		equ 0x3C2B
@@ -79,7 +80,8 @@ l3c78h:	call INIT_AY		;3c78 - Initialise sound card
 	nop			;3c7f
 
 	;; Main game loop
-l3c80h:	call GAME_STEP_0	;3c80 - Does nothing
+GAME_LOOP:
+	call GAME_STEP_0	;3c80 - Does nothing
 	call GAME_STEP_1	;3c83 - Play game sound and synchronise
 				;       game by waiting for FRAMES to be
 				;       updated
@@ -92,7 +94,7 @@ l3c80h:	call GAME_STEP_0	;3c80 - Does nothing
 	call sub_44e8h		;3c92 - Service centipede
 	call sub_46f8h		;3c95 - Service flea 
 
-	jp l3c80h		;3c98 - Jump back to start
+	jp GAME_LOOP		;3c98 - Jump back to start
 
 	nop			;3c9b
 	nop			;3c9c
@@ -373,15 +375,18 @@ l3d53h:	djnz l3d53h		;3d53   tone
 				;and read bottom-left keyboard half row
 				;(V, B, N, M, Space)
 
-	;; Check for space
-	rra			;3d5b
-	jr c,l3d64h		;3d5c - Skip ahead if not pressed
+	;; Possibly, some debugging code triggered by pressing 'Space':
+	;; the subsequent NOP commands have replaced some debugging code
+	rra			;3d5b - Check if Space pressed and
+	jr c,l3d64h		;3d5c   skip ahead if not
+
 	nop			;3d5e
 	nop			;3d5f
 	nop			;3d60
 	nop			;3d61
 	nop			;3d62
 	nop			;3d63
+
 l3d64h:	dec e			;3d64 - Decrement duration
 	jp nz,l3d4ch		;3d65
 
@@ -422,7 +427,7 @@ l3d64h:	dec e			;3d64 - Decrement duration
 	nop		;3d8e
 	nop		;3d8f
 
-	;; Initialisation routine #3 - Initialie game screen
+	;; Initialisation routine #3 - Initialise game screen
 INIT_GAME_SCREEN:
 	call sub_3de0h		;3d90 - Set up graphics
 
@@ -707,6 +712,7 @@ l3ea0h:	ld a,0bfh		;3ea0
 	jp nc,l3e58h		;3eb9 - If not, must be centipede or
 				;       flea, which will mean life lost
 	inc c			;3ebc - Otherwise, reverse move as blocked
+
 	nop			;3ebd
 	nop			;3ebe
 	nop			;3ebf
@@ -797,7 +803,7 @@ l3ef9h:	cp SHIP_CHR		;3ef9 - Check if is bug-buster
 	jp nz,l3e58h		;3efb - Life lost if not, as bug-buster
 				;	must have collided with an enemy
 
-	;; Clear ship
+	;; Clear bug-buster
 	ld a,000h		;3efe
 	call PUT_CHR		;3f00
 
@@ -820,18 +826,18 @@ l3ef9h:	cp SHIP_CHR		;3ef9 - Check if is bug-buster
 	ret			;3f11
 
 SHIP_COORD:
-	dw $160B		; Coordinate of ship (row, col)
+	dw $160B		; Coordinate of bug-buster (row, col)
 	nop			;3f14
 	nop			;3f15
 	nop			;3f16
 	nop			;3f17
 
-	;; Print ship, reset number of lives, score, and set no dart in
-	;; flight
+	;; Print bug-buster, reset number of lives, score, and set no
+	;; dart in flight
 sub_3f18h:
 	push bc			;3f18
 
-	;; Display ship in starting location
+	;; Display bug-buster in starting location
 	ld bc,0160fh		;3f19 - Starting location is (22,15)
 	ld a,005h		;3f1c
 	call PUT_CHR		;3f1e
@@ -1054,7 +1060,7 @@ UPDATE_SCORE:
 	daa			;3fdd
 	ld (de),a		;3fde - Store it
 
-	call sub_3fe8h		;3fdf
+	call sub_3fe8h		;3fdf - Convert score to ASCII and display
 
 	;; Restore registers and done
 	pop af			;3fe2
@@ -1066,47 +1072,68 @@ UPDATE_SCORE:
 	
 	nop			;3fe7
 
-
-	;; Do something to score
+	;; Convert score into ASCII and display on status line at top of
+	;; display
 sub_3fe8h:
-	ld hl,02780h		;3fe8
-	ld de,l3fb8h		;3feb
-	ld b,005h		;3fee
-l3ff0h:
-	ld a,(de)			;3ff0
-	inc de			;3ff1
-	push af			;3ff2
-	ld (hl),a			;3ff3
-	xor a			;3ff4
-	rld		;3ff5
-	add a,030h		;3ff7
-	ld (hl),a			;3ff9
-	inc hl			;3ffa
-	pop af			;3ffb
-	and 00fh		;3ffc
-	add a,030h		;3ffe
-	ld (hl),a			;4000
-	inc hl			;4001
-	djnz l3ff0h		;4002
-	ld hl,02780h		;4004
-l4007h:
-	ld a,(hl)			;4007
-	cp 030h		;4008
-	jr nz,l4011h		;400a
+	ld hl,PAD+0x7F		;3fe8 - Location of Pad in which to
+				;       store score as string
+	ld de,SCORE		;3feb - Location of score in BCD
+	ld b,005h		;3fee - Ten digits to process 
+
+l3ff0h:	ld a,(de)		;3ff0 - Retrieve next two digits (we
+				;       refer to them as "Y" and "Z"
+				;       below)
+
+	inc de			;3ff1 - Advance pointer to next pair of
+				;       digits
+
+	push af			;3ff2 - Save current digits
+
+	;; Retrieve high digit into A
+	ld (hl),a		;3ff3 - Store in HL
+	xor a			;3ff4 - (HL) = $YZ ; A = $00
+	rld			;3ff5 - A = $0Y ; (HL) = $Z0  
+	add a,"0"		;3ff7 - Convert to ASCII
+	ld (hl),a		;3ff9 - Store digit
+
+	inc hl			;3ffa - Advance pointer to location for
+				;       next digit
+
+	pop af			;3ffb - Restore digits
+
+	and 00fh		;3ffc - Isolate lower digit into A
+	add a,"0"		;3ffe - Convert to ASCII
+	ld (hl),a		;4000 - Store digit
+	inc hl			;4001 - Advance pointer to location for
+				;       next digit
+
+	djnz l3ff0h		;4002 - Repeat if more digits
+
+	ld hl,PAD+0x7F		;4004 - Point to start of score string
+
+	;; Find first non-zero digit of score, replacing zeros with
+	;; spaces until then
+l4007h:	ld a,(hl)		;4007
+	cp "0"			;4008 - Check is non-zero and otherwise
+	jr nz,l4011h		;400a   display space
 	ld (hl),000h		;400c
-	inc hl			;400e
+	
+	inc hl			;400e - Advance to next digit and repeat
 	jr l4007h		;400f
-l4011h:
-	ld a,(02787h)		;4011
+
+	;; Check for case when score is zero
+l4011h:	ld a,(PAD+0x86)		;4011
 	and a			;4014
-	jr nz,l401ch		;4015
-	ld a,030h		;4017
-	ld (02787h),a		;4019
-l401ch:
-	ld hl,02780h		;401c
-	ld de,02400h		;401f
-	ld bc,00008h		;4022
-	ldir		;4025
+	jr nz,l401ch		;4015 - Jump forward if not
+	ld a,"0"		;4017 - Otherwise replace final space
+	ld (PAD+0x86),a		;4019   by "0"
+
+	;; Copy score string from Pad onto display
+l401ch:	ld hl,PAD+0x7F		;401c - Location of string in Pad
+	ld de,DISPLAY		;401f 
+	ld bc,00008h		;4022 - Eight digits
+	ldir			;4025
+
 	ret			;4027
 
 	;; Continuation of initialisation routine at 3F18
@@ -1397,114 +1424,6 @@ l4101h:
 	db $04, $00, $00, $00, $00, $00, $00, $00
 	db $05, $00, $00, $00, $00, $00, $00 
 
-;; 	inc d			;4101
-;; 	add hl,bc			;4102
-;; 	ld de,01515h		;4103
-;; 	ld d,016h		;4106
-;; 	ld d,00fh		;4108
-;; 	ld bc,00c16h		;410a
-;; 	ld d,013h		;410d
-;; 	inc d			;410f
-;; 	dec d			;4110
-;; 	inc de			;4111
-;; 	ld (de),a			;4112
-;; 	inc de			;4113
-;; 	inc d			;4114
-;; 	inc d			;4115
-;; 	inc d			;4116
-;; 	ld de,01114h		;4117
-;; 	djnz l4132h		;411a
-;; 	dec d			;411c
-;; 	ld d,015h		;411d
-;; 	nop			;411f
-;; 	nop			;4120
-;; 	rra			;4121
-;; 	add hl,de			;4122
-;; 	rrca			;4123
-;; 	rlca			;4124
-;; 	ex af,af'			;4125
-;; 	ex af,af'			;4126
-;; 	add hl,bc			;4127
-;; 	ld a,(bc)			;4128
-;; 	inc c			;4129
-;; 	rrca			;412a
-;; 	rla			;412b
-;; 	add hl,de			;412c
-;; 	dec d			;412d
-;; 	nop			;412e
-;; 	add hl,de			;412f
-;; 	nop			;4130
-;; 	ex af,af'			;4131
-;; l4132h:
-;; 	inc e			;4132
-;; 	jr $+4		;4133
-;; 	rra			;4135
-;; 	jr $+8		;4136
-;; 	rlca			;4138
-;; 	dec de			;4139
-;; 	ld (bc),a			;413a
-;; 	ld (bc),a			;413b
-;; 	ld bc,0030bh		;413c
-;; 	nop			;413f
-;; 	ld bc,0277fh		;4140
-;; 	daa			;4143
-;; 	ld h,(hl)			;4144
-;; 	ld h,(hl)			;4145
-;; 	ld (hl),d			;4146
-;; 	ld (hl),d			;4147
-;; 	ld (hl),e			;4148
-;; 	daa			;4149
-;; 	ld h,071h		;414a
-;; 	dec h			;414c
-;; 	inc sp			;414d
-;; 	inc sp			;414e
-
-
-;; 	add hl,sp			;414f
-;; 	ccf			;4150
-;; 	scf			;4151
-;; 	inc sp			;4152
-;; 	dec sp			;4153
-;; 	add hl,sp			;4154
-;; 	scf			;4155
-;; 	ccf			;4156
-;; 	scf			;4157
-;; 	ld sp,l3d39h		;4158
-;; 	ld sp,03b39h		;415b
-;; 	daa			;415e
-;; 	nop			;415f
-;; 	nop			;4160
-;; 	nop			;4161
-;; 	nop			;4162
-;; 	nop			;4163
-;; 	nop			;4164
-;; 	nop			;4165
-;; 	nop			;4166
-;; 	nop			;4167
-;; 	nop			;4168
-;; 	nop			;4169
-;; 	nop			;416a
-;; 	nop			;416b
-;; 	nop			;416c
-;; 	nop			;416d
-;; 	nop			;416e
-;; 	nop			;416f
-;; 	inc b			;4170
-;; 	inc b			;4171
-;; 	nop			;4172
-;; 	nop			;4173
-;; 	nop			;4174
-;; 	nop			;4175
-;; 	nop			;4176
-;; 	nop			;4177
-;; 	nop			;4178
-;; 	dec b			;4179
-;; 	nop			;417a
-;; 	nop			;417b
-;; 	nop			;417c
-;; 	nop			;417d
-;; 	nop			;417e
-;; 	nop			;417f
 
 	;; 8-byte buffer, initialised at beginning of game so, likely,
 	;; does not matter what is here
@@ -1567,7 +1486,7 @@ SP_STR:	dw 0x0000
 	;;
 	;; On exit:
 	;;   HL - corrupted
-sub_41a0h:
+RESTORE_FORTH:
 	pop hl			;41a0 - Retrieve return address before
 				;       resetting SP
 	ld ix,(IX_STR)		;41a1 - Restore IX
@@ -1604,38 +1523,43 @@ RESTORE_GAME_DEFAULTS:
 	;; Initial game status
 GAME_STATS: db $0C, $00, $00, $00, $00, $00, $01, $00
 
-	;; Game routine #1 - not used;
+	;; ------------------------------------------------------------
+	;; Game routine #0
+	;; ------------------------------------------------------------
+	;; Not used, though looks to be a quick way to exit back to
+	;; Forth during debugging. If first instruction is replaced by
+	;; `push af`, this routine will check if Space key is pressed
+	;; and exit to Forth, if so.
 	;;
 	;; On entry:
 	;;
 	;; On exit:
 	;;   - All registered preserved
-	;; 
+	;; ------------------------------------------------------------
 GAME_STEP_0:
-	ret			;41c8
+	ret			;41c8 During debugging, is probably
+				;     `push af`
 
-	
+	;; Read keyboard half-row V,...,Space and check if Space pressed
 	ld a,07fh		;41c9
 	in a,(0feh)		;41cb
-	rra			;41cd
-	jr nc,l41d2h		;41ce
-	pop af			;41d0
+	rra			;41cd - Check for Space and jump forward
+	jr nc,l41d2h		;41ce   if pressed
+
+	pop af			;41d0 - Otherwise, balance stack and done
 	ret			;41d1
 
-l41d2h:	call sub_41a0h		;41d2
-	ld de,l41ddh		;41d5
-	call 00979h		;41d8
-	jp (iy)			;41db
+l41d2h:	call RESTORE_FORTH	;41d2
 
-l41ddh:	rlca			;41dd
-	nop			;41de
-	ld d,e			;41df
-	ld d,h			;41e0
-	ld c,a			;41e1
-	ld d,b			;41e2
-	ld d,b			;41e3
-	ld b,l			;41e4
-	ld b,h			;41e5
+	ld de,EXIT_STR		;41d5
+	call 00979h		;41d8 - PRINT_STR routine in ROM
+
+	jp (iy)			;41db - Return to Forth
+
+EXIT_STR:
+	dw 0x0007
+	dm "STOPPED"
+
 	nop			;41e6
 	nop			;41e7
 
@@ -1871,9 +1795,12 @@ l42cah:	ld b,(ix+000h)		;42ca - Retrieve coordinates of current
 	cp 006h			;42d3
 	jp nz,l4310h		;42d5
 
-	call sub_41a0h		;42d8 - Exit game???
-	rst 20h			;42db
-	ex af,af'		;42dc
+	call RESTORE_FORTH	;42d8 - Exit game???
+
+	rst 20h			;42db - ROM error restart routine
+	db 0x08			; Indicates overflow in floating-point
+				; arithmetic
+
 	nop			;42dd
 	nop			;42de
 	nop			;42df
@@ -2190,7 +2117,7 @@ sub_4440h:
 	nop			;445e
 	nop			;445f
 
-	;; Check if centipede hit by laser
+	;; Check if centipede hit by dart
 sub_4460h:
 	push ix		;4460
 	push bc			;4462
@@ -2479,7 +2406,7 @@ l459ch:	djnz l4582h		;459c - Advance to next cell up (if any
 	ld a,000h		;45a8
 	ld (FLEA_FLAG),a	;45aa
 
-	call sub_41a0h		;45ad - Restore Forth environment (***
+	call RESTORE_FORTH		;45ad - Restore Forth environment (***
 				;       not needed as done in subsequemt
 				;       code block ***)
 
@@ -2520,7 +2447,7 @@ l45c1h:	dec hl			;45c1
 l45d0h:	ld a,(NO_LIVES)		;45d0 - Retrieve number of lives
 	and a			;45d3 - Check if zero
 	jp nz,l45e0h		;45d4 - Move on, if not
-	call sub_41a0h		;45d7 - Otherwise, restore Forth
+	call RESTORE_FORTH	;45d7 - Otherwise, restore Forth
 				;       environment *** This would be
 				;       better done in routine at
 				;       address 0x4900 ***
@@ -2879,6 +2806,7 @@ l471dh:	call RND		;471d - RND(4) with zero indicating
 	ld (l46e4h),a		;4747
 
 	jp l4711h		;474a - Done
+
 	nop			;474d
 	nop			;474e
 	nop			;474f
