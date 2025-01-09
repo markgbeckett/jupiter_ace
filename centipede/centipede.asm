@@ -4,6 +4,27 @@
 	;; Disassembly of the Jupiter Ace game 'Centipede', written by
 	;; Colin Dooley and published by Boldfield Computing in 1984.
 	;;
+	;; The original Centipede game was developed by Donna Bailey and
+	;; Ed Logg, and published by Atari in 1981 for a range of
+	;; 6502-based consoles and so-called "cocktail tables". In the
+	;; game, a centipede winds its way down a playing field strewn
+	;; with randomly placed mushrooms. Armed with a "bug-blaster"
+	;; that fires darts up the screen, the player has to shoot the
+	;; centipede and avoid colliding with it. Each time the player
+	;; hits a segment of the centipede it disappears though if the
+	;; player hits somewhere in the middle of the centipede, the
+	;; remaining segments continue as two separate centipedes. If
+	;; the player is too slow, more single-centipede segments are
+	;; added to the game board. Several other enemies -- notably, a
+	;; flea, a spider and a scorpion -- may appear and have to be
+	;; dealt with.
+	;;
+	;; The Ace version is a reasonably accurate conversion, though
+	;; lacks the spider and the scorpion. Game play is smooth and
+	;; with a reasonable difficulty level. The game is enhanced by
+	;; sound effects remeniscent of the original and even supports
+	;; the Boldfield Soundbox.
+	;; 
 	;; In an interview with the curator of the Jupiter Ace archive
 	;; (https://www.jupiter-ace.co.uk), Colin noted that he wrote
 	;; the game on an actual Jupiter Ace, hand-assembling code into
@@ -464,7 +485,7 @@ l3dabh:	dec hl			;3dab
 	;; Print title row, inc. score, high score, and lives left
 	ld bc,00020h		;3db1
 	ld de,DISPLAY
-	ld hl,SCORE_PANEL	;3db7
+	ld hl,STATUS_PANEL	;3db7
 	ldir			;3dba
 
 	call sub_3f18h		;3dbc - Initialise bug buster, reset
@@ -474,7 +495,7 @@ l3dabh:	dec hl			;3dab
 	ret			;3dbf
 
 	;; Top line of game screen
-SCORE_PANEL: db 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x30 ; Score
+STATUS_PANEL: db 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x30 ; Score
 	db 0x00
 l3dc9h:	db 0x05, 0x05		; Lives
 	db 0x00, 0x00, 0x00, 0x00, 0x00
@@ -1017,7 +1038,7 @@ NEXT_SHIP_LOCN:	dw 0x2408	;3fbd - Store for screen address of next
 	;; score
 	;;
 	;; On entry:
-	;;   HL - score increment (decimal with low digits in H and high
+	;;   HL - score increment (BCD with low digits in H and high
 	;;        digits in L). E.g., HL=0x1000 is 10 points and
 	;;        HL=0x0010 is 1,000 points
 	;;
@@ -1060,7 +1081,7 @@ UPDATE_SCORE:
 	daa			;3fdd
 	ld (de),a		;3fde - Store it
 
-	call sub_3fe8h		;3fdf - Convert score to ASCII and display
+	call DISP_SCORE		;3fdf - Convert score to ASCII and display
 
 	;; Restore registers and done
 	pop af			;3fe2
@@ -1072,14 +1093,21 @@ UPDATE_SCORE:
 	
 	nop			;3fe7
 
-	;; Convert score into ASCII and display on status line at top of
-	;; display
-sub_3fe8h:
-	ld hl,PAD+0x7F		;3fe8 - Location of Pad in which to
-				;       store score as string
+	;; Display score (having first converted it to ASCII
+DISP_SCORE:
+	ld hl,PAD+0x7F		;3fe8 - Location in Forth Pad in which
+				;       to store score as string
 	ld de,SCORE		;3feb - Location of score in BCD
-	ld b,005h		;3fee - Ten digits to process 
+	ld b,005h		;3fee - Four bytes (eight digits) of
+				;       score plus location containing
+				;       number of lives
 
+	;; *** NOTE: Loop cycles through all digits of score (in pairs)
+	;; converting to ASCII and then does same for number of lives
+	;; (which is stored immediately after score). Assume this is
+	;; done to ensure the subsequent routine will hit a non-zero
+	;; value, even if score is zero. However, it is not obvious this
+	;; routine is ever called when score is zero. ***
 l3ff0h:	ld a,(de)		;3ff0 - Retrieve next two digits (we
 				;       refer to them as "Y" and "Z"
 				;       below)
@@ -1112,20 +1140,22 @@ l3ff0h:	ld a,(de)		;3ff0 - Retrieve next two digits (we
 	ld hl,PAD+0x7F		;4004 - Point to start of score string
 
 	;; Find first non-zero digit of score, replacing zeros with
-	;; spaces until then
+	;; spaces until then (this is routine that relies on non-zero
+	;; value being stored in NO_LIVES: see note above)
 l4007h:	ld a,(hl)		;4007
-	cp "0"			;4008 - Check is non-zero and otherwise
-	jr nz,l4011h		;400a   display space
-	ld (hl),000h		;400c
+	cp "0"			;4008 - Check is non-zero and, if so, move
+	jr nz,l4011h		;400a   on.
+	ld (hl),000h		;400c   Otherwise, replace with space.
 	
 	inc hl			;400e - Advance to next digit and repeat
 	jr l4007h		;400f
 
-	;; Check for case when score is zero
-l4011h:	ld a,(PAD+0x86)		;4011
-	and a			;4014
+	;; Check for case when score is zero (if final digit of ASCII
+	;; score is a space character)
+l4011h:	ld a,(PAD+0x86)		;4011 - Retrieve digit
+	and a			;4014 - Check if Space
 	jr nz,l401ch		;4015 - Jump forward if not
-	ld a,"0"		;4017 - Otherwise replace final space
+	ld a,"0"		;4017 - Otherwise replace
 	ld (PAD+0x86),a		;4019   by "0"
 
 	;; Copy score string from Pad onto display
