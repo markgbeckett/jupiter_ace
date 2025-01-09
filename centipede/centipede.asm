@@ -2739,8 +2739,8 @@ FLEA_FLAG:
 	db 0x00			;46e0 - Flea is active
 FLEA_COORD:	db 0x16, 0x0D	;46e1 - Flea column and ruw number
 FLEA_ENABLE:	db 0x01			;46e3 - Flea enable
-l46e4h:	db 0x00			;46e4
-l46e5h:	db 0x01			;46e5
+FLEA_SPEED:	db 0x00			;46e4
+FLEA_TIMER:	db 0x01			;46e5
 	
 CHAR_SAVE:
 	db 0x20
@@ -2767,13 +2767,20 @@ INIT_FLEA:
 
 	;; Game Routine #6 - Service Flea
 	;;
-	;; On all levels other than first, fleas randomly drop down from
-	;; top of screen, depositing new mushrooms as they go.
+	;; Once the first centipede has been destroyed, fleas randomly
+	;; drop down from top of screen, occasionally depositing new
+	;; mushrooms as they go.
 	;;
 	;; This routine checks if there is an active flea and, if so,
 	;; moves it. If no flea, the routine potentially introduces a
 	;; flea.
+	;;
+	;; On entry:
+	;;
+	;; On exit:
+	;; - All registers preserved
 sub_46f8h:
+	;; Save registers
 	push bc			;46f8
 	push de			;46f9
 	push hl			;46fa
@@ -2785,11 +2792,11 @@ sub_46f8h:
 	jp nz,l4750h		;4700
 
 	;; Check if past first level. If so, maybe introduce flea
-	ld a,(FLEA_ENABLE)		;4703
+	ld a,(FLEA_ENABLE)	;4703
 	and a			;4706
 	jp nz,l471dh		;4707
 
-	;; Check number of active centipedes?
+	;; If there are two active centipedes, then time to enable flea
 	ld a,(SEGMENT_CNT+6)	;470a
 	cp 002h			;470d
 	jr z,l4716h		;470f
@@ -2801,19 +2808,24 @@ l4711h:	pop af			;4711
 
 	ret			;4715
 
+	;; Enable flea feature for game
 l4716h:	ld a,001h		;4716
-	ld (FLEA_ENABLE),a		;4718
-	jr l4711h		;471b
+	ld (FLEA_ENABLE),a	;4718
+	jr l4711h		;471b - Done
 
+	;; At this point, flea feature is enabled but no fleas are
+	;; active, so check if time to activate flea (one in four
+	;; chance)
 l471dh:	call RND		;471d - RND(4) with zero indicating
 				;       introduction of flea
-	and 03fh		;4720
+	and 03fh		;4720 - Mask off lowest two bits so can
+				;       test a one-in-four chance
 	jr nz,l4711h		;4722 - If non-zero, done
 	
-	ld b,001h		;4724 - Set flea row-count to top of
-				;       screen
+	ld b,001h		;4724 - Set flea row-coordinate to top
+				;       of screen
 	call RND		;4726 - Compute random column for flea 
-	and 01fh		;4729   in 0,...,31
+	and 01fh		;4729   in range 0,...,31
 	ld c,a			;472b
 	ld (FLEA_COORD),bc	;472c - Save flea coordinate
 	ld a,001h		;4730
@@ -2827,14 +2839,16 @@ l471dh:	call RND		;471d - RND(4) with zero indicating
 	ld a,00bh		;473b
 	call PUT_CHR		;473d
 
-	;; ??? This doesn't appear to do anything (plus not clear what
-	;; initial value of h will be)
-	ld l,001h		;4740
-	call RND		;4742
+	;; Decide speed of flea - 50/50 chance of being full speed of
+	;; half speed
+	ld h,0x01		;4740 *** BUG: Was ld l,001h ***
+	call RND		;4742 *** NOTE: This could be much
+				;         simpler - `call RND` / `xor
+				;         0x01` ***
 	and h			;4745
 	xor h			;4746
-	ld (l46e4h),a		;4747
-
+	ld (FLEA_SPEED),a	;4747
+				;    
 	jp l4711h		;474a - Done
 
 	nop			;474d
@@ -2842,24 +2856,26 @@ l471dh:	call RND		;471d - RND(4) with zero indicating
 	nop			;474f
 
 	;; Service flea
-l4750h:	ld a,(l46e5h)		;4750
+l4750h:	ld a,(FLEA_TIMER)	;4750 - Toggle timer between 1 and 0
 	xor 001h		;4753
-	ld (l46e5h),a		;4755
+	ld (FLEA_TIMER),a	;4755
 
+	;; Check if half-speed flea or full-speed flea. If half-speed
+	;; and if timer is zero, do nothing
 	ld h,a			;4758
-	ld a,(l46e4h)		;4759
+	ld a,(FLEA_SPEED)	;4759
 	and a			;475c
 	jp nz,l4764h		;475d
 	or h			;4760
 	jp z,l4711h		;4761 - Done
 
-	;; Retrieve location of flea and check if hit by laser
-l4764h:	ld bc,(FLEA_COORD)		;4764
+	;; Retrieve location of flea and check if hit by dart
+l4764h:	ld bc,(FLEA_COORD)	;4764
 	call GET_CHAR		;4768
 	cp 006h			;476b
 	jp nz,l4783h		;476d - Move on if not
 
-	;; Flea hit by laser, so replace by mushroom
+	;; Flea hit by dart, so replace by mushroom
 	ld a,004h		;4770
 	call PUT_CHR		;4772
 
@@ -2869,22 +2885,28 @@ l4764h:	ld bc,(FLEA_COORD)		;4764
 
 	;; Deactivate flea
 	ld a,000h		;477b
-	ld (FLEA_FLAG),a		;477d
+	ld (FLEA_FLAG),a	;477d
 
 	;; Done
-	jp l4711h		;4780
+	jp l4711h		;4780 - Done
 
-l4783h:	ld a,(CHAR_SAVE)		;4783 - Retrieve character masked by flea
-	cp 000h			;4786
-	jr z,l4794h		;4788
-	cp 005h		;478a
-	jr nc,l4790h		;478c
-	jr l47a0h		;478e
+l4783h:	ld a,(CHAR_SAVE)	;4783 - Retrieve character masked by flea
+	cp 000h			;4786 - Check if flea is on blank cell
+	jr z,l4794h		;4788   and move to check if drops
+				;       mushroom
+	cp 005h			;478a - Check if flea is on mushroom
+	jr nc,l4790h		;478c   Move on to replace by space if not
+	jr l47a0h		;478e - Move on to restore previous
+				;       character
 l4790h:
-	ld a,000h		;4790
-	jr l47a0h		;4792
+	ld a,000h		;4790 - Set previous character to space
+	jr l47a0h		;4792   and jump forward to print it
 
-	;; Decide whether flea deposits mushroom (one in four chance)
+	;; Decide whether flea deposits mushroom (one in four
+	;; chance).
+	;; 
+	;; *** NOTE: In original game, flea only deposits mushroom if
+	;; there are fewer than a certain number on screen ***
 l4794h:	ld h,000h		;4794 - Assume space
 
 	call RND		;4796 - Compute RND(4)
@@ -2894,6 +2916,7 @@ l4794h:	ld h,000h		;4794 - Assume space
 	ld h,004h		;479d - Set to mushroom if RND(4)=0
 
 l479fh:	ld a,h			;479f - Retrieve space/ mushroom and print it
+
 l47a0h:	call PUT_CHR		;47a0
 
 	;; Retrieve whatever is immediately below flea on screen and save it
