@@ -112,8 +112,8 @@ GAME_LOOP:
 				;       updated
 	call GAME_STEP_2	;3c8c - Check for fire
 	call GAME_STEP_3		;3c8f - Check for direction keys
-	call sub_44e8h		;3c92 - Service centipede
-	call sub_46f8h		;3c95 - Service flea 
+	call GAME_STEP_4		;3c92 - Service centipede
+	call GAME_STEP_5		;3c95 - Service flea 
 
 	jp GAME_LOOP		;3c98 - Jump back to start
 
@@ -554,7 +554,7 @@ MROOM3:	;; Three-quarter mushroom (3)
 	db %10000010
 	db %11000110
 	db %10101010
-	db %00110010
+	db %00110000
 	db %00100000
 
 MROOM4:	;; Full mushroom (4)
@@ -1022,8 +1022,7 @@ REGEN_SND:
 	nop			;3fb6
 	nop			;3fb7
 
-SCORE:	
-l3fb8h:	db 0x00, 0x00		;3fb8
+SCORE:	db 0x00, 0x00		;3fb8
 l3fbah:	db 0x58			;3fba
 l3fbbh: db 0x33			;3fbb
 
@@ -1412,9 +1411,8 @@ EXP_SND:
 	nop			;40fd
 	nop			;40fe
 	nop			;40ff
-l4100h:
-	nop			;4100
 
+l4100h:	nop			;4100
 
 	;; Centipede storage
 	;;
@@ -1437,16 +1435,16 @@ l4100h:
 	;; probably not rlevant, as they are overwritten by the
 	;; initialisation routine
 l4101h:
-	db $14, $0c, $14, $15, $15, $16, $15, $13
-	db $12, $12, $12, $12, $13, $13, $14, $15
+	db $14, $09, $11, $15, $15, $16, $16, $16
+	db $0F, $01, $16, $0C, $16, $13, $14, $15
 	db $13, $12, $13, $14, $14, $14, $11, $14
 	db $11, $10, $16, $15, $16, $15, $00, $00
-	db $1a, $18, $11, $11, $12, $12, $13, $17
-	db $15, $08, $07, $06, $04, $00, $19, $00
-	db $08, $1c, $18, $02, $1f, $18, $06, $07
+	db $1F, $19, $0F, $07, $08, $08, $09, $0A
+	db $0C, $0F, $17, $19, $15, $00, $19, $00
+	db $08, $1C, $18, $02, $1f, $18, $06, $07
 	db $1b, $02, $02, $01, $0b, $03, $00, $01
-	db $25, $24, $64, $66, $66, $71, $27, $27
-	db $24, $64, $64, $65, $25, $33, $39, $3f
+	db $7F, $27, $27, $66, $66, $72, $72, $73
+	db $27, $26, $71, $25, $33, $33, $39, $3f
 	db $37, $33, $3b, $39, $37, $3f, $37, $31
 	db $39, $3d, $31, $39, $3b, $27, $00, $00
 	db $00, $00, $00, $00, $00, $00, $00, $00
@@ -1457,6 +1455,7 @@ l4101h:
 
 	;; 8-byte buffer, initialised at beginning of game so, likely,
 	;; does not matter what is here
+GAME_STATS:	
 SEGMENT_CNT:	db 0x07		; Count of number of centipede segments
 				; on screen
 BOTTOM_ROW_CNT:	db 0x05 	; Count of number of centipede segments
@@ -1467,10 +1466,12 @@ XTRA_CENT_TIMER: db $3E, $60	; Timer and initial-timer value for
 				; introducing extra centipedes, if
 				; player does not complete level quickly
 				; enough
-
-	db $01
+CENT_MOVE:	db $01		; Flag determines if centipede can move
+CENTIPEDE_COUNT:
 	db $04			; Used when initialising centipede
-	db $00
+DBL_SPEED_FLAG:	
+	db $00			; Used to indicate if double-speed
+				; centipedes are possible
 
 	;; Initialisation routine - Save Forth environment
 	;;
@@ -1498,9 +1499,9 @@ SAVE_FORTH:
 
 	;; Storage for registers that need to be restored before
 	;; returning to Forth interpretter
-IX_STR:	dw 0x0000	
-IY_STR:	dw 0x0000
-SP_STR:	dw 0x0000
+IX_STR:	dw 0x3C00	
+IY_STR:	dw 0x04C8
+SP_STR:	dw 0x7FF8
 	
 	nop			;419e
 	nop			;419f
@@ -1538,8 +1539,8 @@ RESTORE_FORTH:
 	;; On exit:
 	;;   BC, DE, HL - corrupted
 RESTORE_GAME_DEFAULTS:
-	ld hl,GAME_STATS	;41b0 - Game status is represented by
-	ld de,SEGMENT_CNT	;41b3   8 bytes which can be initialised
+	ld hl,INIT_GAME_STATS	;41b0 - Game status is represented by
+	ld de,GAME_STATS	;41b3   8 bytes which can be initialised
 	ld bc,00008h		;41b6   from copy located immediatelly
 	ldir			;41b9   after this routine
 
@@ -1550,8 +1551,15 @@ RESTORE_GAME_DEFAULTS:
 	nop			;41be
 	nop			;41bf
 
-	;; Initial game status
-GAME_STATS: db $0C, $00, $00, $00, $00, $00, $01, $00
+	;; Initial game status (copied into GAME_STATS during
+	;; initialisation)
+INIT_GAME_STATS: db $0C		; Number of centipede segments
+	db $00			; Bottom-row count
+	db $00			; Flag for extra centipedes
+	db $00, $00		; Timer for exta centipedes
+	db $00
+	db $01			; Number of centipedes
+	db $00			; Flag for double-speed centipedes
 
 	;; ------------------------------------------------------------
 	;; Game routine #0
@@ -1640,7 +1648,7 @@ l41f3h:	res 6,(hl)		;41f3
 				;       6 => active)
 
 	;; Check if double-speed active
-	ld a,(SEGMENT_CNT+7)	;4202
+	ld a,(DBL_SPEED_FLAG)	;4202
 	and a			;4205
 	jr z,l420ah		;4206
 	set 3,h			;4208 - Set double-speed
@@ -1660,16 +1668,15 @@ l420ah:	ld (ix+000h),001h	;420a - Set row coordinate to 01 for all
 	set 0,(ix+040h)		;421b
 
 	;; Check if centipede needs to be split
-	ld ix,l4101h		;421f
-	ld a,(SEGMENT_CNT+6)	;4223 - Retrieve number of centipedes
+	ld ix,l4101h		;421f - Start of centipede
+	ld a,(CENTIPEDE_COUNT)	;4223 - Retrieve number of centipedes
+	ld b,a			;4226 - Will be used as a counter
 
-	;; For each additional centipede, which are head only, convert
+	;; For each additional centipede, which are head-only, convert
 	;; next tail segment into one-cell centipede randomly located on
 	;; row 2
-	ld b,a			;4226
-
 l4227h:	dec b			;4227
-	jp z,l4240h		;4228 - Check if done
+	jp z,l4240h		;4228 - If B=0, done
 
 	;; Turn current segment into head-only centipede
 	ld (ix+000h),002h	;422b - Set row coordinate to 2
@@ -1683,7 +1690,7 @@ l4227h:	dec b			;4227
 	
 	nop			;423a
 	inc ix			;423b - Advance to next segment
-	jp l4227h		;423d   and repeat
+	jp l4227h		;423d   and repeat (NOTE: Could be JR)
 
 l4240h:				; Restore registers
 	pop af			;4240
@@ -1768,7 +1775,33 @@ CREATE_CENTIPEDE:
 
 	nop			;428f
 
-sub_4290h:
+	;; ------------------------------------------------------------
+	;; Move centipede(s)
+	;; ------------------------------------------------------------
+	;; Step through each segment of each centipede moving the
+	;; segment one step at a time, having first checked if the
+	;; segment has been hit by the dart or by the bug-buster.
+	;;
+	;; If the centipede hits a dart, then it changes into a mushroom
+	;; and, if it is not the head or final body segment of a
+	;; centipede, the tail becomes a new centipede, with the leading
+	;; body segment turning into a head.
+	;;
+	;; If the centipede hits the bug-buster, the player loses a life
+	;; and (assuming the player has lives left) the game is reset.
+	;;
+	;; Head sections continue to move horizontally in a particular
+	;; direction until they reach an obstacle (mushroom) or edge of
+	;; the playing area, at which point they drop down (or up) one
+	;; row and reverse their direction.  If a centipede reaches
+	;; bottom of playing area, they begin to move back up the
+	;; playing area but only to row 16, at which point they start
+	;; moving down again, and so on.
+	;;
+	;; Body sections simply follow preceding section or head. 	
+	;; ------------------------------------------------------------
+MOVE_C:
+	;; Save all registers
 	push ix			;4290
 	push bc			;4292
 	push de			;4293
@@ -1779,10 +1812,10 @@ sub_4290h:
 				;before beginning of centipede data
 				;(means first INC IX below works)
 
-	;; Toggle bit 0 of SEGMENT_CNT+5, which is simple one-bit flag
+	;; Toggle bit 0 of CENT_MOVE, which is simple one-bit flag
 	;; that determines if the centipede should move on this game
 	;; loop
-	ld a,(SEGMENT_CNT+5)	;429a
+	ld a,(CENT_MOVE)	;429a
 	xor 001h		;429d
 	ld (SEGMENT_CNT+5),a	;429f
 
@@ -1820,12 +1853,16 @@ l42b4h:	bit 6,(ix+040h)		;42b4 - Check if active segment
 l42cah:	ld b,(ix+000h)		;42ca - Retrieve coordinates of current
 	ld c,(ix+020h)		;42cd   segment
 
-	;; Check if laser at current location ???
+	;; Check if dart at current location. This should not be
+	;; possible, as previous subroutine in this section of the game
+	;; loop should already have checked this. Will raise error if is
+	;; a dart and, otherwise, continue with routine.
 	call GET_CHAR		;42d0
 	cp 006h			;42d3
-	jp nz,l4310h		;42d5
+	jp nz,l4310h		;42d5 - Continue with routine
 
-	call RESTORE_FORTH	;42d8 - Exit game???
+	call RESTORE_FORTH	;42d8 - Restore registers for return to
+				;       Forth
 
 	rst 20h			;42db - ROM error restart routine
 	db 0x08			; Indicates overflow in floating-point
@@ -1892,25 +1929,30 @@ l430eh:	nop			;430e
 	;;
 	;; On entry
 	;; - B, C coordinate of segment
-	;; - IX points to a head segment
+	;; - IX points current segment
 	;;
 	;; On exit
 	;; 
 l4310h:	bit 0,(ix+040h)		;4310 - Check if head segment
 	jp z,l43d0h		;4314 - Jump forward, if not
-	
-	bit 5,(ix+040h)		;4317 - Check if segment is masked
+
+	;; From here on, dealing with a head segment
+	bit 5,(ix+040h)		;4317 - Check if segment has masked
+				;       another charcter
 	jr z,l4323h		;431b - Jump forward if not
 	ld a,(ix+060h)		;431d - Reinstate masked character
 	call PUT_CHR		;4320
 
-l4323h:	call sub_4300h		;4323 - Move centipede head left/ right,
+l4323h:	call sub_4300h		;4323 - Move centipede head left/ right
+				;       by decrementing/ incrementing C,
 				;       according to which direction it
 				;       is facing
 
+	;; Check if centipede has reached edge of screen
 	ld a,c			;4326 - Retrieve column coord
 	cp 020h			;4327 - Check if at right (or left) edge
-				;       of screen
+				;       of screen (that is, A=$20 or
+				;       A=$FF)
 	jr nc,l4360h		;4329 - Jump on, to change direction if
 				;       so
 
@@ -1918,24 +1960,27 @@ l4323h:	call sub_4300h		;4323 - Move centipede head left/ right,
 	call GET_CHAR		;432b
 	cp 000h			;432e - Is it a space?
 	jr z,l433dh		;4330 - Continue, if so
-	cp 005h			;4332 - Is it spaceship?
+	cp 005h			;4332 - Is it bugbuster
 	jr z,l433dh		;4334 - Continue, if so
-	cp 006h			;4336 - Is it a laser?
+	cp 006h			;4336 - Is it a dart?
 	jr z,l433dh		;4338 - Continue, if so
 	jp l4360h		;433a - Otherwise change direction
 
 	;; Update new centipede segment location
 l433dh:	call GET_CHAR		;433d
-	cp 007h			;4340 - Check if centipede
+	cp 007h			;4340 - Check if a centipede or other
+				;       enemy
 	jr nc,l4352h		;4342 - Jump forward if so
-	ld (ix+060h),a		;4344
-	ld a,007h		;4347 - Print centipede body
+	ld (ix+060h),a		;4344 - Store character
+	ld a,007h		;4347 - Display centipede head
 	call PUT_CHR		;4349
-	set 5,(ix+040h)		;434c - Confirm segment is displayed
-	jr l4356h		;4350
+	set 5,(ix+040h)		;434c - Confirm segment is masking
+				;       another character
+	jr l4356h		;4350 - Move on
 
-	;; Arrive here if new location is a centipede segment
-l4352h:	res 5,(ix+040h)		;4352 - Confirm segment not displayed
+	;; Arrive here if new location contains another enemy
+l4352h:	res 5,(ix+040h)		;4352 - Confirm segment not masked
+
 l4356h:	ld (ix+000h),b		;4356 - Store new location
 	ld (ix+020h),c		;4359
 
@@ -1952,6 +1997,9 @@ l4360h:	ld a,%00000010		;4360 - Bit 1 of segment status indicates
 	ld (ix+040h),a		;4365
 
 	call sub_4300h		;4368 - Move centipede right/ left
+				;       (which will effectively move
+				;       segment back to column it was in
+				;       before move)
 
 	;;  Check if going up the screen or down
 	bit 2,(ix+040h)		;436b - Bit 2 of segment status indicates
@@ -1962,34 +2010,39 @@ l4360h:	ld a,%00000010		;4360 - Bit 1 of segment status indicates
 	
 l4374h:	inc b			;4374 - Move down
 
-	;; Check if at row 0x10 and, if so, set centiped to bead down
-	;; screen (deals with case of centipede moving back up screen)
+	;; Check if at row 0x10 and, if so, set centipede direction to
+	;; down (deals with case of centipede moving back up
+	;; screen and oterwise has no effect)
 l4375h:	ld a,b			;4375
 	cp 010h			;4376
 	jr nz,l437eh		;4378
 	set 2,(ix+040h)		;437a
 
 	;; Check if reached bottom of screen and, if so, set centipede
-	;; to start moving up screen
+	;; vertical direction to up
 l437eh:	cp 016h			;437e
 	jp nz,l433dh		;4380 - Move on to update segment, if
-				;       not.
+				;       not
 	res 2,(ix+040h)		;4383 - Otherwise, set centipede segment
 				;       to move up screen
 
-	;; Check if segment has been near bottom of screen before
+	;; Check if segment has been at bottom of screen before
 	bit 4,(ix+040h)		;4387 - Bit 4 of segment status
 				;       indicates if so
 	jr nz,l4395h		;438b - If so, move on
 
-	;;  Increase number ofof centipede segments that have been near
+	;;  Increase count of centipede segments that have been near
 	;;  bottom of screen
-	ld hl,BOTTOM_ROW_CNT		;438d
-	inc (hl)			;4390
+	ld hl,BOTTOM_ROW_CNT	;438d
+	inc (hl)		;4390
 
 	set 4,(ix+040h)		;4391
 
-	;; Randomly choose whether centipede moves left or right
+	;; If centipede has just reached bottom of screen, randomly
+	;; choose whether centipede moves left or right (NOTE: this code
+	;; only runs after the centipede has hit object or edge of
+	;; playing area and moved down to ottom row, so direction
+	;; persists, once selected)
 l4395h:	call RND		;4395
 	and %00000010		;4398 - Bit 1 on segment status
 				;       indicates horizontal direction
@@ -2008,11 +2061,11 @@ l4395h:	call RND		;4395
 
 l43aeh:	set 1,(ix+040h)		;43ae - Set centipede to move right
 
-	jp l433dh		;43b2
+	jp l433dh		;43b2 - Move on to update segment
 
 l43b5h:	res 1,(ix+040h)		;43b5 - Set centipede to move left
 
-	jp l433dh		;43b9
+	jp l433dh		;43b9 - Move on to update segment
 	
 	nop			;43bc
 	nop			;43bd
@@ -2035,6 +2088,7 @@ l43b5h:	res 1,(ix+040h)		;43b5 - Set centipede to move left
 	nop			;43ce
 	nop			;43cf
 
+	;; GOT THIS FAR
 	;; Move centipede body segment
 	;;
 	;; On entry:
@@ -2148,13 +2202,13 @@ sub_4440h:
 	nop			;445f
 
 	;; Check if centipede hit by dart
-sub_4460h:
+CHECK_C_HIT:
 	push ix		;4460
-	push bc			;4462
-	push hl			;4463
-	push af			;4464
+	push bc		;4462
+	push hl		;4463
+	push af		;4464
 
-	ld ix,l4100h		;4465 - One before start of centipede
+	ld ix,l4100h	;4465 - One before start of centipede
 
 l4469h:	inc ix		;4469 - Advance to next segment
 
@@ -2164,7 +2218,7 @@ l4469h:	inc ix		;4469 - Advance to next segment
 	ld a,c		;446e
 	cp 01fh		;446f
 	
-	jr nz,l4479h		;4471
+	jr nz,l4479h	;4471
 
 	pop af			;4473
 	pop hl			;4474
@@ -2173,32 +2227,42 @@ l4469h:	inc ix		;4469 - Advance to next segment
 	
 	ret			;4478
 
-l4479h:	bit 6,(ix+040h)		;4479 - Check if masked character???
+l4479h:	bit 6,(ix+040h)		;4479 - Check if segment is active
 	jr z,l4469h		;447d - Move on to next segment, if not
 	
 	ld b,(ix+000h)		;447f - Retrieve coordinates of segment
 	ld c,(ix+020h)		;4482
 	call GET_CHAR		;4485 - and then character at those
 				;       coordinates
-	cp 006h			;4488 - Check if laser
+	cp 006h			;4488 - Check if dart
 	jr nz,l44afh		;448a - If not, check if masked
-				;       character was a laser, following
-				;       code below, if it was
+				;       character is a dart and return
+				;       to follow code below, if it is
 
+	;; Segment hit by dart, so replace by mushroom and, if
+	;; necessary, split centipede
 l448ch:	ld a,004h		;448c - Replace character with mushroom
 	call PUT_CHR		;448e
 
-	res 6,(ix+040h)		;4491 - Reset masked-segment flag
-	ld hl,01000h		;4495 - Score for hitting body (10 pts)
+	res 6,(ix+040h)		;4491 - Reset segment-active flag
+	ld hl,01000h		;4495 - Assume score for hitting body
+				;       (10 pts)
 	bit 0,(ix+040h)		;4498 - Check if have hit head
 	jr z,l44a1h		;449c - Jump forward, if not
-	ld hl,00001h		;449e - Have hit head (100 points)
+	ld hl,00001h		;449e - Update score for hitting head
+				;       (100 points)
 
-l44a1h:	call sub_4908h		;44a1 - Update score decrement active
-				;       segment count
+l44a1h:	call sub_4908h		;44a1 - Update score and decrement count
+				;       of segments that have reached
+				;       bottom of playing area, if
+				;       necessary
 
 	set 0,(ix+03fh)		;44a4 - Set previous segment to be head
-	ld hl,SEGMENT_CNT	;44a8
+				;       (if first segment, this will
+				;       update address 0x4100, which is
+				;       otherwise unused)
+
+	ld hl,SEGMENT_CNT	;44a8 - Reduce segment count
 	dec (hl)		;44ab
 	
 	jp l4469h		;44ac - Continue to next segment
@@ -2210,13 +2274,17 @@ l44afh:	jp l46d0h		;44af
 	nop			;44b5
 
 	;; Copy of centipede legs
-l44b6h:	db %01000100
+CENTIPEDE_LEGS:	db %01000100
 	db %00100010
 
 	;; Move legs on centipede
-l44b8h:	push af
+ANIM_C_LEGS:	push af
 	push hl
-	ld hl,(l44b6h)		;44ba
+
+	;; Load current leg pattern into H and L
+	ld hl,(CENTIPEDE_LEGS)	;44ba
+
+	;; Alternate legs
 	ld a,h			;44bd
 	xor %01100110		;44be
 	ld h,a			;44c0
@@ -2224,8 +2292,10 @@ l44b8h:	push af
 	xor %01100110		;44c2
 	ld l,a			;44c4
 
-	ld (l44b6h),hl		;44c5
+	;; Store new leg pattern
+	ld (CENTIPEDE_LEGS),hl		;44c5
 
+	;; Update centipede graphic with new leg pattern
 	ld (02c3eh),hl		;44c8 Char 7 - Row 0 and 1
 	ld (02c46h),hl		;44cb Char 8 - Row 0 and 1
 
@@ -2243,28 +2313,32 @@ NEW_CENT_TIMER:	nop		;44d1
 	nop			;44d7
 
 
-	;; Service centipede -- called from Game Routine #5 (44e8)
+	;; Service centipede -- called from Game Routine #4 (44e8)
 sub_44d8h:
-	call sub_4460h		;44d8 - Check if centipede hit by laser
-	call l44b8h		;44db - Animate centipede's legs
-	call sub_4290h		;44de - Move centipede
-	call sub_4630h		;44e1 - Check if should add new
-				;one-segment centipede
+	call CHECK_C_HIT	;44d8 - Check if centipede hit by dart
+	call ANIM_C_LEGS	;44db - Animate centipede's legs
+	call MOVE_C		;44de - Move centipede
+	call CHECK_NEW_H	;44e1 - Check if should add new
+				;       one-segment centipede
 
-	ret			;44e4
+	ret 			;44e4
 
 	nop			;44e5
 	nop			;44e6
 	nop			;44e7
 
 
-	;; Game Routine #5
-sub_44e8h:
+	;; ------------------------------------------------------------
+	;; Game Routine #4
+	;; ------------------------------------------------------------
+	;; 
+	;; ------------------------------------------------------------
+GAME_STEP_4:
 	push af			;44e8
 
 	;; Check if centipede is visible
-	ld a,(SEGMENT_CNT)	;44e9
-	and a			;44ec
+	ld a,(SEGMENT_CNT)	;44e9 - Retrieve number of segments 
+	and a			;44ec   and check if zero
 	jp z,l44f8h		;44ed - Jump forward to new-centipede
 				;       timer, if no centipede
 
@@ -2279,12 +2353,13 @@ sub_44e8h:
 	nop			;44f6
 l44f7h:	nop			;44f7
 
-	;; Check if time to introduce new centipede which, when a
-	;; centipede is destroyed or after player loses a life, on a
-	;; count of 40h
-l44f8h:	ld a,(NEW_CENT_TIMER)	;44f8
-	and a			;44fb
-	jp nz,l4508h		;44fc - Could be JR NZ
+	;; Check if time to introduce new centipede which happens, when
+	;; a centipede is destroyed or after player loses a life, on a
+	;; count of 40h iterations
+l44f8h:	ld a,(NEW_CENT_TIMER)	;44f8 - Check if timer is zero, which
+	and a			;44fb   means needs reset
+	jp nz,l4508h		;44fc - Otherwise, service timer (NOTE:
+				;       Could be JR NZ)
 
 	;; If zero (from previous use), reset timer
 	ld a,040h		;44ff
@@ -2305,37 +2380,39 @@ l4508h:	dec a			;4508
 
 	jr z,l4510h		;450c - Jump forward if timer reaches zero
 
-	;; Balance stack and done
+	;; If non-zero, balance stack and done
 	pop af			;450e
 
 	ret			;450f - return to main game loop
 
 	;; Initialise new centipede
-l4510h:	ld a,(GAME_STATS)	;4510
+l4510h:	ld a,(INIT_GAME_STATS)	;4510
 	ld (SEGMENT_CNT),a	;4513
 
 	ld a,000h		;4516
 	ld (BOTTOM_ROW_CNT),a	;4518
 	ld (XTRA_CENT_FLAG),a	;451b
 
-	ld a,(SEGMENT_CNT+6)	;451e
+	;; Increase centipede count
+	ld a,(CENTIPEDE_COUNT)	;451e
 	inc a			;4521
-	cp 00dh			;4522
-	jr z,l452bh		;4524
-	ld (SEGMENT_CNT+6),a	;4526
+	cp 00dh			;4522 - Check if reached limit
+	jr z,l452bh		;4524 - Reset if so
+	ld (CENTIPEDE_COUNT),a	;4526
 
 	jr l4533h		;4529
 
-	;; ????
+	;; Reset centipede count and enable double-speed option
 l452bh:	ld a,001h		;452b
-	ld (SEGMENT_CNT+6),a	;452d
-	ld (SEGMENT_CNT+7),a	;4530
+	ld (CENTIPEDE_COUNT),a	;452d
+	ld (DBL_SPEED_FLAG),a	;4530
 	
 l4533h:	call CREATE_CENTIPEDE	;4533 - Initialise and display centipede
 
 	pop af			;4536
 
 	ret			;4537
+	
 	nop			;4538
 	nop			;4539
 	nop			;453a
@@ -2503,9 +2580,9 @@ l45e0h:	dec a			;45e0
 	ld (SEGMENT_CNT),a	;45ef
 
 	;; Reduce difficulty???
-	ld a,(SEGMENT_CNT+6)	;45f2
+	ld a,(CENTIPEDE_COUNT)	;45f2
 	dec a			;45f5
-	ld (SEGMENT_CNT+6),a	;45f6
+	ld (CENTIPEDE_COUNT),a	;45f6
 
 	;; Reset bug-buster location to starting location
 	ld bc,0160fh		;45f9
@@ -2555,7 +2632,7 @@ sub_4618h:
 	ld (ix+040h),a		;4620 - Store status
 
 	;; Check if should be double-speed
-	ld a,(SEGMENT_CNT+7)	;4623
+	ld a,(DBL_SPEED_FLAG)	;4623
 	cp 001h			;4626
 	jr nz,l462eh		;4628
 	set 3,(ix+040h)		;462a
@@ -2565,12 +2642,14 @@ l462eh:	pop af			;462e
 
 	ret			;462f
 
+	;; ------------------------------------------------------------
 	;; Check if time to introduce extra, one-segment centipede. Once
 	;; all centipede segments have visited bottom row of screen,
 	;; additional one-segment centipedes are introduced one by one
 	;; after set amounts of time. The time until each extra
 	;; centipede appears reduces as each new centipede appears.
-sub_4630h:
+	;; ------------------------------------------------------------
+CHECK_NEW_H:
 	;; Save registers
 	push hl			;4630
 	push af			;4631
@@ -2608,19 +2687,21 @@ l4652h:	pop af			;4652
 	pop hl			;4653
 
 	ret			;4654
+
 	nop			;4655
 	nop			;4656
 	nop			;4657
 
 	;; Service new-centipede timer
-
 l4658h:	ld a,(XTRA_CENT_TIMER)	;4658 - Decrement timer byte
 	dec a			;465b
 	ld (XTRA_CENT_TIMER),a	;465c
 
 	jr nz,l4652h		;465f - If not zero, done
 
-	;; Reduce start-length of extra-centipede timer, unless has
+	;; Otherwise time to introduce a new one-segment centipede
+	
+	;; First, reduce start-length of extra-centipede timer, unless has
 	;; already dropped to 20 game loops
 	ld a,(XTRA_CENT_TIMER+1)	;4661
 	cp 020h			;4664
@@ -2661,7 +2742,8 @@ l4676h:	inc ix			;4676 - Advance to next segment
 	;; one-segment centipede
 l4685h:	bit 6,(ix+040h)		;4685 - Bit 6 determines if centipede is
 				;       active
-	jp nz,l4676h		;4689 - Loop if segment is active
+	jp nz,l4676h		;4689 - Loop if segment is active (NOTE:
+				;could be JR)
 
 	;; Once found, activate new, one-cell centipede
 	ld (ix+000h),010h	;468c - Set starting row to 0x10
@@ -2679,7 +2761,7 @@ l4685h:	bit 6,(ix+040h)		;4685 - Bit 6 determines if centipede is
 				;       segment active)
 
 	;; Check if double-speed is option
-l469dh:	ld a,(SEGMENT_CNT+7)	;469d
+l469dh:	ld a,(DBL_SPEED_FLAG)	;469d
 	cp 001h			;46a0
 	jr z,l46abh		;46a2
 
@@ -2697,7 +2779,7 @@ l46abh:	ld (ix+040h),h		;46ab - Set status
 	inc a			;46b4
 	ld (SEGMENT_CNT),a	;46b5
 
-	;; Set mask to be blank
+	;; Set masked character to be space
 	ld (ix+060h),000h	;46b8
 
 	;; Restore registers
@@ -2725,7 +2807,7 @@ l46abh:	ld (ix+040h),h		;46ab - Set status
 	nop			;46cf
 
 l46d0h:	ld a,(ix+060h)		;46d0 - Retrieve masked bit
-	cp 006h			;46d3 - Check if laser 
+	cp 006h			;46d3 - Check if dart
 	jp nz,l4469h		;46d5 - Move on to next segment if not
 	jp l448ch		;46d8 - Jump back to handle centipede
 				;       being hit
@@ -2737,7 +2819,7 @@ l46d0h:	ld a,(ix+060h)		;46d0 - Retrieve masked bit
 	nop			;46df
 FLEA_FLAG:
 	db 0x00			;46e0 - Flea is active
-FLEA_COORD:	db 0x16, 0x0D	;46e1 - Flea column and ruw number
+FLEA_COORD:	db 0x0D, 0x16	;46e1 - Flea column and ruw number
 FLEA_ENABLE:	db 0x01			;46e3 - Flea enable
 FLEA_SPEED:	db 0x00			;46e4
 FLEA_TIMER:	db 0x01			;46e5
@@ -2765,7 +2847,7 @@ INIT_FLEA:
 	nop			;46f7
 
 
-	;; Game Routine #6 - Service Flea
+	;; Game Routine #5 - Service Flea
 	;;
 	;; Once the first centipede has been destroyed, fleas randomly
 	;; drop down from top of screen, occasionally depositing new
@@ -2779,7 +2861,7 @@ INIT_FLEA:
 	;;
 	;; On exit:
 	;; - All registers preserved
-sub_46f8h:
+GAME_STEP_5:
 	;; Save registers
 	push bc			;46f8
 	push de			;46f9
@@ -2797,7 +2879,7 @@ sub_46f8h:
 	jp nz,l471dh		;4707
 
 	;; If there are two active centipedes, then time to enable flea
-	ld a,(SEGMENT_CNT+6)	;470a
+	ld a,(CENTIPEDE_COUNT)	;470a
 	cp 002h			;470d
 	jr z,l4716h		;470f
 
@@ -2907,22 +2989,22 @@ l4790h:
 	;; 
 	;; *** NOTE: In original game, flea only deposits mushroom if
 	;; there are fewer than a certain number on screen ***
-l4794h:	ld h,000h		;4794 - Assume space
+l4794h:	ld h,000h		;4794 - Assume flea will deposit a space
 
 	call RND		;4796 - Compute RND(4)
 	and 003h		;4799
 	
-	jr nz,l479fh		;479b
-	ld h,004h		;479d - Set to mushroom if RND(4)=0
+	jr nz,l479fh		;479b - If 1, 2, or 3, move on, or
+	ld h,004h		;479d   set to mushroom if 0
 
 l479fh:	ld a,h			;479f - Retrieve space/ mushroom and print it
 
 l47a0h:	call PUT_CHR		;47a0
 
-	;; Retrieve whatever is immediately below flea on screen and save it
-	inc b			;47a3
-	call GET_CHAR		;47a4
-	ld (CHAR_SAVE),a	;47a7
+	;; Retrieve character at new location for flea and save it
+	inc b			;47a3 - Advance to next row
+	call GET_CHAR		;47a4 - Retrieve character
+	ld (CHAR_SAVE),a	;47a7 - Save it
 
 	;; Check if at bottom of screen
 	ld a,b			;47aa
@@ -2934,15 +3016,15 @@ l47a0h:	call PUT_CHR		;47a0
 	ld a,000h		;47af
 	dec b			;47b1
 	call PUT_CHR		;47b2
-	ld (FLEA_FLAG),a		;47b5
+	ld (FLEA_FLAG),a	;47b5
 
 	;; Done
 	jp l4711h		;47b8
 
 	;; Print flea and store new flea coordinates
-l47bbh:	ld a,00bh		;47bb
+l47bbh:	ld a,00bh		;47bb 
 	call PUT_CHR		;47bd
-	ld (FLEA_COORD),bc		;47c0
+	ld (FLEA_COORD),bc	;47c0
 
 	;; Done
 	jp l4711h		;47c4
