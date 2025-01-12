@@ -62,10 +62,21 @@ CHARSET:	equ 0x2C00	; Start of character RAM
 KEYCOD:		equ 0x3c26	; ASCII code of last key pressed
 FRAMES:		equ 0x3C2B
 
-SHIP_CHR:	equ 0x05	; Character code of ship graphic
-CENB_CHR:	equ 0x07	; Centipede body
-CENH_CHR:	equ 0x08	; Centipede head
-	
+	;; Graphics
+UDG_BLANK:	equ 0x00
+UDG_MUSH_1:	equ 0x01
+UDG_MUSH_2:	equ 0x02
+UDG_MUSH_3:	equ 0x03
+UDG_MUSH_4:	equ 0x04
+UDG_BUGB:	equ 0x05
+UDG_DART:	equ 0x06
+UDG_CENT_H:	equ 0x07
+UDG_CENT_B:	equ 0x08
+UDG_SPID_L:	equ 0x09
+UDG_SPID_R:	equ 0x0A
+UDG_FLEA:	equ 0x0B
+
+	;; Code origin is start of parameter field for DATAM
 	org	03c5ch
 
 START:	nop			;3c5c
@@ -454,11 +465,11 @@ INIT_GAME_SCREEN:
 
 	;; Clear bottom row of the display
 	ld hl,DISPLAY+17h*20h-01h	;3d93 - Address 26DF = end of row 21
-l3d96h:	ld (hl),000h		;3d96
-	dec hl			;3d98
-	ld a,l			;3d99
-	cp 0bfh			;3d9a
-	jr nz,l3d96h		;3d9c
+l3d96h:	ld (hl),000h		;3d96 - Step through addresses 26DF, ..., 26C0
+	dec hl			;3d98   inserting spaces as we go
+	ld a,l			;3d99 - Check if completed row
+	cp 0bfh			;3d9a 
+	jr nz,l3d96h		;3d9c - Repeat, if not
 
 	;; Randomly place mushrooms onto the screen by visiting each
 	;; character cell in turn (starting at end of row 20 and working
@@ -470,16 +481,17 @@ l3d9eh:	call RND		;3d9e - Generate random number
 	jr nz,l3da9h		;3da3 - Unless is zero skip forward to
 				;       print a blank square
 
-	ld (hl),004h		;3da5 - Display mushroom
+	ld (hl),UDG_MUSH_4	;3da5 - Display mushroom
 	jr l3dabh		;3da7
 
-l3da9h:	ld (hl),000h		;3da9 - Display space
+l3da9h:	ld (hl),UDG_BLANK	;3da9 - Display space
 
 l3dabh:	dec hl			;3dab
 
 	;; Check if done (top-left of screen is HL=2400h)
 	ld a,h			;3dac - Done when HL=23FF, which is
-	cp 023h			;3dad   first time that H drops to 0x23 
+	cp 023h			;3dad   first time that H decrements to
+				;       0x23
 	jr nz,l3d9eh		;3daf - Repeat if not
 
 	;; Print title row, inc. score, high score, and lives left
@@ -497,10 +509,10 @@ l3dabh:	dec hl			;3dab
 	;; Top line of game screen
 STATUS_PANEL: db 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x30 ; Score
 	db 0x00
-l3dc9h:	db 0x05, 0x05		; Lives
+l3dc9h:	db 0x05, UDG_BUGB	; Lives
 	db 0x00, 0x00, 0x00, 0x00, 0x00
 	db 0x00, 0x00, 0x00, 0x00
-l3dd4h:	db 0x41, 0x41, 0x41 	; Name of high-scoring player
+l3dd4h:	db "A", "A", "A" 	; Name of high-scoring player
 	db 0x00
 l3dd8h: db 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 ; High score
 
@@ -525,7 +537,6 @@ sub_3de0h:
 	nop			;3def
 
 	;; Graphics characters bitmap data
-
 	;; Quarter-mushroom (1)
 UDG_DATA:
 	db %00000000
@@ -684,7 +695,7 @@ sub_3e60h:
 	call GET_CHAR		;3e71 - Check if obstruction
 	and a			;3e74 
 	jp z,l3e80h		;3e75 - Skip forward if not, as done
-	cp CENB_CHR		;3e78 - Check if mushroom or dart
+	cp UDG_CENT_H		;3e78 - Check if mushroom or dart
 	jp nc,l3e58h		;3e7a - If not, must be centipede or
 				;       flea, which will mean life lost
 	inc b			;3e7d - Otherwise reverse move, as blocked
@@ -706,7 +717,7 @@ l3e80h:	ld a,0bfh		;3e80
 	call GET_CHAR		;3e90 - Check for obstruction
 	and a			;3e93 - Move on, if none
 	jp z,l3ea0h		;3e94
-	cp SHIP_CHR		;3e97 - Check if mushroom
+	cp UDG_MUSH_4+1		;3e97 - Check if mushroom
 	jp nc,l3e58h		;3e99 - If not, must be centipede or
 				;       flea, which will mean life lost
 	dec c			;3e9c - Otherwise, reverse move as blocked
@@ -729,7 +740,7 @@ l3ea0h:	ld a,0bfh		;3ea0
 	call GET_CHAR		;3eb0 - Check for obstruction
 	and a			;3eb3 - Move on, if none
 	jp z,l3ec0h		;3eb4
-	cp SHIP_CHR		;3eb7 - Check if mushroom
+	cp UDG_MUSH_4+1		;3eb7 - Check if mushroom
 	jp nc,l3e58h		;3eb9 - If not, must be centipede or
 				;       flea, which will mean life lost
 	inc c			;3ebc - Otherwise, reverse move as blocked
@@ -752,7 +763,7 @@ l3ec0h:	ld a,07fh		;3ec0
 	call GET_CHAR		;3ed0 - Check for obstruction
 	and a			;3ed3 - Move on, if none
 	jp z,l3eddh		;3ed4
-	cp 005h			;3ed7 - Check if mushroom
+	cp UDG_MUSH_4+1		;3ed7 - Check if mushroom
 	jp nc,l3e58h		;3ed9 - If not, must be centipede or
 				;       flea, which will mean life lost
 	dec b			;3edc - Otherwise, reverse move as blocked
@@ -815,17 +826,17 @@ GAME_STEP_3:
 	push af			;3ef0
 	push bc			;3ef1
 
-	ld bc,(SHIP_COORD)	;3ef2 - Retrieve current bug-buster
+	ld bc,(BUGB_COORD)	;3ef2 - Retrieve current bug-buster
 				;       coordinates
 	call GET_CHAR		;3ef6 - Retrieve character at bug-buster
 				;       location
 
-l3ef9h:	cp SHIP_CHR		;3ef9 - Check if is bug-buster
+l3ef9h:	cp UDG_BUGB		;3ef9 - Check if is bug-buster
 	jp nz,l3e58h		;3efb - Life lost if not, as bug-buster
 				;	must have collided with an enemy
 
 	;; Clear bug-buster
-	ld a,000h		;3efe
+	ld a,UDG_BLANK		;3efe
 	call PUT_CHR		;3f00
 
 	;; Check if direction controls pressed and update bug-buster
@@ -833,11 +844,11 @@ l3ef9h:	cp SHIP_CHR		;3ef9 - Check if is bug-buster
 	call sub_3e60h		;3f03
 
 	;; Redisplay bug-buster
-	ld a,SHIP_CHR		;3f06
+	ld a,UDG_BUGB		;3f06
 	call PUT_CHR		;3f08
 
 	;; Save new bug-buster coordinates
-	ld (SHIP_COORD),bc	;3f0b
+	ld (BUGB_COORD),bc	;3f0b
 
 	;; Restore registers
 	pop bc			;3f0f
@@ -846,7 +857,7 @@ l3ef9h:	cp SHIP_CHR		;3ef9 - Check if is bug-buster
 	;; Done
 	ret			;3f11
 
-SHIP_COORD:
+BUGB_COORD:
 	dw $160B		; Coordinate of bug-buster (row, col)
 	nop			;3f14
 	nop			;3f15
@@ -860,9 +871,9 @@ sub_3f18h:
 
 	;; Display bug-buster in starting location
 	ld bc,0160fh		;3f19 - Starting location is (22,15)
-	ld a,005h		;3f1c
+	ld a,UDG_BUGB		;3f1c
 	call PUT_CHR		;3f1e
-	ld (SHIP_COORD),bc	;3f21 - Store location
+	ld (BUGB_COORD),bc	;3f21 - Store location
 
 	jp l4028h		;3f25 - Continue with remainder of
 				;       routine
@@ -896,7 +907,7 @@ GAME_STEP_2:
 	ret			;3f3e
 
 	;; Fire dart
-l3f3fh:	ld bc,(SHIP_COORD)	;3f3f - Retrieve coordinates of bug-blaster
+l3f3fh:	ld bc,(BUGB_COORD)	;3f3f - Retrieve coordinates of bug-blaster
 	dec b			;3f43 - Move up one square to where
 				;       dart will first appear
 	jp l3f92h		;3f44
@@ -913,12 +924,12 @@ l3f3fh:	ld bc,(SHIP_COORD)	;3f3f - Retrieve coordinates of bug-blaster
 	;;   All registers preserved
 	;; 
 l3f48h:	call GET_CHAR		;3f48 - Retrieve character at B,C
-	cp 006h			;3f4b - Check if is dart
+	cp UDG_DART		;3f4b - Check if is dart
 	jp z,l3f60h		;3f4d - Move on, if so
 
 	;; Display dart at current coordinate (should be picked up by
 	;; routine that handles other object)
-l3f50h:	ld a,006h		;3f50
+l3f50h:	ld a,UDG_DART		;3f50
 	call PUT_CHR		;3f52
 
 	;; End dart in flight, by resetting coordinates
@@ -934,7 +945,7 @@ l3f58h:	ld (DART_COORD),bc	;3f58
 	nop			;3f5f
 
 	;; Move dart up one square
-l3f60h:	ld a,000h		;3f60 - Clear dart from current 
+l3f60h:	ld a,UDG_BLANK		;3f60 - Clear dart from current 
 	call PUT_CHR		;3f62   location
 	dec b			;3f65 - Move dart up screen
 
@@ -943,16 +954,16 @@ l3f60h:	ld a,000h		;3f60 - Clear dart from current
 
 	;; Check if dart has hit something
 l3f69h:	call GET_CHAR		;3f69 - Check if something at (new)
-	cp 000h			;3f6c   dart location
+	cp UDG_BLANK		;3f6c   dart location
 	jp nz,l3f79h		;3f6e - Jump forward if so
 
-	ld a,006h		;3f71 - Otherwise display dart at new locn
+	ld a,UDG_DART		;3f71 - Otherwise display dart at new locn
 	call PUT_CHR		;3f73 
 
 	jp l3f58h		;3f76 - ... and wrap up routine
 
 	;; Dart has hit something
-l3f79h:	cp 005h			;3f79 - Check if mushroom
+l3f79h:	cp UDG_MUSH_4+1		;3f79 - Check if mushroom
 	jp nc,l3f50h		;3f7b - If not, replace object (flea or
 				;       centipede segment) by dart and
 				;       let another routine deal with
@@ -1213,7 +1224,7 @@ INC_LIVES:
 	;; Add another ship to display
 	ld hl,(NEXT_SHIP_LOCN)	;4055
 	inc hl			;4058
-	ld (hl),005h		;4059
+	ld (hl),UDG_BUGB	;4059
 	ld (NEXT_SHIP_LOCN),hl	;405b
 
 	;; Restore registers
@@ -1727,7 +1738,7 @@ l4254h:	;; Retrieve coordinates of current segment into B and C
 
 	;; Retrieve any object at B,C into A
 	call GET_CHAR		;425a
-	cp 005h			;425d - Check if space ship, dart, flea, ...
+	cp UDG_BUGB		;425d - Check if bug-buster, dart, flea, ...
 	jp nc,l4273h		;425f - Jump forward if is (BUG: was 0x4274,
 				;       but that is mid-instruction)
 
@@ -1737,10 +1748,10 @@ l4254h:	;; Retrieve coordinates of current segment into B and C
 	ld (ix+060h),a		;4266 - Save original character for later
 
 	;; Display centipede segment
-	ld a,007h		;4269 - Centipede body
+	ld a,UDG_CENT_H		;4269 - Centipede head
 	bit 0,(ix+040h)		;426b - Is it the head?
-	jr nz,l4273h		;426f
-	ld a,008h		;4271 - Centipede head
+	jr nz,l4273h		;426f - Jump forward, if so
+	ld a,UDG_CENT_B		;4271 - Centipede body
 
 l4273h:	call PUT_CHR		;4273 - Display character
 
@@ -1858,7 +1869,7 @@ l42cah:	ld b,(ix+000h)		;42ca - Retrieve coordinates of current
 	;; loop should already have checked this. Will raise error if is
 	;; a dart and, otherwise, continue with routine.
 	call GET_CHAR		;42d0
-	cp 006h			;42d3
+	cp UDG_DART		;42d3
 	jp nz,l4310h		;42d5 - Continue with routine
 
 	call RESTORE_FORTH	;42d8 - Restore registers for return to
@@ -1958,21 +1969,21 @@ l4323h:	call sub_4300h		;4323 - Move centipede head left/ right
 
 	;; Check centipede can move into space
 	call GET_CHAR		;432b
-	cp 000h			;432e - Is it a space?
+	cp UDG_BLANK		;432e - Is it a space?
 	jr z,l433dh		;4330 - Continue, if so
-	cp 005h			;4332 - Is it bugbuster
+	cp UDG_BUGB		;4332 - Is it bugbuster
 	jr z,l433dh		;4334 - Continue, if so
-	cp 006h			;4336 - Is it a dart?
+	cp UDG_DART		;4336 - Is it a dart?
 	jr z,l433dh		;4338 - Continue, if so
 	jp l4360h		;433a - Otherwise change direction
 
 	;; Update new centipede segment location
 l433dh:	call GET_CHAR		;433d
-	cp 007h			;4340 - Check if a centipede or other
+	cp UDG_CENT_H		;4340 - Check if a centipede or other
 				;       enemy
 	jr nc,l4352h		;4342 - Jump forward if so
 	ld (ix+060h),a		;4344 - Store character
-	ld a,007h		;4347 - Display centipede head
+	ld a,UDG_CENT_H		;4347 - Display centipede head
 	call PUT_CHR		;4349
 	set 5,(ix+040h)		;434c - Confirm segment is masking
 				;       another character
@@ -2095,7 +2106,7 @@ l43b5h:	res 1,(ix+040h)		;43b5 - Set centipede to move left
 	;;   BC - location of segment
 	;;   IX - points to segment in centipede data structure
 l43d0h:	call GET_CHAR		;43d0
-	cp 008h			;43d3 - Check if body segment displayed
+	cp UDG_CENT_B		;43d3 - Check if body segment displayed
 	jr nz,l43e9h		;43d5 - Jump forward, if not
 
 	;; Check if previous segment is active and body
@@ -2119,7 +2130,7 @@ l43e9h:	call sub_4440h		;43e9 - copy (most) of status from next
 	ld c,(ix+021h)		;43ef   segment and character there
 	call GET_CHAR		;43f2
 
-	cp 008h			;43f5 - Check if body segment displayed
+	cp UDG_CENT_B		;43f5 - Check if body segment displayed
 	jr nz,l4401h		;43f7   and jump forward if not.
 
 	ld a,(ix+061h)		;43f9 - Move masked character from next 
@@ -2127,11 +2138,11 @@ l43e9h:	call sub_4440h		;43e9 - copy (most) of status from next
 
 	jr l4423h		;43ff
 
-l4401h:	cp 007h			;4401 - Check if head
+l4401h:	cp UDG_CENT_H		;4401 - Check if head
 	jr nz,l4416h		;4403 - Jump forward, if not
 
 	;; Print body character
-	ld a,008h		;4405
+	ld a,UDG_CENT_B		;4405
 	call PUT_CHR		;4407
 
 	ld a,(ix+061h)		;440a
@@ -2140,7 +2151,7 @@ l4401h:	cp 007h			;4401 - Check if head
 
 	jr l4423h		;4414
 
-l4416h:	cp 007h			;4416
+l4416h:	cp UDG_CENT_H			;4416
 	jr nc,l4423h		;4418
 
 	ld (ix+060h),a		;441a
@@ -2241,7 +2252,7 @@ l4479h:	bit 6,(ix+040h)		;4479 - Check if segment is active
 
 	;; Segment hit by dart, so replace by mushroom and, if
 	;; necessary, split centipede
-l448ch:	ld a,004h		;448c - Replace character with mushroom
+l448ch:	ld a,UDG_MUSH_4		;448c - Replace character with mushroom
 	call PUT_CHR		;448e
 
 	res 6,(ix+040h)		;4491 - Reset segment-active flag
@@ -2455,7 +2466,7 @@ l455fh:	inc ix			;455f - Move to next segment
 	ld hl,02420h		;4569 - Move to start of game board (row
 				;       1, column 0)
 l456ch:	ld a,(hl)		;456c - Retrieve character and check if
-	cp 005h			;456d   mushroom
+	cp UDG_MUSH_4+1		;456d   mushroom
 	jr c,l4573h		;456f - Skip forward if is
 	ld (hl),000h		;4571 - Otherwise delete
 
@@ -2483,7 +2494,7 @@ l4582h:	call GET_CHAR		;4582 - Retrieve character
 	and a			;4585 - If nothing there, move on
 	jr z,l459ch		;4586   to check next cell
 
-	cp 004h			;4588 - If not partial mushroom, move on
+	cp UDG_MUSH_4		;4588 - If not partial mushroom, move on
 	jr nc,l459ch		;458a   to check next cell *** could
 				;       probably move to next column
 				;       here ***
@@ -2495,7 +2506,7 @@ l4582h:	call GET_CHAR		;4582 - Retrieve character
 	call REGEN_MUSHROOM	;4594 - Play mushroom regeneration sound
 				;       and add to score
 
-	ld a,004h		;4597 - Replace (inverted) partial
+	ld a,UDG_MUSH_4		;4597 - Replace (inverted) partial
 	call PUT_CHR		;4599   mushroom with whole mushroom
 
 l459ch:	djnz l4582h		;459c - Advance to next cell up (if any
@@ -2586,9 +2597,9 @@ l45e0h:	dec a			;45e0
 
 	;; Reset bug-buster location to starting location
 	ld bc,0160fh		;45f9
-	ld a,005h		;45fc
+	ld a,UDG_BUGB		;45fc
 	call PUT_CHR		;45fe
-	ld (SHIP_COORD),bc	;4601
+	ld (BUGB_COORD),bc	;4601
 
 	;; Reset any in-flight darts
 	ld bc,00000h		;4605
@@ -2807,7 +2818,7 @@ l46abh:	ld (ix+040h),h		;46ab - Set status
 	nop			;46cf
 
 l46d0h:	ld a,(ix+060h)		;46d0 - Retrieve masked bit
-	cp 006h			;46d3 - Check if dart
+	cp UDG_DART		;46d3 - Check if dart
 	jp nz,l4469h		;46d5 - Move on to next segment if not
 	jp l448ch		;46d8 - Jump back to handle centipede
 				;       being hit
@@ -2918,7 +2929,7 @@ l471dh:	call RND		;471d - RND(4) with zero indicating
 	ld (CHAR_SAVE),a	;4738
 
 	;; Print flea
-	ld a,00bh		;473b
+	ld a,UDG_FLEA		;473b
 	call PUT_CHR		;473d
 
 	;; Decide speed of flea - 50/50 chance of being full speed of
@@ -2954,11 +2965,11 @@ l4750h:	ld a,(FLEA_TIMER)	;4750 - Toggle timer between 1 and 0
 	;; Retrieve location of flea and check if hit by dart
 l4764h:	ld bc,(FLEA_COORD)	;4764
 	call GET_CHAR		;4768
-	cp 006h			;476b
+	cp UDG_DART		;476b
 	jp nz,l4783h		;476d - Move on if not
 
 	;; Flea hit by dart, so replace by mushroom
-	ld a,004h		;4770
+	ld a,UDG_MUSH_4		;4770
 	call PUT_CHR		;4772
 
 	;; Update score
@@ -2973,10 +2984,10 @@ l4764h:	ld bc,(FLEA_COORD)	;4764
 	jp l4711h		;4780 - Done
 
 l4783h:	ld a,(CHAR_SAVE)	;4783 - Retrieve character masked by flea
-	cp 000h			;4786 - Check if flea is on blank cell
+	cp UDG_BLANK		;4786 - Check if flea is on blank cell
 	jr z,l4794h		;4788   and move to check if drops
 				;       mushroom
-	cp 005h			;478a - Check if flea is on mushroom
+	cp UDG_MUSH_4+1		;478a - Check if flea is on mushroom
 	jr nc,l4790h		;478c   Move on to replace by space if not
 	jr l47a0h		;478e - Move on to restore previous
 				;       character
@@ -2989,13 +3000,13 @@ l4790h:
 	;; 
 	;; *** NOTE: In original game, flea only deposits mushroom if
 	;; there are fewer than a certain number on screen ***
-l4794h:	ld h,000h		;4794 - Assume flea will deposit a space
+l4794h:	ld h,UDG_BLANK		;4794 - Assume flea will deposit a space
 
 	call RND		;4796 - Compute RND(4)
 	and 003h		;4799
 	
 	jr nz,l479fh		;479b - If 1, 2, or 3, move on, or
-	ld h,004h		;479d   set to mushroom if 0
+	ld h,UDG_MUSH_4		;479d   set to mushroom if 0
 
 l479fh:	ld a,h			;479f - Retrieve space/ mushroom and print it
 
@@ -3013,7 +3024,7 @@ l47a0h:	call PUT_CHR		;47a0
 
 	;; If so, make sure previous flea location is blank and set flea
 	;; as inactive
-	ld a,000h		;47af
+	ld a,UDG_BLANK		;47af
 	dec b			;47b1
 	call PUT_CHR		;47b2
 	ld (FLEA_FLAG),a	;47b5
@@ -3022,7 +3033,7 @@ l47a0h:	call PUT_CHR		;47a0
 	jp l4711h		;47b8
 
 	;; Print flea and store new flea coordinates
-l47bbh:	ld a,00bh		;47bb 
+l47bbh:	ld a,UDG_FLEA		;47bb 
 	call PUT_CHR		;47bd
 	ld (FLEA_COORD),bc	;47c0
 
