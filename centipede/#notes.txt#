@@ -1,0 +1,62 @@
+Attempting to disassemble the program, the main game loop is a series of calls at 3C80h:
+
+3C80  call 41C8 - does nothing
+3C83  call 3EE0 ; Seems to shift screen left and right
+      	   jp 4940
+	      checks if 46E0
+3C86  call 3F28 -
+      	   check 3F90 is 0x0000 (bullet is in flight)
+	   then check fire (bit 0 of port FDFE)
+3C89  call 3EE0 ; Seems to shift screen left and right
+      	   jp 4940
+	      check 46E0
+3C8C  call 3F28 - check fire
+3C8F  call 3EF0 - check keyboard directions
+      	   call 3E60 (from 3F03)
+	   	Check port DFFE
+3C92  call 44E8 -
+      	   Check 4180 (number of caterpillar segments?)
+                 44D8
+			4460 Check if caterpillar segment is an 8 (maybe is shot?)
+			46D0 Check if caterpillar segment+60 is a 6 (???)
+			44B0
+			4290
+			9630
+3C95  call 46FE - Move caterpillar
+3C98  jp 3C80h
+
+Default keyboard controls are
+   Fire - Port FDFE Bit 0 'a'
+   Up     Port DFFE Bit 2 'i'
+   Right  Port BFFE Bit 1 'l'
+   Left	  Port BFFE Bit 3 'j'
+   Down	  Port 7FFE Bit 1 'm'
+
+Caterpillar is stored in 4100--410B (row coord)
+                         4120--412B (col coord)
+
+VLIST is at 62D
+FIND is at 63D
+FORGET is at 1634
+LIST IS AT 1670
+
+DATA starts at 3C5C, followed by MORECODE, followed by CENTIPEDE (code
+field at 4B33)
+
+Main game entry point is at 3C60
+
+Differences between Ace version and Atari console original:
+
+- Atari version is two-player.
+
+- In original, difficulty level can be configured (by arcade, rather
+  than player)
+
+- Screen has 28 rows on Atari.
+
+- Atari version of game has colour
+
+- Atari version initially places up to 46 mushrooms. Ace has a 25%
+  chance of placing a mushroom at each location, which mean on average
+  there will be 165 mushrooms
+

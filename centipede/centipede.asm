@@ -53,7 +53,7 @@ AY_MAX_VOL:	equ 0x0F	; Maximum volume for sound card
 AY_MAX_CHANNEL:	equ 0x03	; Three channels
 	
 AY_REG_PORT:	equ 0fdh
-AY_DAT_PORT:	equ 0ffh
+AY_DATA_WRITE_PORT:	equ 0ffh
 
 	;; Jupiter Ace Memory Map and System Variables
 DISPLAY:	equ 0x2400	; Start of display buffer
@@ -76,6 +76,8 @@ UDG_SPID_L:	equ 0x09
 UDG_SPID_R:	equ 0x0A
 UDG_FLEA:	equ 0x0B
 
+ACE_IO_PORT:	equ 0xFE
+	
 	;; Code origin is start of parameter field for DATAM
 	org	03c5ch
 
@@ -230,7 +232,7 @@ WRITE_TO_AY:
 	out (AY_REG_PORT),a	;3cf4 - Select it
 	ld a,(hl)		;3cf6 - Retrieve data
 	inc hl			;3cf7 - Advance to return address
-	out (AY_DAT_PORT),a	;3cf8 - Update register
+	out (AY_DATA_WRITE_PORT),a	;3cf8 - Update register
 
 	pop af			;3cfa
 	ex (sp),hl		;3cfb - Restore HL and push return address
@@ -395,15 +397,15 @@ l3d4ch:	ld b,d			;3d4c - Pause appropriate time to create
 l3d4dh:	djnz l3d4dh		;3d4d   tone
 
 	ld a,b			;3d4f - Will always be zero
-	out (0feh),a		;3d50 - Push loud-speaker diaphram out
+	out (ACE_IO_PORT),a	;3d50 - Push loud-speaker diaphram out
 
 	ld b,d			;3d52 - Pause appropriate time to create
 l3d53h:	djnz l3d53h		;3d53   tone
 
 	ld a,07fh		;3d55
-	out (0feh),a		;3d57 - Push loud-speaker diaphram out
+	out (ACE_IO_PORT),a	;3d57 - Push loud-speaker diaphram out
 
-	in a,(0feh)		;3d59 - Push loud-speaker diaphram in
+	in a,(ACE_IO_PORT)	;3d59 - Push loud-speaker diaphram in
 				;and read bottom-left keyboard half row
 				;(V, B, N, M, Space)
 
@@ -449,7 +451,6 @@ l3d64h:	dec e			;3d64 - Decrement duration
 
 	ret		;3d87
 
-
 	nop		;3d88
 	nop		;3d89
 	nop		;3d8a
@@ -461,7 +462,7 @@ l3d64h:	dec e			;3d64 - Decrement duration
 
 	;; Initialisation routine #3 - Initialise game screen
 INIT_GAME_SCREEN:
-	call sub_3de0h		;3d90 - Set up graphics
+	call SETUP_GRAPHICS		;3d90 - Set up graphics
 
 	;; Clear bottom row of the display
 	ld hl,DISPLAY+17h*20h-01h	;3d93 - Address 26DF = end of row 21
@@ -500,7 +501,7 @@ l3dabh:	dec hl			;3dab
 	ld hl,STATUS_PANEL	;3db7
 	ldir			;3dba
 
-	call sub_3f18h		;3dbc - Initialise bug buster, reset
+	call INIT_BUGB		;3dbc - Initialise bug buster, reset
 				;       score, dart location, and number
 				;       of lives
 
@@ -522,7 +523,7 @@ l3dd8h: db 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 ; High score
 	;;
 	;; One exit:
 	;;   BC, DE, HL - corrupted
-sub_3de0h:
+SETUP_GRAPHICS:
 	ld bc,11*8		;3de0 - 11 characters
 	ld de,CHARSET+0x08	;3de3 - Start of character with code 1
 	ld hl,UDG_DATA		;3de6 - Start of bitmap data
@@ -677,13 +678,13 @@ l3e5dh:
 	nop			;3e5f
 
 
-	;; Check if direction controls pressed and move ship
+	;; Check if direction controls pressed and move bug-buster
 sub_3e60h:
 	push af			;3e60
 
 	;; Port 0xDFFE reads keyboard half-row "Y", ..., "P"
 	ld a,0dfh		;3e61
-	in a,(0feh)		;3e63
+	in a,(ACE_IO_PORT)	;3e63
 	bit 2,a			;3e65 - Check if "I" pressed
 	jp nz,l3e80h		;3e67 - Move on if not
 
@@ -705,7 +706,7 @@ sub_3e60h:
 
 	;; Port 0xBFFE reads keyboard half-row "H", ..., "Enter"
 l3e80h:	ld a,0bfh		;3e80
-	in a,(0feh)		;3e82
+	in a,(ACE_IO_PORT)	;3e82
 	bit 1,a			;3e84 - Check if "L" pressed
 	jp nz,l3ea0h		;3e86 - Move on, if not
 
@@ -728,7 +729,7 @@ l3e80h:	ld a,0bfh		;3e80
 
 	;; Port 0xBFFE reads keyboard half-row "H", ..., "Enter"
 l3ea0h:	ld a,0bfh		;3ea0
-	in a,(0feh)		;3ea2
+	in a,(ACE_IO_PORT)	;3ea2
 	bit 3,a			;3ea4 - Check if "J" prssed
 	jp nz,l3ec0h		;3ea6 - Move on if not
 
@@ -751,7 +752,7 @@ l3ea0h:	ld a,0bfh		;3ea0
 
 	;; Port 0x7FFE reads keyboard half-row "V", ..., "Space"
 l3ec0h:	ld a,07fh		;3ec0
-	in a,(0feh)		;3ec2
+	in a,(ACE_IO_PORT)	;3ec2
 	bit 1,a			;3ec4 - Check if "M" pressed
 	jp nz,l3eddh		;3ec6 - Move on, if not
 
@@ -866,11 +867,11 @@ BUGB_COORD:
 
 	;; Print bug-buster, reset number of lives, score, and set no
 	;; dart in flight
-sub_3f18h:
+INIT_BUGB:
 	push bc			;3f18
 
 	;; Display bug-buster in starting location
-	ld bc,0160fh		;3f19 - Starting location is (22,15)
+	ld bc,22*256+15		;3f19 - Starting location is (22,15)
 	ld a,UDG_BUGB		;3f1c
 	call PUT_CHR		;3f1e
 	ld (BUGB_COORD),bc	;3f21 - Store location
@@ -896,7 +897,7 @@ GAME_STEP_2:
 
 	;; No in-flight dart, so check if fire being pressed
 	ld a,0fdh		;3f33 - Read from port FDFEh 
-	in a,(0feh)		;3f35   (keys 'A',...'G')
+	in a,(ACE_IO_PORT)	;3f35   (keys 'A',...'G')
 	bit 0,a			;3f37 - Check if 'A' pressed
 	jp z,l3f3fh		;3f39 - If so, fire dart
 
@@ -1006,7 +1007,7 @@ l3f92h:	call sub_3f98h		;3f92 - Play dart sound
 				;       has hit anything
 
 sub_3f98h:
-	jp l4998h		;3f98 - Play laser sound (and return)
+	jp l4998h		;3f98 - Play fire sound (and return)
 	nop			;3f9b
 	nop			;3f9c
 	nop			;3f9d
@@ -1484,8 +1485,9 @@ DBL_SPEED_FLAG:
 	db $00			; Used to indicate if double-speed
 				; centipedes are possible
 
+	;; ------------------------------------------------------------
 	;; Initialisation routine - Save Forth environment
-	;;
+	;; ------------------------------------------------------------
 	;; Save state for return to Forth interpretter, which requires
 	;; preserving IX, IY, and SP (see Steven Vickers, "Jupiter Ace
 	;; Forth Programming", Chapter 25, p.148)
@@ -1494,6 +1496,7 @@ DBL_SPEED_FLAG:
 	;;
 	;; On exit:
 	;;   HL - corrupted
+	;; ------------------------------------------------------------
 SAVE_FORTH:
 	pop hl			;4188 - Retrieve return address so that
 				;       stack pointer is as in parent
@@ -1502,7 +1505,8 @@ SAVE_FORTH:
 	ld (IY_STR),iy		;418d - Save IY
 	ld (SP_STR),sp		;4191 - Save SP
 	
-	jp (hl)			;4195 - Return (HL contains return address
+	jp (hl)			;4195 - Return (HL contains return
+				;       address)
 
 	
 	nop			;4196
@@ -1591,7 +1595,7 @@ GAME_STEP_0:
 
 	;; Read keyboard half-row V,...,Space and check if Space pressed
 	ld a,07fh		;41c9
-	in a,(0feh)		;41cb
+	in a,(ACE_IO_PORT)	;41cb
 	rra			;41cd - Check for Space and jump forward
 	jr nc,l41d2h		;41ce   if pressed
 
@@ -1644,7 +1648,6 @@ INIT_CENTIPEDE:
 l41f3h:	res 6,(hl)		;41f3
 	inc hl			;41f5
 	djnz l41f3h		;41f6
-
 
 	;; Centipede initially has 12 segments, running horizontally
 	;; from the top-left corner of the screen
@@ -2620,7 +2623,6 @@ l45e0h:	dec a			;45e0
 	nop			;4616
 	nop			;4617
 
-
 	;; Set initial status of head-only centipede
 	;;
 	;; On entry:
@@ -3278,21 +3280,9 @@ l490bh:	bit 4,(ix+040h)		;490b - Check if segment had reached
 
 	ret			;4914 - Done
 
-	nop			;4915
-	nop			;4916
-	nop			;4917
-	nop			;4918
-	nop			;4919
-	nop			;491a
-	nop			;491b
-	nop			;491c
-	nop			;491d
-	nop			;491e
-	nop			;491f
-	nop			;4920
-	nop			;4921
-
-
+	ds $4922-$		; Padding so follow-on word begins at
+				; correct location in dictionary
+	
 	db "M", "O", "R", "E", "C", "O", "D", "E"+080h
 	dw $01FB		; Length field
 	dw $3C59		; Link field
@@ -3633,11 +3623,11 @@ l4a50h:	ld a,(BS_TIMER)		;4a50 - Retrieve timer and check if
 l4a75h:	ld a,002h		;4a75
 	out (AY_REG_PORT),a	;4a77
 	ld a,l			;4a79
-	out (AY_DAT_PORT),a	;4a7a
+	out (AY_DATA_WRITE_PORT),a	;4a7a
 	ld a,003h		;4a7c
 	out (AY_REG_PORT),a	;4a7e
 	ld a,h			;4a80
-	out (AY_DAT_PORT),a	;4a81
+	out (AY_DATA_WRITE_PORT),a	;4a81
 
 	ret			;4a83 - Done
 
@@ -3650,7 +3640,7 @@ l4a75h:	ld a,002h		;4a75
 l4a88h:	ld a,AY_VOL_B		;4a88
 	out (AY_REG_PORT),a	;4a8a
 	ld a,(BS_TIMER)		;4a8c
-	out (AY_DAT_PORT),a	;4a8f
+	out (AY_DATA_WRITE_PORT),a	;4a8f
 	
 	ret			;4a91 - Done
 	
