@@ -3596,7 +3596,7 @@ l4a4dh:	db $A0			;4a4d
 l4a50h:	ld a,(BS_TIMER)		;4a50 - Retrieve timer and check if 
 	cp 001h			;4a53   has reached 1
 	jr nz,l4a88h		;4a55 - Skip forward to set volume for
-				;       sound effect if not
+				;       sound effect, if not
 
 	;; Cycle AY tone parameter through 0, 1, 2, and 3
 	ld a,(BS_AY_TONE)	;4a57
@@ -3620,11 +3620,11 @@ l4a50h:	ld a,(BS_TIMER)		;4a50 - Retrieve timer and check if
 	ld hl,00f00h		;4a72 - Tone if A = 3
 
 	;; Write tone to AY chip
-l4a75h:	ld a,002h		;4a75
+l4a75h:	ld a,AY_TONE_B		;4a75
 	out (AY_REG_PORT),a	;4a77
 	ld a,l			;4a79
 	out (AY_DATA_WRITE_PORT),a	;4a7a
-	ld a,003h		;4a7c
+	ld a,AY_TONE_B+1	;4a7c
 	out (AY_REG_PORT),a	;4a7e
 	ld a,h			;4a80
 	out (AY_DATA_WRITE_PORT),a	;4a81
