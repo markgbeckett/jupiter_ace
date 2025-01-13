@@ -2,11 +2,13 @@
 
 ## Introduction
 
-Centipede is an arcade game, launched by Atari in 1981. It was very popular and spawned a number of micro conversions including, in 1984, a decent port by Colin Dooley to the Jupiter Ace. Colin's port is very playable with a strong resemblence to the original (accepting there is no spider and everything is monochrome). It is also one of the few Jupiter Ace games that supports both the Boldfield Soundbox and the Boldfield joystick interface.
+Centipede is an arcade game launched by Atari in 1981. It was very popular and spawned a number of micro conversions including, in 1984, a decent port by Colin Dooley to the Jupiter Ace. Colin's port is very playable with a strong resemblence to the original (accepting there is no spider and everything is monochrome). It is also one of the few Jupiter Ace games that supports both the Boldfield Soundbox and, apparently a joystick interface.
 
 If you have read my [post about Valkyr](../valkyr-minstrel/README.md), you will know that by adding an RC2014 YM2149 sound card to the Minstrel 4th or 4D, you can get a Soundbox-like experience (except that the port addresses used for controlling the card are different).
 
-The Ace version of Centipede runs okay on the Minstrel 4th and 4D though does not have the enhanced sound support. I have therefore updated Colin Dooley's original, so that you can play the game in all of it's original glory, Plus, if you have a joystick interface, you can get the full experience.
+The Ace version of Centipede runs without issue on the Minstrel 4th and 4D, though does not have the enhanced sound support, because of the different port requirements of the sound card. I have therefore updated Colin Dooley's original, so that you can play the game in all of it's original glory, Plus, if you have a joystick interface, you can get the full experience.
+
+Having updated the sound-card and joystick support to work with the Minstrel 4th/ 4D, I decided to try disassembling the whole game, working through and commenting the code as I went. For an update on this in-progress project, take a look at the section below titled "Disassembling Centipede".
 
 ## Playing the game
 
@@ -54,7 +56,7 @@ Unfortunately, creating sounds often involves sending multiple commands (i.e., w
 
 For Centipede and using the breakpoints based on `OUT` instructions, I quickly found instructions that communicate with the Soundbox at addresses 3CF4h (`OUT A,(FDh)`) and 3CF8h (`OUT A,(FFh)`). The breakpoint was also tripped by the same instructions at 4A7Eh, 4A81h,  4A8Ah, and 4A8Fh, so I was reasonably confident I understood how the programmer interacted with the Soundbox.
 
-Next, I searched (again using the EightyOne Debugger) for other candidate instructions, represented by the byte sequence D3h, FDh or D3h, FFh.  This identified a number of candidates, at address 4A77h and 4A7A, plus repeats of the previously identified instructions at 30F4h, 30F8h, 34F0h, 34F8h, 38F0h, and 38F8h (iniitally, I did not remember that user memory on the Ace in the interval 3C00h--3FFFh is mirrored to 3000h-33FFh, 3400h--37FFh, 3800h--3BFFh, an I was confused by t the multiple copies of apparently the same code).
+Next, I searched (again using the EightyOne Debugger) for other candidate instructions, represented by the byte sequence D3h, FDh or D3h, FFh.  This identified a number of candidates, at address 4A77h and 4A7A, plus repeats of the previously identified instructions at 30F4h, 30F8h, 34F0h, 34F8h, 38F0h, and 38F8h (iniitally, I did not remember that user memory on the Ace in the interval 3C00h--3FFFh is mirrored to 3000h-33FFh, 3400h--37FFh, 3800h--3BFFh, and I was confused by t the multiple copies of apparently the same code).
 
 I was fairly confident that the additional candidates were indeed interactions with the sound card though, noting it could be data that coincidentally has the same byte pattern, I deleted the original breakpoints (looking for `OUT`) and replaced them with breakpoints that stopped if code is executed at the candidate addresses. Then, I began playing the game again though, having set more targetted breakpoints, the action was not stopped by the previously identified instructions. Soon enough the emulator tripped over each candidate address, so I had my list of instructions to be changed: `3CF4h`, `3CF8h`, `4A77h`, `4A7Ah`, `4A7Eh`, `4A81h`, `4A8Ah`, and `4A8Fh` (noting, in each case, whether the instruction accessed the Register port or the Data port).
 
@@ -116,3 +118,22 @@ If you want to change the controls, I have included the source code of the [new 
 ## Other Observations
 
 When I was working on the port, I noted that the first routine in the game loop (at address 41C8h) points to an empty subroutine (returning immediately). Perhaps, Colin planned to include support for the spider, present in the original game, in this routine.
+
+## Disassembling Centipede
+
+The work to add joystick support to Centipede piqued my interest in the program and I have subsequently created a commented disassembly of the game, the current version of which can be found in [centipede.asm](centipede.asm).
+
+In creating the disassembly, I learned a lot about the game and how it was written. I think it is an interesting program to study, for someone with a reasonably understanding of Z80 machine code.
+
+I have made the following interesting discoveries, so far:
+
+- There is quite a lot of unused memory in the program, evidence by sequences of `nop` statements between routines. Given that Colin Dooley wrote this game by hand-assembling code into hexadecimal opcodes and poking into memory on an actual Ace, I think this is reasonable. I suspect Colin left space between routines to allow later changes/ expansion, without a need to relocate routines -- something that would be painful to do when hand-assembling a program.
+
+- I did not find any evidence of joystick support. Possibly there is another version of the game, which includes the support, or possibly Colin mis-remembered this aspect of writing the game.
+
+- The first routine in the main game loop (noted, above, as doing nothing) is a debugging routine. Beyond the first command in the routine (which is a `ret`), there is a routine that checks for the Space key being pressed and, if so, exits back to Forth. You can reinstate the routine by replacing the `ret` statement at address 41C8h with `push af`.
+
+- My suspicion that the first game-loop routine was a place-holder for the spider was wrong. However, Colin did at least considering adding a spider to his game, as during initialisation, two graphics are set up that constitute the left and right half of a spider. This graphic is never used in the current game.
+
+- I have found three bugs in the game. Two of them have no significant impact, but the third bug does affect game play. The most significant bug relates to initalising a new flea. There should be a 50/50 chance that the flea drops slowly or quickly. However, the calculation is broken meaning the flea almost always drops quickly. A second bug relates to a miscalculated relative jump and causes the program to jump to the middle of a two-byte command. It looks as if this bug could cause problems except that the jump (which is conditional) does not ever seem to be satisfied, so the problem code is skipped. The third bug is an incorrect call address, which occurs three times when requesting the player to enter their name into the hall of fame. The incorrect jump is to a location eight bytes to early in memory, but simply means the computer runs eight `nop` statements before asking for user input, so is not significant.
+
