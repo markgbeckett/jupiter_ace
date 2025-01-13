@@ -2053,10 +2053,10 @@ l437eh:	cp 016h			;437e
 	set 4,(ix+040h)		;4391
 
 	;; If centipede has just reached bottom of screen, randomly
-	;; choose whether centipede moves left or right (NOTE: this code
+	;; choose whether centipede moves left or right. This code
 	;; only runs after the centipede has hit object or edge of
-	;; playing area and moved down to ottom row, so direction
-	;; persists, once selected)
+	;; playing area and moved down to bottom row, so direction
+	;; persists, once selected.
 l4395h:	call RND		;4395
 	and %00000010		;4398 - Bit 1 on segment status
 				;       indicates horizontal direction
@@ -2527,8 +2527,9 @@ l459ch:	djnz l4582h		;459c - Advance to next cell up (if any
 	ld a,000h		;45a8
 	ld (FLEA_FLAG),a	;45aa
 
-	call RESTORE_FORTH		;45ad - Restore Forth environment (***
-				;       not needed as done in subsequemt
+	call RESTORE_FORTH		;45ad - Restore Forth
+				;       environment (*** NOTE: not
+				;       needed as done in subsequemt
 				;       code block ***)
 
 	jp l45d0h		;45b0
@@ -2569,8 +2570,8 @@ l45d0h:	ld a,(NO_LIVES)		;45d0 - Retrieve number of lives
 	and a			;45d3 - Check if zero
 	jp nz,l45e0h		;45d4 - Move on, if not
 	call RESTORE_FORTH	;45d7 - Otherwise, restore Forth
-				;       environment *** This would be
-				;       better done in routine at
+				;       environment *** NOTE: This would
+				;       be better done in routine at
 				;       address 0x4900 ***
 
 	jp CHECK_HIGH_SCORE		;45da - Move on to check if high score
@@ -3000,8 +3001,8 @@ l4790h:
 	;; Decide whether flea deposits mushroom (one in four
 	;; chance).
 	;; 
-	;; *** NOTE: In original game, flea only deposits mushroom if
-	;; there are fewer than a certain number on screen ***
+	;; *** NOTE: In Atari original game, flea only deposits mushroom
+	;; if there are fewer than a certain number on screen ***
 l4794h:	ld h,UDG_BLANK		;4794 - Assume flea will deposit a space
 
 	call RND		;4796 - Compute RND(4)
@@ -3180,12 +3181,12 @@ l4842h:	inc hl			;4842
 
 	;; Print high-score message
 GET_NAME:
-	call 04838h		;4850 - *** Bug: was call 04830h ***
+	call 04838h		;4850 - *** BUG: was call 04830h ***
 	db 0x24, 0xC5		; Screen location for message
 	dm "Well done! You got th"
 	db 0xE5
 
-	call 04838h		; - *** Bug: was call 04830h ***
+	call 04838h		; - *** BUG: was call 04830h ***
 	db 0x24, 0xE5		; Screen location for message
 	dm "highest score today. "
 	db 0xA0
@@ -3375,7 +3376,7 @@ sub_4968h:
 	nop			;497f
 
 sub_4980h:
-	call 04838h		; - *** Bug: was call 04830h ***
+	call 04838h		; - *** BUG: was call 04830h ***
 	db $25, $6A
 	dm "Game over"
 	db $AE
