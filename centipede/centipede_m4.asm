@@ -775,19 +775,6 @@ GAME_STEP_1:
 				;       effect
 l3ee3h:	jp l4a00h		;3ee3 - Otherwise, play background sound
 
-	nop			;3ee6
-	nop			;3ee7
-	nop			;3ee8
-	nop			;3ee9
-	nop			;3eea
-	nop			;3eeb
-	nop			;3eec
-sub_3eedh:
-	nop			;3eed
-	nop			;3eee
-	nop			;3eef
-
-
 	;; ------------------------------------------------------------
 	;; Game routine #3 - Check for direction keys
 	;; ------------------------------------------------------------
@@ -922,8 +909,6 @@ l3f58h:	ld (DART_COORD),bc	;3f58
 
 	ret			;3f5e
 
-	nop			;3f5f
-
 	;; Move dart up one square
 l3f60h:	ld a,UDG_BLANK		;3f60 - Clear dart from current 
 	call PUT_CHR		;3f62   location
@@ -987,11 +972,6 @@ l3f92h:	call sub_3f98h		;3f92 - Play dart sound
 
 sub_3f98h:
 	jp l4998h		;3f98 - Play fire sound (and return)
-	nop			;3f9b
-	nop			;3f9c
-	nop			;3f9d
-	nop			;3f9e
-	nop			;3f9f
 
 	;; Regeneration sound for mushroom
 REGEN_SND:
@@ -1008,10 +988,6 @@ REGEN_SND:
 	db AY_ENV_SH, $04
 
 	ret			;3fb4
-
-	nop			;3fb5
-	nop			;3fb6
-	nop			;3fb7
 
 SCORE:	db 0x00, 0x00		;3fb8
 l3fbah:	db 0x58			;3fba
@@ -1081,8 +1057,6 @@ UPDATE_SCORE:
 
 	ret			;3fe6
 	
-	nop			;3fe7
-
 	;; Display score (having first converted it to ASCII
 DISP_SCORE:
 	ld hl,PAD+0x7F		;3fe8 - Location in Forth Pad in which
@@ -2671,12 +2645,8 @@ l471dh:	call RND		;471d - RND(4) with zero indicating
 
 	;; Decide speed of flea - 50/50 chance of being full speed of
 	;; half speed
-	ld h,0x01		;4740 *** BUG: Was ld l,001h ***
-	call RND		;4742 *** NOTE: This could be much
-				;         simpler - `call RND` / `xor
-				;         0x01` ***
-	and h			;4745
-	xor h			;4746
+	call RND		;4742 
+	and %00000001		;4745
 	ld (FLEA_SPEED),a	;4747
 				;    
 	jp l4711h		;474a - Done
@@ -2887,13 +2857,13 @@ l4842h:	inc hl			;4842
 
 	;; Print high-score message
 GET_NAME:
-	call PRINT_MSG		;4850 - *** BUG: was call 04830h ***
-	db 0x24, 0xC5		; Screen location for message
+	call PRINT_MSG		;4850
+	db 0x24, 0xC5		;
 	dm "Well done! You got th"
 	db 0xE5
 
-	call PRINT_MSG		; - *** BUG: was call 04830h ***
-	db 0x24, 0xE5		; Screen location for message
+	call PRINT_MSG		;
+	db 0x24, 0xE5		;
 	dm "highest score today. "
 	db 0xA0
 
