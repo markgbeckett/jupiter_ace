@@ -86,13 +86,15 @@ ACE_IO_PORT:	equ 0xFE
 	;; Code origin is start of parameter field for DATAM
 	org	03c5ch
 
-START:	nop			;3c5c
+	;; The entry point (from Forth word CENTIPEDE) could be to here,
+	;; though is currently to START, hence we have left in this padding
+	nop			;3c5c
 	nop			;3c5d
 	nop			;3c5e
 	nop			;3c5f
 
 	;; Entry point for game
-	call SAVE_FORTH		;3c60 - Save IX, IY, and SP to enable
+START:	call SAVE_FORTH		;3c60 - Save IX, IY, and SP to enable
 				;       return to Forth
 	call RESTORE_GAME_DEFAULTS	;3c63 - Initialise buffer at 4180h
 	call INIT_GAME_SCREEN	;3c66 - Set up graphics and initialise
@@ -146,53 +148,6 @@ INIT_AY:
 
 	ret			;3cc1
 
-	nop			;3cc2
-	nop			;3cc3
-	nop			;3cc4
-	nop			;3cc5
-	nop			;3cc6
-	nop			;3cc7
-	nop			;3cc8
-	nop			;3cc9
-	nop			;3cca
-	nop			;3ccb
-	nop			;3ccc
-	nop			;3ccd
-	nop			;3cce
-	nop			;3ccf
-	nop			;3cd0
-	nop			;3cd1
-	nop			;3cd2
-	nop			;3cd3
-	nop			;3cd4
-	nop			;3cd5
-	nop			;3cd6
-	nop			;3cd7
-	nop			;3cd8
-	nop			;3cd9
-	nop			;3cda
-	nop			;3cdb
-	nop			;3cdc
-	nop			;3cdd
-	nop			;3cde
-	nop			;3cdf
-	nop			;3ce0
-	nop			;3ce1
-	nop			;3ce2
-	nop			;3ce3
-	nop			;3ce4
-	nop			;3ce5
-	nop			;3ce6
-	nop			;3ce7
-	nop			;3ce8
-	nop			;3ce9
-	nop			;3cea
-	nop			;3ceb
-	nop			;3cec
-	nop			;3ced
-	nop			;3cee
-	nop			;3cef
-
 	;; Update AY register
 	;; 
 	;; On entry:
@@ -217,10 +172,6 @@ WRITE_TO_AY:
 	ex (sp),hl		;3cfb - Restore HL and push return address
 	
 	ret			;3cfc
-
-	nop			;3cfd
-	nop			;3cfe
-	nop			;3cff
 
 	;; Store character in A at screen location B,C
 	;;
@@ -430,15 +381,6 @@ l3d64h:	dec e			;3d64 - Decrement duration
 
 	ret		;3d87
 
-	nop		;3d88
-	nop		;3d89
-	nop		;3d8a
-	nop		;3d8b
-	nop		;3d8c
-	nop		;3d8d
-	nop		;3d8e
-	nop		;3d8f
-
 	;; Initialisation routine #3 - Initialise game screen
 INIT_GAME_SCREEN:
 	call SETUP_GRAPHICS		;3d90 - Set up graphics
@@ -510,11 +452,6 @@ SETUP_GRAPHICS:
 	ldir			;3de9
 
 	ret			;3deb
-
-	nop			;3dec
-	nop			;3ded
-	nop			;3dee
-	nop			;3def
 
 	;; Graphics characters bitmap data
 	;; Quarter-mushroom (1)
@@ -628,34 +565,9 @@ l3e28h:	db %00111100
 	db %10010010
 	db %01001001
 	
-l3e48h:	nop			;3e48
-	nop			;3e49
-	nop			;3e4a
-	nop			;3e4b
-	nop			;3e4c
-	nop			;3e4d
-	nop			;3e4e
-	nop			;3e4f
-	nop			;3e50
-	nop			;3e51
-	nop			;3e52
-	nop			;3e53
-	nop			;3e54
-	nop			;3e55
-	nop			;3e56
-	nop			;3e57
-
 	;; Arrive here if player moves bug-buster into enemy (centipede
 	;; or flea) or enemy moves into bug-buster.
 l3e58h:	jp l4540h		;3e58
-
-	nop			;3e5b
-	nop			;3e5c
-l3e5dh:
-	nop			;3e5d
-	nop			;3e5e
-	nop			;3e5f
-
 
 	;; Check if direction controls pressed and move bug-buster
 sub_3e60h:
@@ -680,9 +592,6 @@ sub_3e60h:
 				;       flea, which will mean life lost
 	inc b			;3e7d - Otherwise reverse move, as blocked
 
-	nop			;3e7e
-	nop			;3e7f
-
 	;; Port 0xBFFE reads keyboard half-row "H", ..., "Enter"
 l3e80h:	ld a,0bfh		;3e80
 	in a,(ACE_IO_PORT)	;3e82
@@ -702,10 +611,6 @@ l3e80h:	ld a,0bfh		;3e80
 				;       flea, which will mean life lost
 	dec c			;3e9c - Otherwise, reverse move as blocked
 
-	nop			;3e9d
-	nop			;3e9e
-	nop			;3e9f
-
 	;; Port 0xBFFE reads keyboard half-row "H", ..., "Enter"
 l3ea0h:	ld a,0bfh		;3ea0
 	in a,(ACE_IO_PORT)	;3ea2
@@ -724,10 +629,6 @@ l3ea0h:	ld a,0bfh		;3ea0
 	jp nc,l3e58h		;3eb9 - If not, must be centipede or
 				;       flea, which will mean life lost
 	inc c			;3ebc - Otherwise, reverse move as blocked
-
-	nop			;3ebd
-	nop			;3ebe
-	nop			;3ebf
 
 	;; Port 0x7FFE reads keyboard half-row "V", ..., "Space"
 l3ec0h:	ld a,07fh		;3ec0
@@ -753,9 +654,7 @@ l3eddh:	pop af			;3edd
 
 	ret			;3ede
 
-	nop			;3edf
 
-	
 	;; ------------------------------------------------------------
 	;; Game routine #1 - Play sounds and time synchronisation
 	;; ------------------------------------------------------------
@@ -1333,7 +1232,7 @@ EXP_SND:
 	;;
 	;; Pad code, so that centipede data starts on page boundary
 	;; 
-	ds $4100-$
+PADDING:	ds $4100-$
 	
 l4100h:	nop			;4100
 
