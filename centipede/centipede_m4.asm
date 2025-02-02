@@ -102,12 +102,60 @@ START:	call SAVE_FORTH		;3c60 - Save IX, IY, and SP to enable
 	call CREATE_CENTIPEDE		;3c69 - Initialise centipede store and
 				;       display centipede
 	call INIT_FLEA		;3c6c - Deactivate flea
+	call INIT_SPIDER	; Initialise spider info
 	
 l3c78h:	call INIT_AY		;3c78 - Initialise sound card
 
 	;; Main game loop
+
+	
+	;; If dart in flight, check if location contains dart
+	;;   If so, move dart
+	;;     If lands on mushroom
+	;;       Damage mushroom, update score, cancel dart
+	;;   If not, cancel dart and replace location by dart (collision handled later)
+	;; Check bug-buster location contains bug-buster
+	;;   If not, assume bug-buster destroyed
+	;;   If so, check if move key pressed
+	;;     if So, check if new location contains object
+	;;        If mushroom, cancel move
+	;;        If something else, bug-buster destroyed
+	;;        If not, move bug-buster
+	;; For each active centipede segment, check if cell contains a
+	;; dart (or if masked character is a dart)
+	;;   If so, delete segment, replace by mushroom, split centipede, update score
+	;; For each active centipede segment, move it
+	;;   If segment is a head, check what character next location contains
+	;;     If blank, store to mask and turn mask on
+	;;     If bug-buster, dart, or another enemy, do not display
+	;;       centipede segment (and turn off mask)
+	;;     If mushroom, change direction
+	;;   If segment is body,
+	;;     Check if displaying body segment
+	;;       If so, check if last segment
+	;;         If so, restore character from mask to current location
+	;;     Check character displayed at location of next segment
+	;;       If body, move mask character from next segment to this one.
+	;;       If head, replace by body, copy mask character from next
+	;;         segment to current, set mask character for next segment
+	;;         to be body
+	;;       If another enemy, do nothing
+	;;       Else (e.g., mushroom) store chacter in mask, and display body
+	;; If flea is active,
+	;;    Check if flea cell contains dart
+	;;      If so cancel flea
+	;;    Check character masked by flea is
+	;;      If centipede, enemy, bug buster, or dart, leave blank
+	;;        (previous character will be restored by corresponding
+	;;        service routine)
+	;;      If mushroom, reinstate
+	;;      If blank, check if should drop mushroom
+	;;    Advance flea to next row
+	;;      If bottom of screen, cancel flea
+	;;      Else, store previous character and print flea
+	
 GAME_LOOP:
-	call GAME_STEP_0	;3c80 - Does nothing
+	call GAME_STEP_0	;3c80 - Debugging routine, disabled when game published
 	call GAME_STEP_1	;3c83 - Play game sound and synchronise
 				;       game by waiting for FRAMES to be
 				;       updated
@@ -119,6 +167,8 @@ GAME_LOOP:
 	call GAME_STEP_3	;3c8f - Check for direction keys
 	call GAME_STEP_4	;3c92 - Service centipede
 	call GAME_STEP_5	;3c95 - Service flea 
+
+	call SERVICE_SPIDER	; Check and update spider
 
 	jp GAME_LOOP		;3c98 - Jump back to start
 
@@ -234,7 +284,7 @@ PUT_CHR:
 	;;   A - character retrieved
 	;;   - All other registered preserved
 	;; 
-GET_CHAR:
+GET_CHR:
 	;; Save registers used in routine
 	push hl			;3d18
 	push bc			;3d19
@@ -584,7 +634,7 @@ sub_3e60h:
 	cp 010h			;3e6b - Check if top of patrol area
 	jp z,l3e80h		;3e6d - Skip forward, if so (no move)
 	dec b			;3e70 - Otherwise try to move ship up
-	call GET_CHAR		;3e71 - Check if obstruction
+	call GET_CHR		;3e71 - Check if obstruction
 	and a			;3e74 
 	jp z,l3e80h		;3e75 - Skip forward if not, as done
 	cp UDG_CENT_H		;3e78 - Check if mushroom or dart
@@ -603,7 +653,7 @@ l3e80h:	ld a,0bfh		;3e80
 	cp 01fh			;3e8a - Check if at right-hand limit
 	jp z,l3ea0h		;3e8c - Move on, if so
 	inc c			;3e8f - Attempt to move right
-	call GET_CHAR		;3e90 - Check for obstruction
+	call GET_CHR		;3e90 - Check for obstruction
 	and a			;3e93 - Move on, if none
 	jp z,l3ea0h		;3e94
 	cp UDG_MUSH_4+1		;3e97 - Check if mushroom
@@ -622,7 +672,7 @@ l3ea0h:	ld a,0bfh		;3ea0
 	cp 000h			;3eaa - Check if at left-hand limit
 	jp z,l3ec0h		;3eac - Move on, if so
 	dec c			;3eaf - Attempt to move left
-	call GET_CHAR		;3eb0 - Check for obstruction
+	call GET_CHR		;3eb0 - Check for obstruction
 	and a			;3eb3 - Move on, if none
 	jp z,l3ec0h		;3eb4
 	cp UDG_MUSH_4+1		;3eb7 - Check if mushroom
@@ -641,7 +691,7 @@ l3ec0h:	ld a,07fh		;3ec0
 	cp 016h			;3eca - Check if bottom of patrol area
 	jp z,l3eddh		;3ecc - Move on, if so
 	inc b			;3ecf - Attempt to move down
-	call GET_CHAR		;3ed0 - Check for obstruction
+	call GET_CHR		;3ed0 - Check for obstruction
 	and a			;3ed3 - Move on, if none
 	jp z,l3eddh		;3ed4
 	cp UDG_MUSH_4+1		;3ed7 - Check if mushroom
@@ -694,7 +744,7 @@ GAME_STEP_3:
 
 	ld bc,(BUGB_COORD)	;3ef2 - Retrieve current bug-buster
 				;       coordinates
-	call GET_CHAR		;3ef6 - Retrieve character at bug-buster
+	call GET_CHR		;3ef6 - Retrieve character at bug-buster
 				;       location
 
 l3ef9h:	cp UDG_BUGB		;3ef9 - Check if is bug-buster
@@ -789,7 +839,7 @@ l3f3fh:	ld bc,(BUGB_COORD)	;3f3f - Retrieve coordinates of bug-blaster
 	;; On exit:
 	;;   All registers preserved
 	;; 
-l3f48h:	call GET_CHAR		;3f48 - Retrieve character at B,C
+l3f48h:	call GET_CHR		;3f48 - Retrieve character at B,C
 	cp UDG_DART		;3f4b - Check if is dart
 	jp z,l3f60h		;3f4d - Move on, if so
 
@@ -817,7 +867,7 @@ l3f60h:	ld a,UDG_BLANK		;3f60 - Clear dart from current
 				;       dart and done
 
 	;; Check if dart has hit something
-l3f69h:	call GET_CHAR		;3f69 - Check if something at (new)
+l3f69h:	call GET_CHR		;3f69 - Check if something at (new)
 	cp UDG_BLANK		;3f6c   dart location
 	jp nz,l3f79h		;3f6e - Jump forward if so
 
@@ -1100,7 +1150,7 @@ INVERT_CHR:
 	cp 020h			;406d - Check is on-screen
 	ret nc			;406f
 
-	call GET_CHAR		;4070 - Retrieve characteter
+	call GET_CHR		;4070 - Retrieve characteter
 	xor 080h		;4073 - Invert character
 	call PUT_CHR		;4075 - Print character
 
@@ -1229,6 +1279,182 @@ EXP_SND:
 	
 	ret			;40eb
 
+SPIDER_STATUS:	db 0x00 	; Flag with bits indicating, as follows:
+SPIDER_ACTIVE:	equ %00000001	;   Bit 0 - Set, if spider active
+SPIDER_SPEED:	equ %00000010	;   Bit 1 - Set, if fast spider
+SPIDER_RIGHT:	equ %00000100	;   Bit 2 - Set, if spider moving right
+SPIDER_LEFT:	equ %00001000   ;   Bit 3 - Set, if spider moving left
+SPIDER_UP:	equ %00010000	;   Bit 4 - Set, if spider moving up
+
+SPIDER_LOCN:	db 0x00, 0x00
+SPIDER_COOLDOWN:	db 0x60	; Timer for introducing new spider
+SPIDER_MASK:	ds 0x02		; Store for characters masked by spider
+SPIDER_COUNTER:	db 0x07
+	
+	;; Reset spider status info for new game
+INIT_SPIDER:	xor a
+	ld (SPIDER_STATUS),a
+
+	ret
+	
+	;; Check if spider active and, if so, move. Otherwise check if time to introduce spider
+	;;
+	;; On entry:
+	;;
+	;; On exit:
+	;; 
+SERVICE_SPIDER:
+	;; Check if spider is active. Jump forward to move, if is
+	ld a, (SPIDER_STATUS)
+	and SPIDER_ACTIVE
+	jr nz, MOVE_SPIDER
+
+	;; Spider not active, so check if time to introduce
+	ld a,(SPIDER_COOLDOWN)
+	dec a
+	jr z,INTRODUCE_SPIDER
+
+	;; Store new value of cooldown timer
+	ld (SPIDER_COOLDOWN),a
+
+	ret
+	
+MOVE_SPIDER:
+	;; Check if spider hit
+
+	;; Check if time
+	ld a,(SPIDER_COUNTER)
+	dec a
+	and %00000111
+	ld (SPIDER_COUNTER),a
+
+	ret nz
+	
+	;; Delete previous spider
+	ld bc,(SPIDER_LOCN)
+	call DELETE_SPIDER
+
+	;; Play spider sound
+	
+	;; Work out new location (and adjust direction, if necessary)
+	call UPDATE_SPIDER_LOCN
+
+	;; Check if leaving screen
+	call CHECK_SPIDER
+
+	;; If spider still active, print spider in new location
+	ld a,(SPIDER_STATUS)
+	and SPIDER_ACTIVE
+	call nz,PRINT_SPIDER
+	
+	ret			;
+
+	;; Move the spider based on the direction it is travelling
+	;;
+	;; On entry:
+	;;   BC - current location of spider
+	;;
+	;; On exit:
+	;;   BC - new location of spider
+	;;   A,D - corrupted
+UPDATE_SPIDER_LOCN:
+	ld a,(SPIDER_STATUS)	; Retrieve status flag
+	ld d,a			; Save it
+	
+	;; Check if moving left
+	and SPIDER_LEFT
+	jr z, USL_CONT_1
+	dec c
+
+USL_CONT_1:
+	ld a,d
+	and SPIDER_RIGHT
+	jr z, USL_CONT_2
+	inc c
+
+USL_CONT_2:
+	inc b
+	
+	ld a,d
+	and SPIDER_UP
+	jr z, USL_CONT_3
+
+	dec b
+	dec b
+
+USL_CONT_3:
+	;; Save new coordinate
+	ld (SPIDER_LOCN),bc
+	
+	;; Check if reach boundary
+	ld a,b
+	cp 0x16
+
+	jr nz, USL_CONT_4
+	ld a,d
+	or SPIDER_UP
+	ld d,a
+
+	jr USL_CON_6
+	
+USL_CONT_4:
+	ld a,b
+	cp 0x10
+
+	jr nz, USL_CON_5
+
+	ld a,d
+	and %11111111-SPIDER_UP
+	ld d,a
+	
+USL_CON_5:
+	ld a,d
+
+USL_CON_6:
+	ld (SPIDER_STATUS),a	
+	
+	ret
+
+	
+INTRODUCE_SPIDER:
+	;; Reset spider cooldown
+	ld a, 0x60
+	ld (SPIDER_COOLDOWN),a
+	
+	;; Activate spider
+	ld a,SPIDER_ACTIVE
+
+	;; Check whether fast or slow spider
+	call SET_SPIDER_SPEED
+
+	;; Set spider's starting position
+	ld b, 0x10	    ; Enters on row 16
+	ld c, 0x00	    ; Assume enters from left
+	or SPIDER_RIGHT
+	
+	;; Check if spider enters from left or right
+	ld d,a
+	call RND
+	and %00000001
+	ld a,d
+	jr z, IS_CONT
+	ld c, 0x1E		; Switch to right edge
+	xor SPIDER_RIGHT
+	or SPIDER_LEFT
+	
+IS_CONT:			; Store status and location
+	ld (SPIDER_STATUS),a
+	ld (SPIDER_LOCN),bc
+
+	;; Print spider
+	call PRINT_SPIDER
+		
+	ret
+
+SET_SPIDER_SPEED:
+	ret
+
+	;; dec c
 	;;
 	;; Pad code, so that centipede data starts on page boundary
 	;; 
@@ -1293,6 +1519,101 @@ CENTIPEDE_COUNT:
 DBL_SPEED_FLAG:	
 	db $00			; Used to indicate if double-speed
 				; centipedes are possible
+
+	;; ------------------------------------------------------------
+	;; Print spider (saving whatever was there before)
+	;; ------------------------------------------------------------
+	;; 
+	;; On entry
+	;;   BC - coordinate of spider (left)
+	;;
+	;; On exit
+	;;  BC - coordinate of spider (right)
+	;;  A - corrupt
+	;; ------------------------------------------------------------
+PRINT_SPIDER:
+	;; Store whatever is displayed on screen in spider location
+	call GET_CHR
+	ld (SPIDER_MASK),a
+
+	ld a, UDG_SPID_L
+	call PUT_CHR
+	
+	inc c
+
+	call GET_CHR
+	ld (SPIDER_MASK+1),a
+
+	ld a, UDG_SPID_R
+	call PUT_CHR
+
+	ret
+
+	;; ------------------------------------------------------------
+	;; Delete spider (restoring whatever was there before, except mushrooms)
+	;; ------------------------------------------------------------
+	;; On entry
+	;;   BC - coordinate of spider (left)
+	;;
+	;; On exit
+	;;  BC - coordinate of spider (left)
+	;;  A - corrupt
+	;; ------------------------------------------------------------
+DELETE_SPIDER:
+	ld a,(SPIDER_MASK)
+	cp UDG_MUSH_4+1
+	jr nc, DS_CONT
+	ld a, UDG_BLANK
+
+DS_CONT:
+	call PUT_CHR
+
+	inc c
+	ld a,(SPIDER_MASK+1)
+	cp UDG_MUSH_4+1
+	jr nc, DS_CONT_2
+	ld a, UDG_BLANK
+
+DS_CONT_2:
+	call PUT_CHR
+
+	dec c
+	
+	ret
+
+CHECK_SPIDER:
+	ld a,c
+	and a
+
+	jr nz,CS_CONT_1
+
+	ld a,(SPIDER_STATUS)
+	and SPIDER_RIGHT
+
+	jr nz,CS_CONT_1
+
+	;; Disable spider
+	and %11111111-SPIDER_ACTIVE
+	ld (SPIDER_STATUS),a
+
+	ret
+CS_CONT_1:
+	ld a,c
+	cp $1E
+
+	ret nz
+
+	ld a,(SPIDER_STATUS)
+	and SPIDER_LEFT
+
+	ret nz
+
+	;; Disable spider
+	and %11111111-SPIDER_ACTIVE
+	ld (SPIDER_STATUS),a
+
+	ret
+
 
 	;; ------------------------------------------------------------
 	;; Initialisation routine - Save Forth environment
@@ -1527,7 +1848,7 @@ l4254h:	;; Retrieve coordinates of current segment into B and C
 	ld c,(ix+020h)		;4257
 
 	;; Retrieve any object at B,C into A
-	call GET_CHAR		;425a
+	call GET_CHR		;425a
 	cp UDG_BUGB		;425d - Check if bug-buster, dart, flea, ...
 	jp nc,l4273h		;425f - Jump forward if is (BUG: was 0x4274,
 				;       but that is mid-instruction)
@@ -1650,7 +1971,7 @@ l42cah:	ld b,(ix+000h)		;42ca - Retrieve coordinates of current
 	;; possible, as previous subroutine in this section of the game
 	;; loop should already have checked this. Will raise error if is
 	;; a dart and, otherwise, continue with routine.
-	call GET_CHAR		;42d0
+	call GET_CHR		;42d0
 	cp UDG_DART		;42d3
 	jp nz,l4310h		;42d5 - Continue with routine
 
@@ -1705,7 +2026,7 @@ l4323h:	call sub_4300h		;4323 - Move centipede head left/ right
 				;       so
 
 	;; Check centipede can move into space
-	call GET_CHAR		;432b
+	call GET_CHR		;432b
 	cp UDG_BLANK		;432e - Is it a space?
 	jr z,l433dh		;4330 - Continue, if so
 	cp UDG_BUGB		;4332 - Is it bugbuster
@@ -1715,7 +2036,7 @@ l4323h:	call sub_4300h		;4323 - Move centipede head left/ right
 	jp l4360h		;433a - Otherwise change direction
 
 	;; Update new centipede segment location
-l433dh:	call GET_CHAR		;433d
+l433dh:	call GET_CHR		;433d
 	cp UDG_CENT_H		;4340 - Check if a centipede or other
 				;       enemy
 	jr nc,l4352h		;4342 - Jump forward if so
@@ -1818,7 +2139,7 @@ l43b5h:	res 1,(ix+040h)		;43b5 - Set centipede to move left
 	;; On entry:
 	;;   BC - location of segment
 	;;   IX - points to segment in centipede data structure
-l43d0h:	call GET_CHAR		;43d0
+l43d0h:	call GET_CHR		;43d0
 	cp UDG_CENT_B		;43d3 - Check if body segment displayed
 	jr nz,l43e9h		;43d5 - Jump forward, if not
 
@@ -1828,7 +2149,7 @@ l43d0h:	call GET_CHAR		;43d0
 	cp 040h			;43dc
 	jr z,l43e9h		;43de - Jump forward, if so
 	
-	;; Restore previous character
+	;; If not, is end of string, so restore previous character
 	ld a,(ix+060h)		;43e3
 	call PUT_CHR		;43e6
 
@@ -1837,11 +2158,13 @@ l43e9h:	call sub_4440h		;43e9 - copy (most) of status from next
 
 	ld b,(ix+001h)		;43ec - retrieve coordinates of next
 	ld c,(ix+021h)		;43ef   segment and character there
-	call GET_CHAR		;43f2
+	call GET_CHR		;43f2
 
 	cp UDG_CENT_B		;43f5 - Check if body segment displayed
 	jr nz,l4401h		;43f7   and jump forward if not.
 
+	;; Otherwise, just need to update coordinates, as body segment
+	;; already displayed
 	ld a,(ix+061h)		;43f9 - Move masked character from next 
 	ld (ix+060h),a		;43fc   segment into current
 
@@ -1860,11 +2183,11 @@ l4401h:	cp UDG_CENT_H		;4401 - Check if head
 
 	jr l4423h		;4414
 
-l4416h:	cp UDG_CENT_H			;4416
+l4416h:	cp UDG_CENT_H		;4416 - If another centipede or enemy, leave screen as is.
 	jr nc,l4423h		;4418
 
 	ld (ix+060h),a		;441a
-	ld a,008h		;441d
+	ld a,UDG_CENT_B		;441d
 	call PUT_CHR		;441f
 
 	nop			;4422
@@ -1887,7 +2210,7 @@ l4423h:	ld a,b			;4423 - Check if on bottom row
 l4436h:	ld (ix+000h),b		;4436
 	ld (ix+020h),c		;4439
 
-	jp l42a2h		;443c
+	jp l42a2h		;443c - Move on to next segment
 
 sub_4440h:
 	ld a,(ix+040h)		;4440 - Extract and save info as to whether 
@@ -1933,7 +2256,7 @@ l4479h:	bit 6,(ix+040h)		;4479 - Check if segment is active
 	
 	ld b,(ix+000h)		;447f - Retrieve coordinates of segment
 	ld c,(ix+020h)		;4482
-	call GET_CHAR		;4485 - and then character at those
+	call GET_CHR		;4485 - and then character at those
 				;       coordinates
 	cp 006h			;4488 - Check if dart
 	jr nz,l44afh		;448a - If not, check if masked
@@ -2104,9 +2427,8 @@ l4533h:	call CREATE_CENTIPEDE	;4533 - Initialise and display centipede
 	;; l3e58h
 l4540h:	call DISP_EXPLOSION	;4540 - Display explosion
 
-	ld ix,CENT_STORE		;4543 - Pointer to centipede
+	ld ix,CENT_STORE	;4543 - Pointer to centipede
 
-	;; Delete centipede
 l4547h:	bit 6,(ix+040h)		;4547 - Check if segment is active
 	jr z,l455fh		;454b - Jump forward, if not
 	bit 5,(ix+040h)		;454d - Check if segment masked another
@@ -2156,7 +2478,7 @@ l4573h:	inc hl			;4573 - Move to next cell
 l4580h:	ld b,016h		;4580
 
 	;; Find mushroom
-l4582h:	call GET_CHAR		;4582 - Retrieve character
+l4582h:	call GET_CHR		;4582 - Retrieve character
 	and a			;4585 - If nothing there, move on
 	jr z,l459ch		;4586   to check next cell
 
@@ -2165,7 +2487,7 @@ l4582h:	call GET_CHAR		;4582 - Retrieve character
 				;       probably move to next column
 				;       here ***
 
-	call GET_CHAR		;458c - Invert character
+	call GET_CHR		;458c - Invert character
 	xor 080h		;458f
 	call PUT_CHR		;4591
 
@@ -2535,7 +2857,7 @@ l471dh:	call RND		;471d - RND(4) with zero indicating
 	ld (FLEA_FLAG),a	;4732 - Note flea is active
 
 	;; Check and save the character at new flea's location
-	call GET_CHAR		;4735
+	call GET_CHR		;4735
 	ld (CHAR_SAVE),a	;4738
 
 	;; Print flea
@@ -2566,7 +2888,7 @@ l4750h:	ld a,(FLEA_TIMER)	;4750 - Toggle timer between 1 and 0
 
 	;; Retrieve location of flea and check if hit by dart
 l4764h:	ld bc,(FLEA_COORD)	;4764
-	call GET_CHAR		;4768
+	call GET_CHR		;4768
 	cp UDG_DART		;476b
 	jp nz,l4783h		;476d - Move on if not
 
@@ -2593,7 +2915,7 @@ l4783h:	ld a,(CHAR_SAVE)	;4783 - Retrieve character masked by flea
 	jr nc,l4790h		;478c   Move on to replace by space if not
 	jr l47a0h		;478e - Move on to restore previous
 				;       character
-l4790h:	ld a,000h		;4790 - Set previous character to space
+l4790h:	ld a,000h		;4790 - Set previous character to space if centipede, bug buster, dart (not possible) or enemy 
 	jr l47a0h		;4792   and jump forward to print it
 
 	;; Decide whether flea deposits mushroom (one in four
@@ -2615,7 +2937,7 @@ l47a0h:	call PUT_CHR		;47a0
 
 	;; Retrieve character at new location for flea and save it
 	inc b			;47a3 - Advance to next row
-	call GET_CHAR		;47a4 - Retrieve character
+	call GET_CHR		;47a4 - Retrieve character
 	ld (CHAR_SAVE),a	;47a7 - Save it
 
 	;; Check if at bottom of screen
@@ -2623,8 +2945,8 @@ l47a0h:	call PUT_CHR		;47a0
 	cp 017h			;47ab
 	jr nz,l47bbh		;47ad
 
-	;; If so, make sure previous flea location is blank and set flea
-	;; as inactive
+	;; If so, make sure previous flea location is blank (so no
+	;; mushroom on bottom row) and set flea as inactive
 	ld a,UDG_BLANK		;47af
 	dec b			;47b1
 	call PUT_CHR		;47b2
