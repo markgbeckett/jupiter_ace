@@ -145,15 +145,14 @@ l3c78h:	call INIT_AY		;3c78 - Initialise sound card
 	;;    Check if flea cell contains dart
 	;;      If so cancel flea
 	;;    Check character masked by flea is
-	;;      If centipede, enemy, bug buster, or dart, leave blank
-	;;        (previous character will be restored by corresponding
-	;;        service routine)
+	;;      If centipede, enemy, bug buster, or dart, leave blank to
+	;;        avoid risk of orphaned character (previous character
+	;;        will be restored by corresponding service routine)
 	;;      If mushroom, reinstate
 	;;      If blank, check if should drop mushroom
 	;;    Advance flea to next row
 	;;      If bottom of screen, cancel flea
 	;;      Else, store previous character and print flea
-	
 GAME_LOOP:
 	call GAME_STEP_0	;3c80 - Debugging routine, disabled when game published
 	call GAME_STEP_1	;3c83 - Play game sound and synchronise
@@ -1321,8 +1320,17 @@ SERVICE_SPIDER:
 	
 MOVE_SPIDER:
 	;; Check if spider hit
+	ld bc,(SPIDER_LOCN)
+	call GET_CHR
+	cp UDG_DART
+	jr z, SPIDER_HIT
 
-	;; Check if time
+	inc c
+	call GET_CHR
+	cp UDG_DART
+	jr z, SPIDER_HIT
+	
+	;; Check if time to move
 	ld a,(SPIDER_COUNTER)
 	dec a
 	and %00000111
@@ -1349,70 +1357,20 @@ MOVE_SPIDER:
 	
 	ret			;
 
-	;; Move the spider based on the direction it is travelling
-	;;
-	;; On entry:
-	;;   BC - current location of spider
-	;;
-	;; On exit:
-	;;   BC - new location of spider
-	;;   A,D - corrupted
-UPDATE_SPIDER_LOCN:
-	ld a,(SPIDER_STATUS)	; Retrieve status flag
-	ld d,a			; Save it
+SPIDER_HIT:
+	;; Update score
+	ld hl,00010h		; 1000 points
+	call UPDATE_SCORE	
+
+	;; Remove spider
+	ld bc,(SPIDER_LOCN)
+	call DELETE_SPIDER
 	
-	;; Check if moving left
-	and SPIDER_LEFT
-	jr z, USL_CONT_1
-	dec c
-
-USL_CONT_1:
-	ld a,d
-	and SPIDER_RIGHT
-	jr z, USL_CONT_2
-	inc c
-
-USL_CONT_2:
-	inc b
-	
-	ld a,d
-	and SPIDER_UP
-	jr z, USL_CONT_3
-
-	dec b
-	dec b
-
-USL_CONT_3:
-	;; Save new coordinate
-	ld (SPIDER_LOCN),bc
-	
-	;; Check if reach boundary
-	ld a,b
-	cp 0x16
-
-	jr nz, USL_CONT_4
-	ld a,d
-	or SPIDER_UP
-	ld d,a
-
-	jr USL_CON_6
-	
-USL_CONT_4:
-	ld a,b
-	cp 0x10
-
-	jr nz, USL_CON_5
-
-	ld a,d
-	and %11111111-SPIDER_UP
-	ld d,a
-	
-USL_CON_5:
-	ld a,d
-
-USL_CON_6:
+	;; Deactivate flea
+	xor a			
 	ld (SPIDER_STATUS),a	
-	
+
+	;; Done
 	ret
 
 	
@@ -1550,28 +1508,29 @@ PRINT_SPIDER:
 	ret
 
 	;; ------------------------------------------------------------
-	;; Delete spider (restoring whatever was there before, except mushrooms)
+	;; Delete spider (restoring whatever was there before, except
+	;; mushrooms, which spider eats and bug-busters, darts, or
+	;; enemies which will be restored on next iteration)
 	;; ------------------------------------------------------------
-	;; On entry
-	;;   BC - coordinate of spider (left)
+	;; On entry BC - coordinate of spider (left)
 	;;
 	;; On exit
 	;;  BC - coordinate of spider (left)
 	;;  A - corrupt
 	;; ------------------------------------------------------------
 DELETE_SPIDER:
-	ld a,(SPIDER_MASK)
-	cp UDG_MUSH_4+1
-	jr nc, DS_CONT
+	;; ld a,(SPIDER_MASK)
+	;; cp UDG_MUSH_4+1
+	;; jr nc, DS_CONT
 	ld a, UDG_BLANK
 
 DS_CONT:
 	call PUT_CHR
 
 	inc c
-	ld a,(SPIDER_MASK+1)
-	cp UDG_MUSH_4+1
-	jr nc, DS_CONT_2
+	;; ld a,(SPIDER_MASK+1)
+	;; cp UDG_MUSH_4+1
+	;; jr nc, DS_CONT_2
 	ld a, UDG_BLANK
 
 DS_CONT_2:
@@ -1612,6 +1571,72 @@ CS_CONT_1:
 	and %11111111-SPIDER_ACTIVE
 	ld (SPIDER_STATUS),a
 
+	ret
+
+	;; Move the spider based on the direction it is travelling
+	;;
+	;; On entry:
+	;;   BC - current location of spider
+	;;
+	;; On exit:
+	;;   BC - new location of spider
+	;;   A,D - corrupted
+UPDATE_SPIDER_LOCN:
+	ld a,(SPIDER_STATUS)	; Retrieve status flag
+	ld d,a			; Save it
+	
+	;; Check if moving left
+	and SPIDER_LEFT
+	jr z, USL_CONT_1
+	dec c
+
+USL_CONT_1:
+	ld a,d
+	and SPIDER_RIGHT
+	jr z, USL_CONT_2
+	inc c
+
+USL_CONT_2:
+	inc b
+	
+	ld a,d
+	and SPIDER_UP
+	jr z, USL_CONT_3
+
+	dec b
+	dec b
+
+USL_CONT_3:
+	;; Save new coordinate
+	ld (SPIDER_LOCN),bc
+	
+	;; Check if reach boundary
+	ld a,b
+	cp 0x16
+
+	jr nz, USL_CONT_4
+	ld a,d
+	or SPIDER_UP
+	ld d,a
+
+	jr USL_CON_6
+	
+USL_CONT_4:
+	ld a,b
+	cp 0x10
+
+	jr nz, USL_CON_5
+
+	ld a,d
+	and %11111111-SPIDER_UP
+	ld d,a
+	
+USL_CON_5:
+	ld a,d
+
+USL_CON_6:
+	ld (SPIDER_STATUS),a	
+	
 	ret
 
 
