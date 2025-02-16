@@ -180,8 +180,8 @@ GAME_LOOP:
 	;; 
 INIT_AY:
 	call WRITE_TO_AY	;3ca8 - Set mixer
-	db AY_MIXER, %00110101  ; Channel A noise; Channel B sound;
-				; Channel C off
+	db AY_MIXER, %00110001  ; Channel A noise; Channel B sound;
+				; Channel C sound
 
 	call WRITE_TO_AY	;3cad - Set Channel A vol to wave pattern
 	db AY_VOL_A, $10
@@ -194,6 +194,9 @@ INIT_AY:
 
 	call WRITE_TO_AY	;3cbc - Set Channel B vol to 0
 	db AY_VOL_B, $00
+
+	call WRITE_TO_AY	;3cbc - Set Channel C vol to 0
+	db AY_VOL_C, $00
 
 	ret			;3cc1
 
@@ -1268,7 +1271,7 @@ sub_40d0h:
 	db AY_VOL_B, $0F
 	
 	call WRITE_TO_AY	;40e1
-	db AY_MIXER, %00100111
+	db AY_MIXER, %00000111
 
 	;; White noise frequency is based on current radius of explosion
 	;; (set earlier in this subroutine)
@@ -1280,137 +1283,19 @@ EXP_SND:
 
 SPIDER_STATUS:	db 0x00 	; Flag with bits indicating, as follows:
 SPIDER_ACTIVE:	equ %00000001	;   Bit 0 - Set, if spider active
-SPIDER_SPEED:	equ %00000010	;   Bit 1 - Set, if fast spider
-SPIDER_RIGHT:	equ %00000100	;   Bit 2 - Set, if spider moving right
-SPIDER_LEFT:	equ %00001000   ;   Bit 3 - Set, if spider moving left
-SPIDER_UP:	equ %00010000	;   Bit 4 - Set, if spider moving up
+SPIDER_UP:	equ %00000010	;   Bit 4 - Set, if spider moving up
+SPIDER_SPEED:	equ %00000100	;   Bit 1 - Set, if fast slow
+SPIDER_RIGHT:	equ %00001000	;   Bit 2 - Set, if spider moving right
+SPIDER_LEFT:	equ %00010000   ;   Bit 3 - Set, if spider moving left
 
 SPIDER_LOCN:	db 0x00, 0x00
-SPIDER_COOLDOWN:	db 0x60	; Timer for introducing new spider
+SPIDER_COOLDOWN:	db 0x60	; Timer for introducing new spider/
+				; changing dirn/
 SPIDER_MASK:	ds 0x02		; Store for characters masked by spider
 SPIDER_COUNTER:	db 0x07
+SPIDER_PREV_DIR:	db 0x00
+SPIDER_IDX:	db 0x14
 	
-	;; Reset spider status info for new game
-INIT_SPIDER:	xor a
-	ld (SPIDER_STATUS),a
-
-	ret
-	
-	;; Check if spider active and, if so, move. Otherwise check if time to introduce spider
-	;;
-	;; On entry:
-	;;
-	;; On exit:
-	;; 
-SERVICE_SPIDER:
-	;; Check if spider is active. Jump forward to move, if is
-	ld a, (SPIDER_STATUS)
-	and SPIDER_ACTIVE
-	jr nz, MOVE_SPIDER
-
-	;; Spider not active, so check if time to introduce
-	ld a,(SPIDER_COOLDOWN)
-	dec a
-	jr z,INTRODUCE_SPIDER
-
-	;; Store new value of cooldown timer
-	ld (SPIDER_COOLDOWN),a
-
-	ret
-	
-MOVE_SPIDER:
-	;; Check if spider hit
-	ld bc,(SPIDER_LOCN)
-	call GET_CHR
-	cp UDG_DART
-	jr z, SPIDER_HIT
-
-	inc c
-	call GET_CHR
-	cp UDG_DART
-	jr z, SPIDER_HIT
-	
-	;; Check if time to move
-	ld a,(SPIDER_COUNTER)
-	dec a
-	and %00000111
-	ld (SPIDER_COUNTER),a
-
-	ret nz
-	
-	;; Delete previous spider
-	ld bc,(SPIDER_LOCN)
-	call DELETE_SPIDER
-
-	;; Play spider sound
-	
-	;; Work out new location (and adjust direction, if necessary)
-	call UPDATE_SPIDER_LOCN
-
-	;; Check if leaving screen
-	call CHECK_SPIDER
-
-	;; If spider still active, print spider in new location
-	ld a,(SPIDER_STATUS)
-	and SPIDER_ACTIVE
-	call nz,PRINT_SPIDER
-	
-	ret			;
-
-SPIDER_HIT:
-	;; Update score
-	ld hl,00010h		; 1000 points
-	call UPDATE_SCORE	
-
-	;; Remove spider
-	ld bc,(SPIDER_LOCN)
-	call DELETE_SPIDER
-	
-	;; Deactivate flea
-	xor a			
-	ld (SPIDER_STATUS),a	
-
-	;; Done
-	ret
-
-	
-INTRODUCE_SPIDER:
-	;; Reset spider cooldown
-	ld a, 0x60
-	ld (SPIDER_COOLDOWN),a
-	
-	;; Activate spider
-	ld a,SPIDER_ACTIVE
-
-	;; Check whether fast or slow spider
-	call SET_SPIDER_SPEED
-
-	;; Set spider's starting position
-	ld b, 0x10	    ; Enters on row 16
-	ld c, 0x00	    ; Assume enters from left
-	or SPIDER_RIGHT
-	
-	;; Check if spider enters from left or right
-	ld d,a
-	call RND
-	and %00000001
-	ld a,d
-	jr z, IS_CONT
-	ld c, 0x1E		; Switch to right edge
-	xor SPIDER_RIGHT
-	or SPIDER_LEFT
-	
-IS_CONT:			; Store status and location
-	ld (SPIDER_STATUS),a
-	ld (SPIDER_LOCN),bc
-
-	;; Print spider
-	call PRINT_SPIDER
-		
-	ret
-
-SET_SPIDER_SPEED:
-	ret
 
 	;; dec c
 	;;
@@ -1478,6 +1363,13 @@ DBL_SPEED_FLAG:
 	db $00			; Used to indicate if double-speed
 				; centipedes are possible
 
+	;; Reset spider status info for new game
+INIT_SPIDER:
+	xor a
+	ld (SPIDER_STATUS),a
+
+	ret
+	
 	;; ------------------------------------------------------------
 	;; Print spider (saving whatever was there before)
 	;; ------------------------------------------------------------
@@ -1505,6 +1397,148 @@ PRINT_SPIDER:
 	ld a, UDG_SPID_R
 	call PUT_CHR
 
+	ret
+
+SPIDER_HIT:
+	;; Update score
+	ld hl,00010h		; 1000 points
+	call UPDATE_SCORE	
+
+	;; Remove spider
+	ld bc,(SPIDER_LOCN)
+	call DELETE_SPIDER
+	
+	;; Deactivate flea
+	xor a			
+	ld (SPIDER_STATUS),a	
+
+	;; Restore countdown
+	ld a,0x60
+	ld (SPIDER_COOLDOWN),a
+	
+	;; Deactivate spider sound
+	call WRITE_TO_AY
+	db AY_VOL_C, 0x00
+	
+	;; Done
+	ret
+
+MOVE_SPIDER:
+	;; Check if spider hit
+	ld bc,(SPIDER_LOCN)
+	call GET_CHR
+	cp UDG_DART
+	jp z, SPIDER_HIT
+
+	inc c
+	call GET_CHR
+	cp UDG_DART
+	jr z, SPIDER_HIT
+	
+	;; Play spider sound
+	ld hl,SPIDER_SND_F-1
+	ld a,(SPIDER_IDX)
+	dec a
+	dec a
+	jr nz, MS_SKIP
+	ld a,$14
+MS_SKIP:
+	ld (SPIDER_IDX),a
+
+	add a,l
+	ld l,a
+	ld a,(hl)
+	ld ($+7),a
+	call WRITE_TO_AY
+	db AY_TONE_C+1, 0x00
+	inc hl
+	ld a,(hl)
+	ld ($+7),a
+	call WRITE_TO_AY
+	db AY_TONE_C, 0x00
+	
+	;; Check if time to move
+	ld a,(SPIDER_COUNTER)
+	dec a
+	ld d,a
+	ld a,(SPIDER_STATUS)
+	and SPIDER_SPEED
+	or %00000011
+	and d
+	ld (SPIDER_COUNTER),a
+
+	ret nz
+	
+	;; Delete previous spider
+	ld bc,(SPIDER_LOCN)
+	call DELETE_SPIDER
+
+	;; Check if time to change direction
+	ld a,(SPIDER_COOLDOWN)
+	dec a
+	ld (SPIDER_COOLDOWN),a
+
+	jr nz, MS_CONT
+
+	ld a, 0x0C
+	ld (SPIDER_COOLDOWN),a
+
+	;; 50/ 50 chance will not change direction
+	call RND
+	and 0x01
+	jr z, MS_CONT
+
+	;; Retrieve current dirn
+	ld a,(SPIDER_STATUS)
+	ld d,a			     ; Save status for later
+
+	;; Check if moving up down, and restore direction if so
+	and SPIDER_LEFT+SPIDER_RIGHT
+	jr z, MS_REST_DIR
+
+	;; Otherwise set direction to up/ down
+	ld (SPIDER_PREV_DIR),a
+	ld a,d
+	and %11111111-SPIDER_LEFT-SPIDER_RIGHT
+	ld (SPIDER_STATUS),a
+
+	jr MS_CONT
+
+	;; Spider is moving up/ down, so time to restore previous direction
+MS_REST_DIR:
+	ld a,(SPIDER_PREV_DIR)
+	or d
+	ld (SPIDER_STATUS),a
+	
+	;; Work out new location (and adjust direction, if necessary)
+MS_CONT:
+	call UPDATE_SPIDER_LOCN
+
+	;; Check if leaving screen
+	call CHECK_SPIDER
+
+	;; If spider still active, print spider in new location
+	jr z, MS_DEACTIVATE
+	
+	ld a,(SPIDER_STATUS)
+	and SPIDER_ACTIVE
+	call nz,PRINT_SPIDER
+
+	ret
+
+MS_DEACTIVATE:
+	;; Disable spider
+	and %11111111-SPIDER_ACTIVE
+	ld (SPIDER_STATUS),a
+	
+	;; Restore countdown
+	ld a,0x60
+	ld (SPIDER_COOLDOWN),a
+	
+	;; Deactivate spider sound
+	call WRITE_TO_AY
+	db AY_VOL_C, 0x00
+	
 	ret
 
 	;; ------------------------------------------------------------
@@ -1542,34 +1576,13 @@ DS_CONT_2:
 
 CHECK_SPIDER:
 	ld a,c
-	and a
+	cp 0xFF
 
-	jr nz,CS_CONT_1
+	ret z
 
-	ld a,(SPIDER_STATUS)
-	and SPIDER_RIGHT
-
-	jr nz,CS_CONT_1
-
-	;; Disable spider
-	and %11111111-SPIDER_ACTIVE
-	ld (SPIDER_STATUS),a
-
-	ret
 CS_CONT_1:
 	ld a,c
-	cp $1E
-
-	ret nz
-
-	ld a,(SPIDER_STATUS)
-	and SPIDER_LEFT
-
-	ret nz
-
-	;; Disable spider
-	and %11111111-SPIDER_ACTIVE
-	ld (SPIDER_STATUS),a
+	cp $1F
 
 	ret
 
@@ -1639,7 +1652,88 @@ USL_CON_6:
 	
 	ret
 
+INTRODUCE_SPIDER:
+	;; Reset spider cooldown
+	ld a, 0x04
+	ld (SPIDER_COOLDOWN),a
+	
+	;; Activate spider
+	ld d,SPIDER_ACTIVE
 
+	;; Check whether fast or slow spider
+	call RND
+	and SPIDER_SPEED
+	or d 
+	ld a,d
+	
+	;; Set spider's starting position
+	ld b, 0x10	    ; Enters on row 16
+	ld c, 0x00	    ; Assume enters from left
+	or SPIDER_RIGHT	    ; and is moving right
+	
+	;; Check if spider enters from left or right (50/50 chance)
+	ld d,a
+	call RND
+	and %00000001
+	ld a,d
+	jr z, IS_CONT
+
+	ld c, 0x1E		; Switch to right edge
+	xor SPIDER_RIGHT	; and moving left
+	or SPIDER_LEFT
+	
+IS_CONT:			; Store status and location
+	ld (SPIDER_STATUS),a
+	ld (SPIDER_LOCN),bc
+
+	;; Activate spider sound
+	call WRITE_TO_AY
+	db AY_VOL_C, 0x0B
+
+	ld a, 0x14
+	ld (SPIDER_IDX),a
+	;; Print spider
+	call PRINT_SPIDER
+		
+	ret
+
+SPIDER_SND_F:
+	;; db $05, $05, $20, $20, $30, $30, $35, $35
+	;; db $30, $30, $20, $20, $05, $05, $20, $20
+	;; db $30, $30, $35, $35
+	db $39, $00, $E4, $00
+	db $4A, $01, $69, $01
+	db $4A, $01, $E4, $00
+	db $39, $00, $E4, $00
+	db $4A, $01, $69, $01
+	
+SPIDER_SND_C:
+	;; db $a1, $00, $a2, $00, $a3, $00, $a4, $00
+	;; db $a3, $00, $a2, $00, $a1, $00, $a2, $00
+	;; db $a3, $00, $a2, $00
+
+	;; Check if spider active and, if so, move. Otherwise check if time to introduce spider
+	;;
+	;; On entry:
+	;;
+	;; On exit:
+	;; 
+SERVICE_SPIDER:
+	;; Check if spider is active. Jump forward to move, if is
+	ld a, (SPIDER_STATUS)
+	and SPIDER_ACTIVE
+	jp nz, MOVE_SPIDER
+
+	;; Spider not active, so check if time to introduce
+	;; Decrement cooldown: if zero, time to introduce spider
+	ld a,(SPIDER_COOLDOWN)
+	dec a
+	ld (SPIDER_COOLDOWN),a
+
+	jp z,INTRODUCE_SPIDER
+
+	ret
+	
 	;; ------------------------------------------------------------
 	;; Initialisation routine - Save Forth environment
 	;; ------------------------------------------------------------
@@ -2451,7 +2545,7 @@ l4533h:	call CREATE_CENTIPEDE	;4533 - Initialise and display centipede
 	;; or flea) or enemy moves onto bug-buster. Arrive here from
 	;; l3e58h
 l4540h:	call DISP_EXPLOSION	;4540 - Display explosion
-
+	
 	ld ix,CENT_STORE	;4543 - Pointer to centipede
 
 l4547h:	bit 6,(ix+040h)		;4547 - Check if segment is active
@@ -2533,10 +2627,13 @@ l459ch:	djnz l4582h		;459c - Advance to next cell up (if any
 
 	ld sp,(SP_STR)		;45a4 - Restore stack pointer ???
 
-	;; Disable flea
+	;; Disable flea and spider
 	ld a,000h		;45a8
 	ld (FLEA_FLAG),a	;45aa
-
+	ld (SPIDER_STATUS),a
+	ld a,0x60
+	ld (SPIDER_COOLDOWN),a
+	
 	call RESTORE_FORTH		;45ad - Restore Forth
 				;       environment (*** NOTE: not
 				;       needed as done in subsequemt
@@ -3002,15 +3099,19 @@ l47d1h:	ld a,(FLEA_FLAG)	;47d1 - Check if flea active
 
 	call WRITE_TO_AY	;47d7 - Otherwise mute channel B
 	db AY_VOL_B, $00
-	
+
+	call WRITE_TO_AY	;3ca8 - Set mixer
+	db AY_MIXER, %00110001  ; Channel A noise; Channel B sound;
+				; Channel C sound
+
 l47dch:	pop af			;47dc - Restore A
 	
 	jp l3ee3h		;47dd - Move on to next part of Game
 				;       Routine #2
 
 l47e0h:	call WRITE_TO_AY	;47e0
-	db AY_MIXER, %00110101	; Channel A - sound; Channel B - noise;
-				; Channel C - off
+	db AY_MIXER, %00010101	; Channel A - sound; Channel B - noise;
+				; Channel C - sound
 
 	;; Set volumne for Channel B
 	call WRITE_TO_AY	;47e5
@@ -3040,7 +3141,7 @@ l47fch:	db $b0
 	;; before returning to Forth.
 	;; ------------------------------------------------------------
 CHECK_HIGH_SCORE:	
-	call sub_4968h		;4800 - Turn of AY sound and clear all
+	call sub_4968h		;4800 - Turn off AY sound and clear all
 				;       but top row of screen. On exit,
 				;       HL = DISPLAY-01
 
@@ -3194,18 +3295,6 @@ l490bh:	bit 4,(ix+040h)		;490b - Check if segment had reached
 				;       area
 
 	ret			;4914 - Done
-
-	ds $4922-$		; Padding so follow-on word begins at
-				; correct location in dictionary
-
-	;; Dictionary header
-	db "M", "O", "R", "E", "C", "O", "D", "E"+080h
-	dw $01FB		; Length field
-	dw $3C59		; Link field
-	db $08			; Name-length field
-	dw $0FEC		; Code field
-
-	;; Parameter field for MORECODE
 
 	;; ================================================================
 	;; Play sound for flea, if is active
@@ -3477,4 +3566,14 @@ l4a88h:	ld a,AY_VOL_B		;4a88
 	ret			;4a91 - Done
 	
 N_END:	ds $4B25-$
+
+	;; Modified header for CENTIPEDE word to remove reference to
+	;; MORECODE word.
+CENT_WORD:
+	db 0x43, 0x45, 0x4E, 0x54, 0x49, 0x50, 0x45, 0x44
+	db 0xC5			; Name field
+	db 0x0F, 0x00 		; Length field
+	dw 0x3C59		; Link field to DATA (was 0x492E)
+	db 0x09			; Name-length field
+	dw 0x0EC3		; Code field
 END:
