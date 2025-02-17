@@ -696,7 +696,7 @@ sub_3e60h:
 	call GET_CHAR		;3e71 - Check if obstruction
 	and a			;3e74 
 	jp z,l3e80h		;3e75 - Skip forward if not, as done
-	cp UDG_CENT_H		;3e78 - Check if mushroom or dart
+	cp UDG_BUGB		;3e78 - Check if mushroom or dart *** BUG: Was UDG_CENT_H
 	jp nc,l3e58h		;3e7a - If not, must be centipede or
 				;       flea, which will mean life lost
 	inc b			;3e7d - Otherwise reverse move, as blocked
