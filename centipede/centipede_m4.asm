@@ -88,7 +88,7 @@ ACE_IO_PORT:	equ 0xFE
 
 	;; The entry point (from Forth word CENTIPEDE) could be to here,
 	;; though is currently to START, hence we have left in this padding
-	nop			;3c5c
+USE_JOYSTICK:	db 0x00
 	nop			;3c5d
 	nop			;3c5e
 	nop			;3c5f
@@ -622,87 +622,154 @@ l3e28h:	db %00111100
 l3e58h:	jp l4540h		;3e58
 
 	;; Check if direction controls pressed and move bug-buster
-sub_3e60h:
+CHECK_DIRN:
 	push af			;3e60
 
-	;; Port 0xDFFE reads keyboard half-row "Y", ..., "P"
-	ld a,0dfh		;3e61
-	in a,(ACE_IO_PORT)	;3e63
-	bit 2,a			;3e65 - Check if "I" pressed
-	jp nz,l3e80h		;3e67 - Move on if not
+	;; Check if joystick is enabled
+	ld a,(USE_JOYSTICK)
+	and a
+	jr nz, CHD_J_UP
+	
+	;; Check directions
+	ld a, $DF
+	in a,($FE)
+	and %00000100		; 'I' - UP
+	jr nz, CHD_K_RIGHT
+	ld a,b
+	cp $10
+	jr z, CHD_K_RIGHT
+	dec b
+	call GET_CHR
+	and a
+	jr z, CHD_K_RIGHT
+	cp UDG_BUGB
+	jp nc, l4540h
+	inc b
 
-	;; Try to move up
-	ld a,b			;3e6a - Retrieve row 
-	cp 010h			;3e6b - Check if top of patrol area
-	jp z,l3e80h		;3e6d - Skip forward, if so (no move)
-	dec b			;3e70 - Otherwise try to move ship up
-	call GET_CHR		;3e71 - Check if obstruction
-	and a			;3e74 
-	jp z,l3e80h		;3e75 - Skip forward if not, as done
-	cp UDG_CENT_H		;3e78 - Check if mushroom or dart
-	jp nc,l3e58h		;3e7a - If not, must be centipede or
-				;       flea, which will mean life lost
-	inc b			;3e7d - Otherwise reverse move, as blocked
+CHD_K_RIGHT:	
+	ld a,$BF
+	in a,($FE)
+	and %00000010		; 'L' - RIGHT
+	jr nz, CHD_K_LEFT
+	ld a,c
+	cp $1F
+	jr z, CHD_K_LEFT
+	inc c
+	call GET_CHR
+	and a
+	jr z, CHD_K_LEFT
+	cp UDG_BUGB
+	jp nc, l4540h
+	dec c
+	nop
+	nop
+	nop
 
-	;; Port 0xBFFE reads keyboard half-row "H", ..., "Enter"
-l3e80h:	ld a,0bfh		;3e80
-	in a,(ACE_IO_PORT)	;3e82
-	bit 1,a			;3e84 - Check if "L" pressed
-	jp nz,l3ea0h		;3e86 - Move on, if not
+CHD_K_LEFT:	
+	ld a,$BF
+	in a,($FE)
+	and %00001000
+	jr nz, CHD_K_DOWN
+	ld a,c
+	cp $00
+	jr z, CHD_K_DOWN
+	dec c
+	call GET_CHR
+	and a
+	jr z, CHD_K_DOWN
+	cp UDG_BUGB
+	jp nc, l4540h
+	inc c
+	nop
+	nop
+	nop
 
-	;; Try to move right
-	ld a,c			;3e89 - Retrieve column
-	cp 01fh			;3e8a - Check if at right-hand limit
-	jp z,l3ea0h		;3e8c - Move on, if so
-	inc c			;3e8f - Attempt to move right
-	call GET_CHR		;3e90 - Check for obstruction
-	and a			;3e93 - Move on, if none
-	jp z,l3ea0h		;3e94
-	cp UDG_MUSH_4+1		;3e97 - Check if mushroom
-	jp nc,l3e58h		;3e99 - If not, must be centipede or
-				;       flea, which will mean life lost
-	dec c			;3e9c - Otherwise, reverse move as blocked
+CHD_K_DOWN:
+	ld a,($7F)
+	in a, ($FE)
+	and %00000010
+	jr nz, CHD_DONE
+	ld a,b
+	cp $16
+	jr z, CHD_DONE
+	inc b
+	call GET_CHR
+	and a
+	jr z, CHD_DONE
+	cp UDG_BUGB
+	jp nc, l4540h 		; $3E58
+	dec b
 
-	;; Port 0xBFFE reads keyboard half-row "H", ..., "Enter"
-l3ea0h:	ld a,0bfh		;3ea0
-	in a,(ACE_IO_PORT)	;3ea2
-	bit 3,a			;3ea4 - Check if "J" prssed
-	jp nz,l3ec0h		;3ea6 - Move on if not
+	jr CHD_DONE
+	
+	;; Check directions (joystick version)
+CHD_J_UP:
+	xor a
+	in a,($01)
+	and %00000001		; 'I' - UP
+	jr z, CHD_J_RIGHT
+	ld a,b
+	cp $10
+	jr z, CHD_J_RIGHT
+	dec b
+	call GET_CHR
+	and a
+	jr z, CHD_J_RIGHT
+	cp UDG_BUGB
+	jp nc, l4540h
+	inc b
 
-	;; Try to move left
-	ld a,c			;3ea9 - Retrieve column
-	cp 000h			;3eaa - Check if at left-hand limit
-	jp z,l3ec0h		;3eac - Move on, if so
-	dec c			;3eaf - Attempt to move left
-	call GET_CHR		;3eb0 - Check for obstruction
-	and a			;3eb3 - Move on, if none
-	jp z,l3ec0h		;3eb4
-	cp UDG_MUSH_4+1		;3eb7 - Check if mushroom
-	jp nc,l3e58h		;3eb9 - If not, must be centipede or
-				;       flea, which will mean life lost
-	inc c			;3ebc - Otherwise, reverse move as blocked
+CHD_J_RIGHT:	
+	xor a
+	in a,($01)
+	and %00000100		; 'L' - RIGHT
+	jr z, CHD_J_LEFT
+	ld a,c
+	cp $1F
+	jr z, CHD_J_LEFT
+	inc c
+	call GET_CHR
+	and a
+	jr z, CHD_J_LEFT
+	cp UDG_BUGB
+	jp nc, l4540h
+	dec c
 
-	;; Port 0x7FFE reads keyboard half-row "V", ..., "Space"
-l3ec0h:	ld a,07fh		;3ec0
-	in a,(ACE_IO_PORT)	;3ec2
-	bit 1,a			;3ec4 - Check if "M" pressed
-	jp nz,l3eddh		;3ec6 - Move on, if not
+CHD_J_LEFT:	
+	xor a
+	in a,($01)
+	and %00001000
+	jr z, CHD_J_DOWN
+	ld a,c
+	cp $00
+	jr z, CHD_J_DOWN
+	dec c
+	call GET_CHR
+	and a
+	jr z, CHD_J_DOWN
+	cp UDG_BUGB
+	jp nc, l4540h
+	inc c
 
-	;; Attempt to move down
-	ld a,b			;3ec9 - Retrieve row
-	cp 016h			;3eca - Check if bottom of patrol area
-	jp z,l3eddh		;3ecc - Move on, if so
-	inc b			;3ecf - Attempt to move down
-	call GET_CHR		;3ed0 - Check for obstruction
-	and a			;3ed3 - Move on, if none
-	jp z,l3eddh		;3ed4
-	cp UDG_MUSH_4+1		;3ed7 - Check if mushroom
-	jp nc,l3e58h		;3ed9 - If not, must be centipede or
-				;       flea, which will mean life lost
-	dec b			;3edc - Otherwise, reverse move as blocked
+CHD_J_DOWN:
+	xor a
+	in a, ($01)
+	and %00000010
+	jr z, CHD_DONE
+	ld a,b
+	cp $16
+	jr z, CHD_DONE
+	inc b
+	call GET_CHR
+	and a
+	jr z, CHD_DONE
+	cp UDG_BUGB
+	jp nc, l4540h 		; $3E58
+	dec b
 
 	;; Done
-l3eddh:	pop af			;3edd
+CHD_DONE:
+	pop af			;3edd
 
 	ret			;3ede
 
@@ -759,7 +826,7 @@ l3ef9h:	cp UDG_BUGB		;3ef9 - Check if is bug-buster
 
 	;; Check if direction controls pressed and update bug-buster
 	;; coordinates
-	call sub_3e60h		;3f03
+	call CHECK_DIRN		;3f03
 
 	;; Redisplay bug-buster
 	ld a,UDG_BUGB		;3f06
@@ -805,20 +872,53 @@ GAME_STEP_2:
 	push af			;3f28
 	push bc			;3f29
 
-	;; Check for in-flight dart
+	;; Check for input mode
+	ld a, $BF
+	in a,($FE)
+	ld b,a
+	and %00010000		; 'H'
+	jr nz, CHF_CONT
+	dec a
+	ld (USE_JOYSTICK),a
+
+CHF_CONT:	
+	ld a,b
+	and %00000100		; 'K'
+	jr nz, CHF_CONT_2
+	ld (USE_JOYSTICK),a
+	
+	;; Check if dart in-flight
+CHF_CONT_2:	
 	ld bc,(DART_COORD)	;3f2a - Retrieve dart coordinates
 	ld a,b			;3f2e - Non-zero coordinate indicates
 	or c			;3f2f   dart is in flight
 	jp nz,l3f48h		;3f30 - Jump forward to move dart, if
 				;       so
 
+	;; Check if joystick is enabled
+	ld a,(USE_JOYSTICK)
+	and a
+	jr nz, CHF_JOY
+	
 	;; No in-flight dart, so check if fire being pressed
-	ld a,0fdh		;3f33 - Read from port FDFEh 
+	ld a,0xFD		;3f33 - Read from port FDFEh 
 	in a,(ACE_IO_PORT)	;3f35   (keys 'A',...'G')
 	bit 0,a			;3f37 - Check if 'A' pressed
+	and %00000001
 	jp z,l3f3fh		;3f39 - If so, fire dart
 
-	;; Otherwise, done
+	;; No fire, so done
+	jr CHF_DONE
+	
+	;; Check for joystick fire
+CHF_JOY:
+	xor a
+	in a,($01)
+	and %00100000
+	jp nz,l3f3fh
+
+	;; No fire, so done
+CHF_DONE:	
 	pop bc			;3f3c
 	pop af			;3f3d
 	
@@ -3110,8 +3210,8 @@ l47dch:	pop af			;47dc - Restore A
 				;       Routine #2
 
 l47e0h:	call WRITE_TO_AY	;47e0
-	db AY_MIXER, %00010101	; Channel A - sound; Channel B - noise;
-				; Channel C - sound
+	db AY_MIXER, %00010101	; Channel A - noise; Channel B - sound;
+				; Channel C - noise
 
 	;; Set volumne for Channel B
 	call WRITE_TO_AY	;47e5
