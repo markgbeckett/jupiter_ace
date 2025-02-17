@@ -56,8 +56,8 @@ AY_MAX_CHANNEL:	equ 0x03	; Three channels
 	;;  Boldfield Sound Blaster   - REG_PORT = FD ; WRITE = FF
 	;;  RC2014 YM2149 Rev 5 (Def) - REG_PORT = D8 ; WRITE = D0
 	;;  RC2014 YM2149 Rev 6 (MSX) - REG_PORT = A0 ; WRITE = A1 
-AY_REG_PORT:	equ 0xFD
-AY_DATA_WRITE_PORT:	equ 0xFF
+AY_REG_PORT:	equ 0xA0
+AY_DATA_WRITE_PORT:	equ 0xA1
 
 	;; Jupiter Ace Memory Map and System Variables
 DISPLAY:	equ 0x2400	; Start of display buffer
