@@ -2,80 +2,39 @@
 
 ## Introduction
 
-Centipede is an arcade game launched by Atari in 1981. It was very popular and spawned a number of micro conversions including, in 1984, a decent port by Colin Dooley to the Jupiter Ace. Colin's port is very playable with a strong resemblence to the original (accepting there is no spider and everything is monochrome). It is also one of the few Jupiter Ace games that supports both the Boldfield Soundbox and, apparently a joystick interface.
+Centipede is an arcade game launched by Atari in 1981. It was very popular and spawned a number of micro conversions including, in 1984, a port by Colin Dooley for the Jupiter Ace. Colin's port is very playable with a strong resemblence to the original (accepting everything is monochrome and some of the enemies are missing). It is also one of the few Jupiter Ace games that supports both the Boldfield Soundbox and, apparently, a joystick interface.
 
 If you have read my [post about Valkyr](../valkyr-minstrel/README.md), you will know that by adding an RC2014 YM2149 sound card to the Minstrel 4th or 4D, you can get a Soundbox-like experience (except that the port addresses used for controlling the card are different).
 
-The Ace version of Centipede runs without issue on the Minstrel 4th and 4D, though does not have the enhanced sound support, because of the different port requirements of the sound card. I have therefore updated Colin Dooley's original, so that you can play the game in all of it's original glory, Plus, if you have a joystick interface, you can get the full experience.
+The Ace version of Centipede runs without issue on the Minstrel 4th and 4D, though does not have the enhanced sound support, because of the different port requirements of the sound card. I was also unable to get the game to work with a joystick. I therefore set about updating Colin Dooley's original, so that you play the game in all of its three-channel-audio glory using either a joystick or keyboard, on the Minstrel 4th/ 4D.
 
-Having updated the sound-card and joystick support to work with the Minstrel 4th/ 4D, I decided to try disassembling the whole game, working through and commenting the code as I went. For an update on this in-progress project, take a look at the section below titled "Disassembling Centipede".
+In short, I have created a new version of the game that runs well on the Minstrel 4th/ 4D, supports the RC2014 sound card, and the Boldfield/ Tynemouth interfacde. Plus, it has some extra features as I reveal below.
+
+If you just want to play the game, follow the instructions in the next section. If you want to read about my experience of disassembling th game, have a look at the section below titled "Disassembling Centipede".
 
 ## Playing the game
 
-To run Centipede on your Minstrel 4th/ 4D, simply load the game from the TAP or WAV file with `LOAD centipede` and type `go` to run.
+There are three different versions of the game, named [centipede-m4_sb.tap](centipede-m4_sb.tap), [centipede-m4_rev5.tap](centipede-m4_rev5.tap), and [centipede-m4_rev6.tap](centipede-m4_rev6.tap), for the Boldfield Soundbox, the YM2149 sound card Revision 5 (default configuration), and the YM2149 sound card Revision 6 (MSX configuration), respectively.
+
+To play Centipede on your Minstrel 4th/ 4D, simply copy the tape image to the SD card and load using the menu system (choose to load the game "CENTIPEDE" but not to auto-run). Once loaded, start the game by entering `GO`.
+
+To play the game in an emulator (for example, EightyOne), choose the Soundbox version. If your emulator supports Soundbox audio, you will get enhanced sound.
 
 A reminder about the keyboard controls is provided at the beginning of the game: to fire, you press 'A', to move you press 'J' and 'L' to move left and right, 'I' and 'M' for up and down.
 
 Joystick controls, if you have a suitable interface, are also available. Press 'H' to switch to joystick controls, while playing the game. Press 'K' to switch back to keyboard controls.
 
-## Sound Support
+## Disassembling Centipede
 
-This Minstrel 4th port of Centipede produces sound on both the built-in speaker and, if plugged in, an RC2014 YM2419 sound card. By default, the program assumes an RC2014 YM2419 sound card Rev 5 with default addressing (that is, the Register port is D8h and the Data port is D0h) is connected. If you have a Rev 6 card or your card is configured to use different ports, you can update the program using the included word `PATCH` (see below for details).
+My original plan had been to make fairly lightweight changes to the sound support in the original game (effectively, changing the port numbers use for the relevant `IN` and `OUT` commands), so that it would work with the RC2014 sound card on a Minstrel 4th/ 4D. I did this though, in so doing, I found myself hunting for evidence of joystick support within the machine code of the program.
 
-Because of copy-protection, some of the usual Ace Forth commands (such as SAVE and REDEFINE) are not available once Centipede is loaded: these words have been overloaded in the Centipede dictionary to make it more difficult for the user to access the program code. To work around this, you need to use `EXECUTE` with the code-field address of the built-in words you need.
+In an interview with the curator of the [Jupiter Ace website](https://www.jupiter-ace.co.uk/sw_centipede.html), Colin Dooley noted that the game can also be controlled by joystick. As the Minstrel 4D has a built-in joystick interface that is compatible with the original Boldfield joystick interface, I assumed this would work straight away and was surprised when it did not.
 
-To patch program for your particular sound-card configuration and save a new version of Centipede, enter the commands below.
+I then read Colin's comments more carefully and realised that he had implemented his own joystick interface using one of the I/O ports on the AY-3-8910 (in the Soundbox interface).
 
-```
-16 BASE C! ( SWITCH TO HEX FOR EASIER CODING )
-<REG_PORT> CONSTANT REG
-13FD EXECUTE REG ( REDEFINE )
-<DATA_PORT> CONSTANT DAT
-13FD EXECUTE DAT ( REDEFINE )
-PATCH
-1934 EXECUTE centipede ( SAVE )
-```
+I was a little surprised as I thought I had found all interactions with the sound card, when updating the sound support, even though none of those looked to interact with the I/O ports on the sound chip. I therefore started to delve further into the game code and to do a partial disassembly of the code that handle game controls.
 
-You should substitute `<REG_PORT>` and `<DAT_PORT>` with the appropriate values for your sound card. You do not need to enter the comments (in brackets).
-
-## Porting the Game to Minstrel 4th/ 4D
-
-The porting approach for Centipede is reasonably straightforward. Controlling the Boldfield Soundbox involved interacting with two different ports which are connected to the AY-3-8910 sound chip: the Register port (address FDh) and the Data port (address FFh). Three operations are important to consider:
-
-- Writing to the Register port to select the active register
-- Reading from the Register port to read the value stored in the active register
-- Writing to the Data port to set the value stored in the active register.
-
-Interacting with the RC2014 YM2419 sound card is similar, though not identical, in that to read the value stored in the active register, you read from a different port. For Rev 5 boards, you read the value from the Data port and on the Rev 6 board you read the value from a third port.
-
-Thankfully, games like Centipede often only write data to the sound chip, rather than reading it. So, I needed to find `OUT` instructions within the program code that address either FDh or FFh.
-
-This is straightforward to do with the debugger in (a recent version of) the EightyOne emulator: you can set two breakpoints to be triggered whenever you write to one of those two ports. Having done that, you then need to play the game to find the relevant instructions, noting down the addresses of the relevant OUT instructions as they trigger breakpoints.
-
-Unfortunately, creating sounds often involves sending multiple commands (i.e., writes) to the sound chip, so the breakpoint will be tripped repeatedly by the same addresses. Furthermore, there is a chance that some instructions will only be reached in unlikely game scenarios -- e.g., you achieve a high score or unlock a special bonus feature. Because of this, having found the first few instances of instructions, I then start to look for occurances of the same byte pattern elsewhere in the code.
-
-For Centipede and using the breakpoints based on `OUT` instructions, I quickly found instructions that communicate with the Soundbox at addresses 3CF4h (`OUT A,(FDh)`) and 3CF8h (`OUT A,(FFh)`). The breakpoint was also tripped by the same instructions at 4A7Eh, 4A81h,  4A8Ah, and 4A8Fh, so I was reasonably confident I understood how the programmer interacted with the Soundbox.
-
-Next, I searched (again using the EightyOne Debugger) for other candidate instructions, represented by the byte sequence D3h, FDh or D3h, FFh.  This identified a number of candidates, at address 4A77h and 4A7A, plus repeats of the previously identified instructions at 30F4h, 30F8h, 34F0h, 34F8h, 38F0h, and 38F8h (iniitally, I did not remember that user memory on the Ace in the interval 3C00h--3FFFh is mirrored to 3000h-33FFh, 3400h--37FFh, 3800h--3BFFh, and I was confused by t the multiple copies of apparently the same code).
-
-I was fairly confident that the additional candidates were indeed interactions with the sound card though, noting it could be data that coincidentally has the same byte pattern, I deleted the original breakpoints (looking for `OUT`) and replaced them with breakpoints that stopped if code is executed at the candidate addresses. Then, I began playing the game again though, having set more targetted breakpoints, the action was not stopped by the previously identified instructions. Soon enough the emulator tripped over each candidate address, so I had my list of instructions to be changed: `3CF4h`, `3CF8h`, `4A77h`, `4A7Ah`, `4A7Eh`, `4A81h`, `4A8Ah`, and `4A8Fh` (noting, in each case, whether the instruction accessed the Register port or the Data port).
-
-The final step was then to edit the port address for each of these instructions, replacing the original value (e.g., 'FDh' for Register port) with the corresponding value for the RC2014 sound card (e.g., 'D8' for a Rev 5 board with default port configuration). Note that the port address is the second byte of the two-byte `OUT A,(XX)` instruction, so I needed to change the value at `3CF5h`, `3CF9h`, and so on. I wrote a FORTH word `PATCH` to do this, using constants `REG` and `DAT` to allow someone to adjust the replacement addresses according to the particular settings of their card. This is the purpose of the `PATCH` word.
-
-Having patched and re-saved the program, I was able to test on the Minstrel 4th and confirm by ear that things sounded correctly.
-
-As a final check, I ran the patched version of the program in EightyOne and confirmed there was no sound from the Soundbox (indicating I had not missed any instructions).
-
-Finally, it was time to play some Centipede!
-
-
-## Adding Joystick Support
-
-In an interview with the curator of the [Jupiter Ace website](https://www.jupiter-ace.co.uk/sw_centipede.html), Colin notes that the game can also be controlled by joystick. As the Minstrel 4D has a built-in joystick interface, I assumed this would work straight away and was surprised when it did not.
-
-I then read Colin's comments more carefully and realised that he had implemented his own joystick interface using one of the I/O ports on the AY-3-8910 (in the Soundbox interface). I was a little surprised as I thought I had found all interactions with the sound card, when porting the game to work with the RC2014 YM2419 sound card, even though none of them looked to control the I/O ports on the sound chip. I started to delve further into the game code.
-
-By running the game on the EightyOne emulator and pausing it mid-game, I was able to step through the return addresses on the stack and find the main game loop. It was located at address 3C80h and consisted of a sequence of eight calls to subroutines in a continuous loop:
+By running the game on the EightyOne emulator and pausing mid-game, I was able to step through the return addresses on the stack and find the main game loop. It was located at address 3C80h and consisted of a sequence of eight calls to subroutines in a continuous loop:
 
 ```
 3C80	call 41C8h
@@ -89,13 +48,13 @@ By running the game on the EightyOne emulator and pausing it mid-game, I was abl
 3C98	jp 3C80h
 ```
 
-Single-stepping the code, I quickly found the routine that checks for fire being pressed (the subroutine at address 3F28h). Surpringly, there was no evidence of an attempt to read from the joystick: the routine only checked for the 'A' key.
+Single-stepping the code, I quickly found the routine that checks for fire being pressed (the subroutine at address 3F28h). There was no evidence of an attempt to read from the joystick: the routine only checked for the 'A' key.
 
-I also found the code that checked the direction keys (the subroutine at address 3EF0h). However, again, there was no evidence of joystick support.
+I also found the code that checked the direction keys (the subroutine at address 3EF0h). Again, there was no evidence of joystick support.
 
-I started to wonder if there were multiple versions of the program code and I was looking at a version without joystick support, so I set about adding joystick support by replacing the two input routines with a version that checked both keyboard and joystick.
+I started to wonder if there were multiple versions of the program code and I was looking at a version without joystick support. Either way, I strongly suspected the joystick support was for a custom interface, so would need updating. Therefore I decided to add joystick support to this version of the game.
 
-The machine-code of the main game is stored in the Centipede dictionary in a word named `DATA`. The program code is not relocatable and the game entry point is expected to be at address 3C60h. This makes it difficult to modify the existing code, since changes to the dictionary are likely to move subsequent words in memory and stop the game from working. Therefore I elected to add new game-control routines (one for fire and one for directions) at the end of the dictionary and then find the appropriate place to call out to those routines from within the original game code.
+The machine-code of the main game is stored in the Centipede dictionary in two words named `DATA` and `MORECODE`. The program code is not relocatable and the game entry point is expected to be at address 3C60h. This made it difficult to modify the existing code, since changes to the dictionary are likely to move subsequent words in memory and stop the game from working. Therefore I initially elected to add new game-control routines (one for fire and one for directions) at the end of the dictionary and then find the appropriate place to call out to those routines from within the original game code.
 
 I created a new word, named `GAMECTRL`, at the end of the dictionary, in which to hold the new code. (The easiest way to do this is to use `CREATE` and then `ALLOT` enough space to hold the machine code in the word's parameter field). In this case, the parameter field for `GAMECTRL` started at address 5580h, so that is where I would locate the new code.
 
@@ -103,38 +62,67 @@ I started with the routine that checked for the Fire button, as this seemed the 
 
 Originally, I planned to have joystick support enabled all the time and to check both keyboard controls and joystick controls. However, I discovered that if no joystick interface is connected, then reading the joystick port can produce a misleading result. For example, on EightyOne, reading the port will typically return 20h (or 00100000 in binary) and, unfortunately, bit 5 is linked to the fire button, so this means the game thinks fire on the joystick is being pressed constantly.
 
-Given this, I needed to update the game so the user could turn on and turn off joystick support. An easy way to do this, which did not require significant changes to the original code, was to check for additional keys within the routine handling fire. Specifically, I extended the routine to check for 'H' and 'K', which I mapped to joystick-support on and joystick-support off, respectively. The 'J' key is more obvious than 'H' but this is already mapped to the move-left command.
+Given this, I decided to update the game so the user could turn on and turn off joystick support. An easy way to do this, which did not require significant changes to the original code, was to check for additional keys within the routine handling fire. Specifically, I extended the routine to check for 'H' and 'K', which I mapped to joystick-support on and joystick-support off, respectively. The 'J' key is more obvious than 'H' but this is already mapped to the move-left command.
 
-With this change, the user can switch back and forth between keyboard control and joystick control, while playing the game, by pressing 'H' and 'K'.
+With this change, the user can switch back and forth between keyboard control and joystick control, while playing the game, by pressing 'H' or 'K'.
 
-I then moved on to look at the routine that checks the direction controls. That routine is more complicated than the routine that checks for fire, with various different functions. However, after a little studying I found a call out to a subroutine at address 3E60h, from address 3F03h, which is where the keyboard controls are checked. Again, I wrote a new version of this routine which checked the keyboard or the joystick port, according to which control was active.
+I then moved on to look at the routine that checks the direction controls. That routine is more complicated than the routine that checks for fire, with various different functions. However, after a little studying I found a call out to a subroutine at address 3E60h, at address 3F03h, which is where the keyboard controls are checked. Again, I wrote a new version of this routine which checked the keyboard or the joystick port, according to which control was active.
 
 To complete the port, I then had to change the call instructions at address 3C86h and at address 3F03h to use my new versions of the routines, save the new version of the game, and get testing.
 
-I also considered changing the keyboard controls, as I found them slighty awkward to use and thought it might be easier to play with the typical 'Q', 'A', 'O', 'P', and 'M' controls. However, looking back at pictures of the original Centipede arcade machine, I remembered that it used a trackball for control (possibly was the first arcade game to use that control) and realised that Colin's control choice sort of mimicked that setup. Thus, I decided it was best to leave it as Colin had designed it. With all of the testing, I was also getting more used to the controls anyway.
+I also considered changing the keyboard controls, as I find them slighty awkward to use and thought it might be easier to play with the typical 'Q', 'A', 'O', 'P', and 'M' controls. However, looking back at pictures of the original Centipede arcade machine, I remembered that it used a trackball for control (possibly, Centipede was the first arcade game to use that control) and realised that Colin's control choice sort of mimicked that setup. Thus, I decided it was best to leave it as Colin had designed it. With all of the testing, I was also getting more used to the controls anyway.
 
-If you want to change the controls, I have included the source code of the [new game-control routines](gamectrl.asm). With the information above, it should be possible for anyone to make further changes to the game controls.
-
-## Other Observations
-
-When I was working on the port, I noted that the first routine in the game loop (at address 41C8h) points to an empty subroutine (returning immediately). Perhaps, Colin planned to include support for the spider, present in the original game, in this routine.
-
-## Disassembling Centipede
-
-The work to add joystick support to Centipede piqued my interest in the program and I have subsequently created a commented disassembly of the game, the current version of which can be found in [centipede.asm](centipede.asm).
+The work to add joystick support to Centipede piqued my interest in the program and I have subsequently created a commented disassembly of the game, in [centipede.asm](centipede.asm).
 
 In creating the disassembly, I learned a lot about the game and how it was written. I think it is an interesting program to study, for someone with a reasonably understanding of Z80 machine code.
 
-I have made the following interesting discoveries, so far:
+I made the following interesting discoveries while disassembling the code:
 
-- There is quite a lot of unused memory in the program, evidenced by sequences of `nop` statements between routines. Given that Colin Dooley wrote this game by hand-assembling code into hexadecimal opcodes and poking into memory on an actual Ace, I think this is reasonable. I suspect Colin left space between routines to allow later changes/ expansion, without a need to relocate routines -- something that would be painful to do when hand-assembling a program.
+- There is quite a lot of unused memory in the program, evidenced by sequences of `nop` statements between routines. Given that Colin Dooley wrote this game by hand-assembling code into hexadecimal opcodes and poking into memory on an actual Ace, I think this is reasonable. I suspect Colin left space between routines to allow later changes/ expansion, without a need to relocate subsequent routines -- something that would be painful to do when hand-assembling a program.
 
 - I did not find any evidence of joystick support. Possibly there is another version of the game, which includes the support, or possibly Colin mis-remembered this aspect of writing the game.
 
-- The first routine in the main game loop (noted, above, as doing nothing and maybe being a placeholder for a spider feature) is, in fact, a debugging routine. Beyond the first command in the routine (which is a `ret`), there is code that checks for the Space key being pressed and, if so, exits back to Forth. You can reinstate the routine by replacing the `ret` statement at address 41C8h with `push af`.
+- The first routine in the main game loop returns immediately. I had originally wondered if this was a placeholder for an additional game feature -- such as the bouncing spider from the Atari original --  though, having disassmbled the whole program I realised is, in fact, a debugging routine. Beyond the first command in the routine (which is a `ret`), there is code that checks for the Space key being pressed and, if so, exits back to Forth. You can reinstate the routine by replacing the `ret` statement at address 41C8h with `push af`: something that proved useful when I went on to do further work on the program.
 
-- My suspicion that the first game-loop routine was a place-holder for the spider was wrong. However, Colin did at least consider adding a spider to his game as, during initialisation, two graphics are set up that constitute the left and right halves of a spider. This graphic is never used in the current game.
+- My suspicion that the first game-loop routine was a place-holder for the spider was wrong. However, Colin did at least consider adding a spider to his game as, during initialisation, two graphics are set up that constitute the left and right halves of a spider. This graphic is never used in the original game.
 
-- I have found three bugs in the game (look for comments beginning with "BUG:" in the source code). Two of them have no significant impact, but the third bug does affect game play. The most significant bug relates to initalising a new flea. There should be a 50/50 chance that the flea drops slowly or quickly. However, the calculation is broken meaning the flea almost always drops quickly. A second bug relates to a miscalculated relative jump and causes the program to jump to the middle of a two-byte command. It looks as if this bug could cause problems except that the jump (which is conditional) does not ever seem to be satisfied, so the problem code is skipped. The third bug is an incorrect call address, which occurs three times when requesting the player to enter their name into the hall of fame. The incorrect jump is to a location eight bytes too early in memory, but simply means the computer runs eight `nop` statements before asking for user input, so is not significant. These bugs are fixed in the version of the disassmebled source code in this repository.
+- I have found five bugs in the game (look for comments beginning with "BUG:" in the source code). Three of them have no significant impact, one might cause problems in very specific circumstances when a centipede meets the flea, but the other bug does definitely affect game play. That bug relates to initalising a new flea. There should be a 50/50 chance that the flea drops slowly or quickly. However, the calculation is broken meaning the flea almost always drops quickly.
 
 - There are a few instances of redundant code or of absolute jumps that could be replaced by relative jumps (look for comments beginning with "NOTE:" in the source code). However, these are not meant to be criticisms of the original programming. As noted above, Colin wrote this game on an actual Jupiter Ace, using hand-assembly. This is an impressive feat which requires great skill, organisation, and stamina. A genuine example of bedroom coding in action!
+
+## Finishing Colin Dooley's Work
+
+Having disassembled the program, and having discovered the spider graphic, I decided it would be fitting to try to add the spider feature and to properly integrate Boldfield joystick support, to finish off Colin's work.
+
+I have tried to find a contact address for Colin so I can tell him about this project, though have so far failed. Hopefully, Colin will be happy with what I have done.
+
+Before adding spider support, I decided to do a modest refactor of the program, removing the space that was left between many of the routines. I did this to hopefully free up enough space to add in the extra features that I planned without overspilling the words `DATA` and `MORECODE`.
+
+Also, as `DATA` and `MORECODE` were held consecutively in memory, I edited the link field in the subsequent word `CENTIPEDE`, so that `MORECODE` is effectively deleted and `DATA` has an expanded parameter field also covering the dictionary space previously occupied by `MORECODE`. This means I did not have to worry about preserving the location and correctness of the `MORECODE` header, which is located in the middle of the source code.
+
+I decided to implement the spider in a similar way to the flea. In simple terms, they are alike, in that they are enemies to be shot or avoided that progress across the screen until they are done.  The special feature of the flea is that it deposits mushrooms as it falls down the screen. Whereas the spider eats mushroom that it passes over. Looking at recordings of someone playing the Atari original game, I saw that the spider had a reasonably complex movement pattern, zigzaging its way across the screen. I decided to consult a disassembly of the [original game code](https://6502disassembly.com/va-centipede/Centipede_rev4.html) by Andy McFadden to find out more.
+
+It took me a little while to get to grips with the original code. It is written in 6502 assembly language which I am less familiar with and I was original confused by two elements: the game checks if it is being played on a "cocktail table" in which case it inverts the screen for Player 2; and the game has a demo mode which is referred to as "attract mode".
+
+Once I was aware of the cocktail and attract modes, it was somewhat easier to work out what was going on and I was surprised to discover that my recollection of how the spider moved was wrong. It turns out the spider either moves from left-to-right or right-to-left and never reverses its direction. During its travels, there is a chance it will stop moving horizontally and just move vertically for a while, before resuming its journey. I tried to work out the speed and the probability of it changing how it moved at any point, and then implemented that in Z80 machine code.
+
+Then I had to tackle the bit I had been most dreading: adding sound effects. There was one fortunate feature of Colin's original version, in that it only used two of the three sound channels on the AY-3-8910 chip, so I was able to use Channel C without any risk of corrupting existing sound effects. I thought for a while about how to do this, and considered reaching out for the community for help. However, in the end, I decided to reverse engineer the implementation on the Atari original, which used a special chip called the Pokey chip, for which there is [online documentation](http://visual6502.org/images/C012294_Pokey/pokey.pdf).
+
+I worked out how to translate between the Pokey chips implementation of sound frequencies and the AY-3-8910's implementation and then created a small spreadsheet to convert the sound sequence for the spider.
+
+The final result is not 100% accurate, but I think it is close enough, and sounds good with the rest of the game sounds.
+
+Having implemented the spider enemy, I also fixed the bugs I had found in the original code, and reinstated joystick support -- though embedded in the main code rather that in an extra Forth word at the end of the dictionary.
+
+The [source code](centipede_m4.asm) of the modified version of the game is also available if anyone wants to study my changes or to make further enhancements to the game. It should assemble with most of the common cross-assemblers. I have used [z80asm](https://savannah.nongnu.org/projects/z80asm). Having assembled the source -- e.g. `z80asm -o centipede.bin centipede_m4.asm` -- you should load Centipede into an emulator, such as EightyOne, and then load the assembled binary file at memory address 0x3C5C.
+
+The game employs basic security to prevent unauthorised copying and overloads the meaning of various words including `SAVE`. To work around this, you need to use `EXECUTE` and point to the code field of the original SAVE word. For example, enter:
+
+```
+6452 EXECUTE centipede
+```
+
+--in decimal mode.
+
+Finally, write a new tape image from EightyOne with your modified version of the game and enjoy.
+
