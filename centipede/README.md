@@ -26,15 +26,15 @@ Joystick controls, if you have a suitable interface, are also available. Press '
 
 ## Disassembling Centipede
 
-My original plan had been to make fairly lightweight changes to the sound support in the original game (effectively, changing the port numbers use for the relevant `IN` and `OUT` commands), so that it would work with the RC2014 sound card on a Minstrel 4th/ 4D. I did this though, in so doing, I found myself hunting for evidence of joystick support within the machine code of the program.
+My original plan had been to make fairly lightweight changes to the code that handled sound in the original game (effectively, changing the port numbers use for the relevant `IN` and `OUT` commands), so that it would work with the RC2014 sound card on a Minstrel 4th/ 4D. I did this though, in so doing, I found myself hunting for evidence of joystick support within the program.
 
-In an interview with the curator of the [Jupiter Ace website](https://www.jupiter-ace.co.uk/sw_centipede.html), Colin Dooley noted that the game can also be controlled by joystick. As the Minstrel 4D has a built-in joystick interface that is compatible with the original Boldfield joystick interface, I assumed this would work straight away and was surprised when it did not.
+In an interview with the curator of the [Jupiter Ace website](https://www.jupiter-ace.co.uk/sw_centipede.html), Colin Dooley noted that the game could also be controlled by joystick. As the Minstrel 4D has a built-in joystick interface that is compatible with the original Boldfield joystick interface, I assumed this would work straight away and was surprised when it did not.
 
-I then read Colin's comments more carefully and realised that he had implemented his own joystick interface using one of the I/O ports on the AY-3-8910 (in the Soundbox interface).
+I then read Colin's comments more carefully and realised that he had implemented his own joystick interface using the I/O ports on the AY-3-8910 (in the Soundbox interface).
 
-I was a little surprised as I thought I had found all interactions with the sound card, when updating the sound support, even though none of those looked to interact with the I/O ports on the sound chip. I therefore started to delve further into the game code and to do a partial disassembly of the code that handle game controls.
+I was a little surprised as I thought I had found all interactions with the sound card, when updating the sound support, even though none of those looked to interact with the I/O ports on the sound chip. I therefore started to delve further into the game code and created a partial disassembly of the code, concentrating on the section that handles game controls.
 
-By running the game on the EightyOne emulator and pausing mid-game, I was able to step through the return addresses on the stack and find the main game loop. It was located at address 3C80h and consisted of a sequence of eight calls to subroutines in a continuous loop:
+By running the game on the [EightyOne emulator](https://sourceforge.net/projects/eightyone-sinclair-emulator/) and pausing mid-game, I was able to step through the return addresses on the stack and find the main game loop. It was located at address 3C80h and consisted of a sequence of eight calls to six different subroutines in a continuous loop:
 
 ```
 3C80	call 41C8h
@@ -52,11 +52,11 @@ Single-stepping the code, I quickly found the routine that checks for fire being
 
 I also found the code that checked the direction keys (the subroutine at address 3EF0h). Again, there was no evidence of joystick support.
 
-I started to wonder if there were multiple versions of the program code and I was looking at a version without joystick support. Either way, I strongly suspected the joystick support was for a custom interface, so would need updating. Therefore I decided to add joystick support to this version of the game.
+I started to wonder if there were multiple versions of the program code and I was looking at a version without joystick support. Either way, I strongly suspected the joystick support was for a custom interface, so to support the Boldfield (and Tynemouth) joystick would require new code. Therefore I decided to add joystick support to this version of the game.
 
 The machine-code of the main game is stored in the Centipede dictionary in two words named `DATA` and `MORECODE`. The program code is not relocatable and the game entry point is expected to be at address 3C60h. This made it difficult to modify the existing code, since changes to the dictionary are likely to move subsequent words in memory and stop the game from working. Therefore I initially elected to add new game-control routines (one for fire and one for directions) at the end of the dictionary and then find the appropriate place to call out to those routines from within the original game code.
 
-I created a new word, named `GAMECTRL`, at the end of the dictionary, in which to hold the new code. (The easiest way to do this is to use `CREATE` and then `ALLOT` enough space to hold the machine code in the word's parameter field). In this case, the parameter field for `GAMECTRL` started at address 5580h, so that is where I would locate the new code.
+I created a new word, named `GAMECTRL`, at the end of the dictionary, in which to hold the new code. (The easiest way to do this is to use `CREATE` to create a basic word and then use `ALLOT` to expand the parameter field to be large enough to hold the machine code). In this case, the parameter field for `GAMECTRL` started at address 5580h, so that is where I located the new code.
 
 I started with the routine that checked for the Fire button, as this seemed the easier of the two. The routine at 3F28h is relatively self-contained so I set about making a new version of it that would also check the fire button on the joystick. The routine first checks to see if there is already a bullet in flight. If so, there is nothing to do and control is returned the game loop. Otherwise, it checks if fire is pressed and, if so, jumps to a routine at 3F3Fh to implement the fire mechanism.
 
@@ -64,31 +64,29 @@ Originally, I planned to have joystick support enabled all the time and to check
 
 Given this, I decided to update the game so the user could turn on and turn off joystick support. An easy way to do this, which did not require significant changes to the original code, was to check for additional keys within the routine handling fire. Specifically, I extended the routine to check for 'H' and 'K', which I mapped to joystick-support on and joystick-support off, respectively. The 'J' key is more obvious than 'H' but this is already mapped to the move-left command.
 
-With this change, the user can switch back and forth between keyboard control and joystick control, while playing the game, by pressing 'H' or 'K'.
+I then moved on to look at the routine that checks the direction controls. That routine is more complicated than the routine that checks for fire, fulfilling various functions. However, after a little studying I found a call out to a subroutine at address 3E60h which is where the keyboard controls are checked. Again, I wrote a new version of this routine to check the keyboard or the joystick port, according to which control was active.
 
-I then moved on to look at the routine that checks the direction controls. That routine is more complicated than the routine that checks for fire, with various different functions. However, after a little studying I found a call out to a subroutine at address 3E60h, at address 3F03h, which is where the keyboard controls are checked. Again, I wrote a new version of this routine which checked the keyboard or the joystick port, according to which control was active.
+To complete the port, I then had to change the call instructions (one at address 3C86h, one at address 3C8Fh and one at address 3F03h) to point to my new versions of the routines, save the new version of the game, and get testing.
 
-To complete the port, I then had to change the call instructions at address 3C86h and at address 3F03h to use my new versions of the routines, save the new version of the game, and get testing.
+I also considered changing the keyboard controls, as I found them slighty awkward to use and thought it might be easier to play with the typical 'Q', 'A', 'O', 'P', and 'M' controls. However, looking back at pictures of the original Centipede arcade machine, I remembered that it used a trackball for control (possibly, Centipede was the first arcade game to use that control) and realised that Colin's control choice sort of mimicked that setup. Thus, I decided it was best to leave it as Colin had designed it. With all of the testing, I was also getting more used to the controls anyway.
 
-I also considered changing the keyboard controls, as I find them slighty awkward to use and thought it might be easier to play with the typical 'Q', 'A', 'O', 'P', and 'M' controls. However, looking back at pictures of the original Centipede arcade machine, I remembered that it used a trackball for control (possibly, Centipede was the first arcade game to use that control) and realised that Colin's control choice sort of mimicked that setup. Thus, I decided it was best to leave it as Colin had designed it. With all of the testing, I was also getting more used to the controls anyway.
-
-The work to add joystick support to Centipede piqued my interest in the program and I have subsequently created a commented disassembly of the game, in [centipede.asm](centipede.asm).
+The work to add joystick support to Centipede piqued my interest: I started to look into other game-loop routines and soon decided I would try to created a full, commented disassembly of the game, which you can study in [centipede.asm](centipede.asm).
 
 In creating the disassembly, I learned a lot about the game and how it was written. I think it is an interesting program to study, for someone with a reasonably understanding of Z80 machine code.
 
 I made the following interesting discoveries while disassembling the code:
 
-- There is quite a lot of unused memory in the program, evidenced by sequences of `nop` statements between routines. Given that Colin Dooley wrote this game by hand-assembling code into hexadecimal opcodes and poking into memory on an actual Ace, I think this is reasonable. I suspect Colin left space between routines to allow later changes/ expansion, without a need to relocate subsequent routines -- something that would be painful to do when hand-assembling a program.
+- There is quite a lot of unused memory in the program, evidenced by sequences of `nop` statements between routines. Given that Colin Dooley wrote this game by hand-assembling code into hexadecimal opcodes and poking them into memory on an actual Ace, I think this is reasonable. I suspect Colin left space between routines to allow later changes/ expansion, without a need to relocate subsequent routines -- something that would be painful to do when hand-assembling a program.
 
 - I did not find any evidence of joystick support. Possibly there is another version of the game, which includes the support, or possibly Colin mis-remembered this aspect of writing the game.
 
-- The first routine in the main game loop returns immediately. I had originally wondered if this was a placeholder for an additional game feature -- such as the bouncing spider from the Atari original --  though, having disassmbled the whole program I realised is, in fact, a debugging routine. Beyond the first command in the routine (which is a `ret`), there is code that checks for the Space key being pressed and, if so, exits back to Forth. You can reinstate the routine by replacing the `ret` statement at address 41C8h with `push af`: something that proved useful when I went on to do further work on the program.
+- The first routine in the main game loop returns immediately. I had originally wondered if this was a placeholder for an additional game feature -- such as the bouncing spider from the Atari original --  though, having disassmbled the whole program I realised it is, in fact, a debugging routine. Beyond the first command in the routine (which is a `ret`), there is code that checks for the Space key being pressed and, if so, exits back to Forth. You can reinstate the routine by replacing the `ret` statement at address 41C8h with `push af`: something that proved useful when I went on to do further work on the program.
 
 - My suspicion that the first game-loop routine was a place-holder for the spider was wrong. However, Colin did at least consider adding a spider to his game as, during initialisation, two graphics are set up that constitute the left and right halves of a spider. This graphic is never used in the original game.
 
-- I have found five bugs in the game (look for comments beginning with "BUG:" in the source code). Three of them have no significant impact, one might cause problems in very specific circumstances when a centipede meets the flea, but the other bug does definitely affect game play. That bug relates to initalising a new flea. There should be a 50/50 chance that the flea drops slowly or quickly. However, the calculation is broken meaning the flea almost always drops quickly.
+- I have found five bugs in the game (look for comments beginning with "BUG:" in the [source code](centipede.asm)). Three of them have no significant impact, one might cause problems in very specific circumstances when a centipede meets the flea, but the other bug does definitely affect game play. That bug relates to initalising a new flea. There should be a 50/50 chance that the flea drops slowly or quickly. However, the calculation is broken meaning the flea almost always drops quickly.
 
-- There are a few instances of redundant code or of absolute jumps that could be replaced by relative jumps (look for comments beginning with "NOTE:" in the source code). However, these are not meant to be criticisms of the original programming. As noted above, Colin wrote this game on an actual Jupiter Ace, using hand-assembly. This is an impressive feat which requires great skill, organisation, and stamina. A genuine example of bedroom coding in action!
+- There are a few instances of redundant code and of absolute jumps that could be replaced by relative jumps (look for comments beginning with "NOTE:" in the source code). However, these are not meant to be criticisms of the original programming. As noted above, Colin wrote this game on an actual Jupiter Ace, using hand assembly. This is an impressive feat which requires great skill, organisation, and stamina. A genuine example of bedroom coding in action!
 
 ## Finishing Colin Dooley's Work
 
