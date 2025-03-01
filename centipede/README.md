@@ -8,9 +8,9 @@ If you have read my [post about Valkyr](../valkyr-minstrel/README.md), you will 
 
 The Ace version of Centipede runs without issue on the Minstrel 4th and 4D, though does not have the enhanced sound support, because of the different port requirements of the sound card. I was also unable to get the game to work with a joystick. I therefore set about updating Colin Dooley's original, so that you play the game in all of its three-channel-audio glory using either a joystick or keyboard, on the Minstrel 4th/ 4D.
 
-In short, I have created a new version of the game that runs well on the Minstrel 4th/ 4D, supports the RC2014 sound card, and the Boldfield/ Tynemouth interfacde. Plus, it has some extra features as I reveal below.
+In short, I have created a new version of the game that runs well on the Minstrel 4th/ 4D, supports the RC2014 sound card, and the Boldfield/ Tynemouth interface. Plus, it has some extra features as I reveal below.
 
-If you just want to play the game, follow the instructions in the next section. If you want to read about my experience of disassembling th game, have a look at the section below titled "Disassembling Centipede".
+If you just want to play the game, follow the instructions in the next section. If you want to read about my experience of disassembling the game, have a look at the section below titled "Disassembling Centipede".
 
 ## Playing the game
 
@@ -26,7 +26,7 @@ Joystick controls, if you have a suitable interface, are also available. Press '
 
 ## Disassembling Centipede
 
-My original plan had been to make fairly lightweight changes to the code that handled sound in the original game (effectively, changing the port numbers use for the relevant `IN` and `OUT` commands), so that it would work with the RC2014 sound card on a Minstrel 4th/ 4D. I did this though, in so doing, I found myself hunting for evidence of joystick support within the program.
+My original plan had been to make fairly lightweight changes to the code that handled sound in the original game (effectively, changing the port numbers used in the relevant `IN` and `OUT` commands, which I found by setting a breakpoint in EightyOne on any interactions with the Soundbox I/O ports 0xFD and 0xFF), so that it would work with the RC2014 sound card on a Minstrel 4th/ 4D. I did this though, in so doing, I found myself hunting for evidence of joystick support within the program.
 
 In an interview with the curator of the [Jupiter Ace website](https://www.jupiter-ace.co.uk/sw_centipede.html), Colin Dooley noted that the game could also be controlled by joystick. As the Minstrel 4D has a built-in joystick interface that is compatible with the original Boldfield joystick interface, I assumed this would work straight away and was surprised when it did not.
 
@@ -52,15 +52,15 @@ Single-stepping the code, I quickly found the routine that checks for fire being
 
 I also found the code that checked the direction keys (the subroutine at address 3EF0h). Again, there was no evidence of joystick support.
 
-I started to wonder if there were multiple versions of the program code and I was looking at a version without joystick support. Either way, I strongly suspected the joystick support was for a custom interface, so to support the Boldfield (and Tynemouth) joystick would require new code. Therefore I decided to add joystick support to this version of the game.
+I started to wonder if there were multiple versions of the program code and I was looking at a version without joystick support. Either way, I strongly suspected the joystick support was for a custom interface; so to support the Boldfield (and Tynemouth) joystick would require new code. Therefore I decided to add joystick support to this version of the game.
 
-The machine-code of the main game is stored in the Centipede dictionary in two words named `DATA` and `MORECODE`. The program code is not relocatable and the game entry point is expected to be at address 3C60h. This made it difficult to modify the existing code, since changes to the dictionary are likely to move subsequent words in memory and stop the game from working. Therefore I initially elected to add new game-control routines (one for fire and one for directions) at the end of the dictionary and then find the appropriate place to call out to those routines from within the original game code.
+The machine code of the main game is stored in the Centipede dictionary in two words named `DATA` and `MORECODE`. The program code is not relocatable and the game entry point is expected to be at address 3C60h. This made it difficult to modify the existing code, since changes to the dictionary are likely to move subsequent words in memory and stop the game from working. Therefore I initially elected to add new game-control routines (one for fire and one for directions) at the end of the dictionary and then find the appropriate place to call out to those routines from within the original game code.
 
 I created a new word, named `GAMECTRL`, at the end of the dictionary, in which to hold the new code. (The easiest way to do this is to use `CREATE` to create a basic word and then use `ALLOT` to expand the parameter field to be large enough to hold the machine code). In this case, the parameter field for `GAMECTRL` started at address 5580h, so that is where I located the new code.
 
 I started with the routine that checked for the Fire button, as this seemed the easier of the two. The routine at 3F28h is relatively self-contained so I set about making a new version of it that would also check the fire button on the joystick. The routine first checks to see if there is already a bullet in flight. If so, there is nothing to do and control is returned the game loop. Otherwise, it checks if fire is pressed and, if so, jumps to a routine at 3F3Fh to implement the fire mechanism.
 
-Originally, I planned to have joystick support enabled all the time and to check both keyboard controls and joystick controls. However, I discovered that if no joystick interface is connected, then reading the joystick port can produce a misleading result. For example, on EightyOne, reading the port will typically return 20h (or 00100000 in binary) and, unfortunately, bit 5 is linked to the fire button, so this means the game thinks fire on the joystick is being pressed constantly.
+Originally, I planned to have joystick support enabled all the time and to check both keyboard controls and joystick controls. However, I discovered that if no joystick interface is connected, then reading the joystick port can produce a misleading result, as described by Dave Curran in [Valkyr - One Game, so many changes](http://blog.tynemouthsoftware.co.uk/2022/10/valkyr-one-game-so-many-changes.html). For example, on EightyOne, reading the port will typically return 20h (or 00100000 in binary) and, unfortunately, bit 5 is linked to the fire button, so this means the game thinks fire on the joystick is being pressed constantly.
 
 Given this, I decided to update the game so the user could turn on and turn off joystick support. An easy way to do this, which did not require significant changes to the original code, was to check for additional keys within the routine handling fire. Specifically, I extended the routine to check for 'H' and 'K', which I mapped to joystick-support on and joystick-support off, respectively. The 'J' key is more obvious than 'H' but this is already mapped to the move-left command.
 
@@ -104,7 +104,7 @@ It took me a little while to get to grips with the original code. It is written 
 
 Once I was aware of the cocktail and attract modes, it was somewhat easier to work out what was going on and I was surprised to discover that my recollection of how the spider moved was wrong. It turns out the spider either moves from left-to-right or right-to-left and never reverses its direction. During its travels, there is a chance it will stop moving horizontally and just move vertically for a while, before resuming its journey. I tried to work out the speed and the probability of it changing how it moved at any point, and then implemented that in Z80 machine code.
 
-Then I had to tackle the bit I had been most dreading: adding sound effects. There was one fortunate feature of Colin's original version, in that it only used two of the three sound channels on the AY-3-8910 chip, so I was able to use Channel C without any risk of corrupting existing sound effects. I thought for a while about how to do this, and considered reaching out for the community for help. However, in the end, I decided to reverse engineer the implementation on the Atari original, which used a special chip called the Pokey chip, for which there is [online documentation](http://visual6502.org/images/C012294_Pokey/pokey.pdf).
+Then I had to tackle the bit I had been most dreading: adding sound effects. Colin's original version helped a little here, in that it only used two of the three sound channels on the AY-3-8910 chip, so I was able to use the third channel (Channel C) without any risk of corrupting existing sound effects. I thought for a while about how to do this, and considered reaching out to the community for help. However, in the end, I decided to reverse engineer the implementation on the Atari original, which used a special chip called the Pokey chip, for which there is [online documentation](http://visual6502.org/images/C012294_Pokey/pokey.pdf).
 
 I worked out how to translate between the Pokey chips implementation of sound frequencies and the AY-3-8910's implementation and then created a small spreadsheet to convert the sound sequence for the spider.
 
