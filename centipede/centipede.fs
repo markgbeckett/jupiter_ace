@@ -8,6 +8,269 @@ CREATE DATA 0EC9 ALLOT
     DATA 4 + CALL
 ;
 
+CREATE T1
+DC C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C,
+A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C,
+A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C,
+A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, AF C,
+
+A0 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, A0 C,
+
+A0 C, 20 C, 20 C, 20 C, 94 C, 13 C, 97 C, 96 C,
+13 C, 97 C, 95 C, 10 C, 15 C, 13 C, 16 C, 15 C,
+13 C, 12 C, 95 C, 94 C, 13 C, 15 C, 10 C, 10 C,
+94 C, 13 C, 97 C, 10 C, 10 C, 10 C, 10 C, A0 C,
+
+A0 C, 20 C, 10 C, 10 C, 91 C, 93 C, 12 C, 95 C,
+10 C, 95 C, 95 C, 10 C, 15 C, 10 C, 15 C, 15 C,
+93 C, 10 C, 95 C, 91 C, 97 C, 15 C, 10 C, 10 C,
+95 C, 10 C, 95 C, 10 C, 10 C, 10 C, 10 C, A0 C,
+
+A0 C, 10 C, 10 C, 10 C, 95 C, 10 C, 95 C, 95 C,
+10 C, 95 C, 95 C, 10 C, 15 C, 10 C, 15 C, 15 C,
+10 C, 10 C, 95 C, 95 C, 10 C, 15 C, 10 C, 10 C,
+95 C, 10 C, 95 C, 10 C, 10 C, 10 C, 10 C, A0 C,
+
+A0 C, 10 C, 10 C, 10 C, 91 C, 93 C, 12 C, 16 C,
+93 C, 12 C, 91 C, 93 C, 15 C, 93 C, 96 C, 15 C,
+10 C, 10 C, 95 C, 91 C, 93 C, 15 C, 93 C, 97 C,
+91 C, 93 C, 12 C, 20 C, 20 C, 20 C, 20 C, A0 C,
+
+A0 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, A0 C,
+
+A0 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 95 C,
+10 C, 10 C, 15 C, 97 C, 10 C, 92 C, 15 C, 11 C,
+17 C, 13 C, 15 C, 13 C, 12 C, 94 C, 16 C, 10 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, A0 C,
+
+A0 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 95 C,
+10 C, 15 C, 15 C, 11 C, 96 C, 15 C, 15 C, 10 C,
+15 C, 10 C, 15 C, 93 C, 10 C, 95 C, 15 C, 10 C,
+10 C, 10 C, 10 C, 10 C, 10 C, 10 C, 10 C, A0 C,
+
+A0 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 95 C,
+10 C, 15 C, 15 C, 10 C, 10 C, 15 C, 15 C, 10 C,
+15 C, 10 C, 15 C, 93 C, 10 C, 95 C, 15 C, 10 C,
+10 C, 10 C, 10 C, 10 C, 10 C, 10 C, 10 C, A0 C,
+
+A0 C, 10 C, 10 C, 10 C, 10 C, 10 C, 10 C, 95 C,
+10 C, 15 C, 15 C, 10 C, 10 C, 15 C, 15 C, 10 C,
+15 C, 10 C, 15 C, 10 C, 10 C, 95 C, 15 C, 10 C,
+10 C, 10 C, 10 C, 10 C, 10 C, 10 C, 10 C, A0 C,
+
+A0 C, 10 C, 10 C, 10 C, 10 C, 10 C, 10 C, 91 C,
+93 C, 15 C, 15 C, 10 C, 10 C, 15 C, 15 C, 10 C,
+15 C, 10 C, 15 C, 10 C, 10 C, 95 C, 15 C, 10 C,
+10 C, 10 C, 10 C, 10 C, 10 C, 10 C, 10 C, A0 C,
+
+A0 C, 10 C, 10 C, 10 C, 10 C, 10 C, 10 C, 10 C,
+10 C, 10 C, 10 C, 10 C, 10 C, 10 C, 10 C, 10 C,
+10 C, 10 C, 10 C, 10 C, 10 C, 10 C, 10 C, 10 C,
+10 C, 10 C, 10 C, 10 C, 10 C, 10 C, 10 C, A0 C,
+
+A0 C, 20 C, 10 C, 96 C, 13 C, 97 C, 96 C, 13 C,
+97 C, 91 C, 10 C, 14 C, 95 C, 94 C, 13 C, 97 C,
+95 C, 10 C, 95 C, 13 C, 94 C, 12 C, 95 C, 91 C,
+10 C, 95 C, 96 C, 13 C, 97 C, 10 C, 10 C, A0 C,
+
+A0 C, 10 C, 10 C, 95 C, 10 C, 10 C, 95 C, 10 C,
+95 C, 95 C, 16 C, 12 C, 95 C, 91 C, 93 C, 12 C,
+95 C, 10 C, 95 C, 10 C, 95 C, 10 C, 95 C, 95 C,
+95 C, 95 C, 95 C, 10 C, 10 C, 10 C, 10 C, A0 C,
+
+A0 C, 10 C, 10 C, 95 C, 10 C, 10 C, 95 C, 10 C,
+95 C, 95 C, 10 C, 10 C, 95 C, 95 C, 10 C, 10 C,
+95 C, 10 C, 95 C, 10 C, 95 C, 10 C, 95 C, 95 C,
+95 C, 95 C, 95 C, 13 C, 95 C, 10 C, 10 C, A0 C,
+
+A0 C, 10 C, 10 C, 16 C, 93 C, 12 C, 16 C, 93 C,
+12 C, 95 C, 10 C, 10 C, 95 C, 95 C, 10 C, 10 C,
+16 C, 93 C, 12 C, 10 C, 95 C, 10 C, 95 C, 95 C,
+11 C, 95 C, 16 C, 93 C, 12 C, 10 C, 10 C, A0 C,
+
+A0 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, A0 C,
+
+AF C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C,
+A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C,
+A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C,
+A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, DC C,
+
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+
+D0 C, A0 C, D2 C, A0 C, C5 C, A0 C, D3 C, A0 C,
+C5 C, A0 C, CE C, A0 C, D4 C, A0 C, D3 C, A0 C,
+A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C,
+A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C,
+
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+
+CREATE T2
+20 C, 20 C, 20 C, 20 C, 20 C, A0 C, A0 C, A0 C,
+A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C,
+A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C,
+A0 C, A0 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+
+20 C, 20 C, 20 C, 20 C, 20 C, A0 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, A0 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+
+20 C, 20 C, 20 C, 20 C, 20 C, A0 C, 20 C, 43 C,
+20 C, 45 C, 20 C, 4E C, 20 C, 54 C, 20 C, 49 C,
+20 C, 50 C, 20 C, 45 C, 20 C, 44 C, 20 C, 45 C,
+20 C, A0 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+
+20 C, 20 C, 20 C, 20 C, 20 C, A0 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, A0 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+
+20 C, 20 C, 20 C, 20 C, 20 C, A0 C, A0 C, A0 C,
+A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C,
+A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C,
+A0 C, A0 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, A0 C,
+A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, A0 C,
+20 C, 20 C, 20 C, 20 C, 20 C, A0 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, A0 C,
+20 C, 42 C, 20 C, 59 C, 20 C, A0 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, A0 C,
+20 C, 20 C, 20 C, 20 C, 20 C, A0 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, A0 C,
+A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C,
+A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C,
+A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, 20 C, 20 C,
+
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, A0 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, A0 C, 20 C, 20 C,
+
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, A0 C, 20 C, 43 C, 20 C, 2E C,
+20 C, 44 C, 20 C, 4F C, 20 C, 4F C, 20 C, 4C C,
+20 C, 45 C, 20 C, 59 C, 20 C, A0 C, 20 C, 20 C,
+
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, A0 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, A0 C, 20 C, 20 C,
+
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, A0 C,
+A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C,
+A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C,
+A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, 20 C, 20 C,
+
+CREATE T3
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+
+A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C,
+A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C,
+A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C,
+A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C,
+
+95 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 15 C,
+
+95 C, 43 C, 6F C, 70 C, 79 C, 72 C, 69 C, 67 C,
+68 C, 74 C, 20 C, 7F C, 20 C, 42 C, 6F C, 6C C,
+64 C, 66 C, 69 C, 65 C, 6C C, 64 C, 20 C, 4C C,
+74 C, 64 C, 2E C, 31 C, 39 C, 38 C, 34 C, 15 C,
+
+95 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 15 C,
+
+95 C, 20 C, 55 C, 6E C, 61 C, 75 C, 74 C, 68 C,
+6F C, 72 C, 69 C, 73 C, 65 C, 64 C, 20 C, 72 C,
+65 C, 70 C, 72 C, 6F C, 64 C, 75 C, 63 C, 74 C,
+69 C, 6F C, 6E C, 20 C, 6F C, 66 C, 20 C, 15 C,
+
+95 C, 20 C, 20 C, 20 C, 74 C, 68 C, 69 C, 73 C,
+20 C, 63 C, 61 C, 73 C, 73 C, 65 C, 74 C, 74 C,
+65 C, 20 C, 69 C, 73 C, 20 C, 69 C, 6C C, 6C C,
+65 C, 67 C, 61 C, 6C C, 20 C, 20 C, 20 C, 15 C,
+
+95 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 15 C,
+
+A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C,
+A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C,
+A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C,
+A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C,
+
+
+DEFINER CODE
+  DOES> CALL
+;
+
+CODE TITLE
+    DF C, 42 C, 4B C, DF C, 62 C, 6B C, 11 C, 00 C,
+    24 C, ED C, B0 C, FD C, E9 C,
+    
+
 : TITLE1 ( FIRST TITLE SCREEN )
     CLS
     ."
