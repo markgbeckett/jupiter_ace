@@ -190,8 +190,8 @@ A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, 20 C, 20 C,
 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
 20 C, 20 C, 20 C, 20 C, 20 C, A0 C, 20 C, 20 C,
 
-20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
-20 C, 20 C, 20 C, A0 C, 20 C, 43 C, 20 C, 2E C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, A0 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 43 C, 20 C, 2E C,
 20 C, 44 C, 20 C, 4F C, 20 C, 4F C, 20 C, 4C C,
 20 C, 45 C, 20 C, 59 C, 20 C, A0 C, 20 C, 20 C,
 
@@ -261,7 +261,6 @@ A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C,
 A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C,
 A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C,
 
-
 DEFINER CODE
   DOES> CALL
 ;
@@ -273,17 +272,17 @@ CODE TITLE
 
 : TITLE1 ( FIRST TITLE SCREEN )
     CLS
-    ."
-    "
-    15 0 AT ." P R E S E N T S                " 
+    T1 300 TITLE
 ;
 
 : TITLE2 ( SECOND TITLE SCREEN )
     CLS
+    T2 1E0 TITLE
 ;
 
 :  TITLE3 ( THIRD TITLE SCREEN )
     CLS
+    T3 160 TITLE
 ;
 
 CREATE LNGTH 
@@ -336,8 +335,8 @@ CREATE NTS
     DUP PSN !
 
     ( .S : PSN PSN )
-    N@ SWAP L@
-    AF * BEEP
+    N@ SWAP
+    L@ AF * BEEP
 
     ( CHECK AND, IF NECESSARY, RESET INDEX )
     PSN @ 68 = IF
@@ -347,6 +346,7 @@ CREATE NTS
 
 : INTRO
     ( CHECK IF JOYSTICK COULD BE PRESENT )
+    0 ( INITIAL VALUE )
     400 0 DO
 	1 IN 0= IF
 	    DROP 1
@@ -371,22 +371,21 @@ CREATE NTS
 	LOOP
 
 	TITLE3
-	34 0 DO
+
+	0 34 0 DO
 	    INTR
 	    INKEY D = IF
-		2 ?JOYSTICK C!
+		DROP 1
 		LEAVE
 	    THEN
 
 	    ?JOYSTICK C@ IF
 		1 IN 20 = IF
-		    2 ?JOYSTICK C!
+		    DROP 1
 		    LEAVE
 		THEN
 	    THEN
 	LOOP
-
-	?JOYSTICK 2 =
     UNTIL
 
     190 1F4 BEEP
@@ -396,24 +395,38 @@ CREATE NTS
     CLS
 
     ( INSTRUCTIONS FORMATTED INTO LINES, ORIGINAL HAS ONE STRING )
-    ."        C E N T I P E D E"
-    ."        _________________"
-    ."  Use 'J' and 'L' for left and"
-    ." right, 'I' and 'M' for up and"
-    ." down and 'A' to fire to shoot"
+    ."        C E N T I P E D E" CR
+    ."        _________________" CR
+    ."  Use 'J' and 'L' for left and" CR CR
+    ." right, 'I' and 'M' for up and" CR
+    ." down and 'A' to fire to shoot" CR
     ." the centipede."
 
     15 0 AT
-    ."  P R E S S  E N T E R          "
+    ."  P R E S S  E N T E R / F I R E"
 
     C8 1F4 BEEP
 
     BEGIN
-	INKEY 0D =
+	INKEY 0D = IF
+	    0 3C5C C!
+	    1
+	ELSE ?JOYSTICK C@ IF
+		1 IN 20 = IF
+		    1 3C5C C!
+		    1
+		ELSE
+		    0
+		THEN
+	    ELSE
+		0
+	    THEN
+	THEN
     UNTIL
 ;
 
-: GO    
+: GO
+    ( ASSUME NO JOYSTICK SUPPORT )
     0 ?JOYSTICK C!
     
     INTRO
