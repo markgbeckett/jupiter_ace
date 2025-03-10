@@ -308,8 +308,8 @@ A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C,
 
 A0 C, D0 C, A0 C, D2 C, A0 C, C5 C, A0 C, D3 C,
 A0 C, D3 C, A0 C, A0 C, C5 C, A0 C, CE C, A0 C,
-D4 C, A0 C, C5 C, A0 C, D2 C, A0 C, A2 C, A0 C,
-A6 C, A0 C, A9 C, A0 C, B2 C, A0 C, A5 C, A0 C,
+D4 C, A0 C, C5 C, A0 C, D2 C, A0 C, AF C, A0 C,
+C6 C, A0 C, C9 C, A0 C, D2 C, A0 C, C5 C, A0 C,
 
 DEFINER CODE
   DOES> CALL
@@ -447,7 +447,8 @@ CREATE NTS
     ( INSTRUCTIONS FORMATTED INTO LINES, ORIGINAL HAS ONE STRING )
     ."        C E N T I P E D E" CR
     ."        _________________" CR
-    ."  Use 'J' and 'L' for left and" CR CR
+    CR
+    ."  Use 'J' and 'L' for left and" CR
     ." right, 'I' and 'M' for up and" CR
     ." down and 'A' to fire to shoot" CR
     ." the centipede."
