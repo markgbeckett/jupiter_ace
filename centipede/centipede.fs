@@ -45,17 +45,12 @@ A0 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, A0 C,
 
 A0 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 95 C,
-10 C, 10 C, 15 C, 97 C, 10 C, 92 C, 15 C, 11 C,
+10 C, 15 C, 15 C, 97 C, 10 C, 92 C, 15 C, 11 C,
 17 C, 13 C, 15 C, 13 C, 12 C, 94 C, 16 C, 10 C,
 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, A0 C,
 
 A0 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 95 C,
 10 C, 15 C, 15 C, 11 C, 96 C, 15 C, 15 C, 10 C,
-15 C, 10 C, 15 C, 93 C, 10 C, 95 C, 15 C, 10 C,
-10 C, 10 C, 10 C, 10 C, 10 C, 10 C, 10 C, A0 C,
-
-A0 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 95 C,
-10 C, 15 C, 15 C, 10 C, 10 C, 15 C, 15 C, 10 C,
 15 C, 10 C, 15 C, 93 C, 10 C, 95 C, 15 C, 10 C,
 10 C, 10 C, 10 C, 10 C, 10 C, 10 C, 10 C, A0 C,
 
@@ -66,7 +61,7 @@ A0 C, 10 C, 10 C, 10 C, 10 C, 10 C, 10 C, 95 C,
 
 A0 C, 10 C, 10 C, 10 C, 10 C, 10 C, 10 C, 91 C,
 93 C, 15 C, 15 C, 10 C, 10 C, 15 C, 15 C, 10 C,
-15 C, 10 C, 15 C, 10 C, 10 C, 95 C, 15 C, 10 C,
+15 C, 10 C, 15 C, 93 C, 97 C, 91 C, 96 C, 10 C,
 10 C, 10 C, 10 C, 10 C, 10 C, 10 C, 10 C, A0 C,
 
 A0 C, 10 C, 10 C, 10 C, 10 C, 10 C, 10 C, 10 C,
@@ -185,23 +180,23 @@ A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C,
 A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C,
 A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, 20 C, 20 C,
 
-20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, A0 C,
 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, A0 C, 20 C, 20 C, 20 C, 20 C,
 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
 20 C, 20 C, 20 C, 20 C, 20 C, A0 C, 20 C, 20 C,
 
-20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, A0 C,
-20 C, 20 C, 20 C, 20 C, 20 C, 43 C, 20 C, 2E C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, A0 C, 20 C, 43 C, 20 C, 2E C,
 20 C, 44 C, 20 C, 4F C, 20 C, 4F C, 20 C, 4C C,
 20 C, 45 C, 20 C, 59 C, 20 C, A0 C, 20 C, 20 C,
 
-20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, A0 C,
 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, A0 C, 20 C, 20 C, 20 C, 20 C,
 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
 20 C, 20 C, 20 C, 20 C, 20 C, A0 C, 20 C, 20 C,
 
-20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, A0 C,
-A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, A0 C, A0 C, A0 C, A0 C, A0 C,
 A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C,
 A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, 20 C, 20 C,
 
@@ -261,6 +256,61 @@ A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C,
 A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C,
 A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C,
 
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+
+A0 C, D0 C, A0 C, D2 C, A0 C, C5 C, A0 C, D3 C,
+A0 C, D3 C, A0 C, A0 C, C5 C, A0 C, CE C, A0 C,
+D4 C, A0 C, C5 C, A0 C, D2 C, A0 C, A2 C, A0 C,
+A6 C, A0 C, A9 C, A0 C, B2 C, A0 C, A5 C, A0 C,
+
 DEFINER CODE
   DOES> CALL
 ;
@@ -272,7 +322,7 @@ CODE TITLE
 
 : TITLE1 ( FIRST TITLE SCREEN )
     CLS
-    T1 300 TITLE
+    T1 2E0 TITLE
 ;
 
 : TITLE2 ( SECOND TITLE SCREEN )
@@ -282,7 +332,7 @@ CODE TITLE
 
 :  TITLE3 ( THIRD TITLE SCREEN )
     CLS
-    T3 160 TITLE
+    T3 2C0 TITLE
 ;
 
 CREATE LNGTH 
