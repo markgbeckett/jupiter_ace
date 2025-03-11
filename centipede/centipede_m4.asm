@@ -56,8 +56,8 @@ AY_MAX_CHANNEL:	equ 0x03	; Three channels
 	;;  Boldfield Sound Blaster   - REG_PORT = FD ; WRITE = FF
 	;;  RC2014 YM2149 Rev 5 (Def) - REG_PORT = D8 ; WRITE = D0
 	;;  RC2014 YM2149 Rev 6 (MSX) - REG_PORT = A0 ; WRITE = A1 
-AY_REG_PORT:	equ 0xA0
-AY_DATA_WRITE_PORT:	equ 0xA1
+AY_REG_PORT:	equ 0xFD
+AY_DATA_WRITE_PORT:	equ 0xFF
 
 	;; Jupiter Ace Memory Map and System Variables
 DISPLAY:	equ 0x2400	; Start of display buffer
@@ -642,7 +642,7 @@ CHECK_DIRN:
 	call GET_CHR
 	and a
 	jr z, CHD_K_RIGHT
-	cp UDG_BUGB
+	cp UDG_DART
 	jp nc, l4540h
 	inc b
 
@@ -658,7 +658,7 @@ CHD_K_RIGHT:
 	call GET_CHR
 	and a
 	jr z, CHD_K_LEFT
-	cp UDG_BUGB
+	cp UDG_DART
 	jp nc, l4540h
 	dec c
 	nop
@@ -677,7 +677,7 @@ CHD_K_LEFT:
 	call GET_CHR
 	and a
 	jr z, CHD_K_DOWN
-	cp UDG_BUGB
+	cp UDG_DART
 	jp nc, l4540h
 	inc c
 	nop
@@ -696,7 +696,7 @@ CHD_K_DOWN:
 	call GET_CHR
 	and a
 	jr z, CHD_DONE
-	cp UDG_BUGB
+	cp UDG_DART
 	jp nc, l4540h 		; $3E58
 	dec b
 
@@ -715,7 +715,7 @@ CHD_J_UP:
 	call GET_CHR
 	and a
 	jr z, CHD_J_RIGHT
-	cp UDG_BUGB
+	cp UDG_DART
 	jp nc, l4540h
 	inc b
 
@@ -731,7 +731,7 @@ CHD_J_RIGHT:
 	call GET_CHR
 	and a
 	jr z, CHD_J_LEFT
-	cp UDG_BUGB
+	cp UDG_DART
 	jp nc, l4540h
 	dec c
 
@@ -747,7 +747,7 @@ CHD_J_LEFT:
 	call GET_CHR
 	and a
 	jr z, CHD_J_DOWN
-	cp UDG_BUGB
+	cp UDG_DART
 	jp nc, l4540h
 	inc c
 
@@ -763,7 +763,7 @@ CHD_J_DOWN:
 	call GET_CHR
 	and a
 	jr z, CHD_DONE
-	cp UDG_BUGB
+	cp UDG_DART
 	jp nc, l4540h 		; $3E58
 	dec b
 
@@ -1923,7 +1923,7 @@ INIT_GAME_STATS: db $0C		; Number of centipede segments
 	;;   - All registered preserved
 	;; ------------------------------------------------------------
 GAME_STEP_0:
-	push af			;41c8 During debugging, is probably
+	ret 			;41c8 During debugging, is probably
 				;     `push af`
 
 	;; Read keyboard half-row V,...,Space and check if Space pressed
@@ -1935,8 +1935,10 @@ GAME_STEP_0:
 	pop af			;41d0 - Otherwise, balance stack and done
 	ret			;41d1
 
-l41d2h:	jr l41d2h
-	;; call RESTORE_FORTH		;41d2
+l41d2h:	call WRITE_TO_AY	;4968 - Mute all sounds
+	db AY_MIXER, 0xFF	;496b
+
+	call RESTORE_FORTH	;41d2
 
 	ld de,EXIT_STR		;41d5
 	call PRINT_STR		;41d8 - PRINT_STR routine in ROM
