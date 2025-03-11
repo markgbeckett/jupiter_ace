@@ -642,7 +642,7 @@ CHECK_DIRN:
 	call GET_CHR
 	and a
 	jr z, CHD_K_RIGHT
-	cp UDG_DART
+	cp UDG_DART+1
 	jp nc, l4540h
 	inc b
 
@@ -658,7 +658,7 @@ CHD_K_RIGHT:
 	call GET_CHR
 	and a
 	jr z, CHD_K_LEFT
-	cp UDG_DART
+	cp UDG_DART+1
 	jp nc, l4540h
 	dec c
 	nop
@@ -677,7 +677,7 @@ CHD_K_LEFT:
 	call GET_CHR
 	and a
 	jr z, CHD_K_DOWN
-	cp UDG_DART
+	cp UDG_DART+1
 	jp nc, l4540h
 	inc c
 	nop
@@ -696,7 +696,7 @@ CHD_K_DOWN:
 	call GET_CHR
 	and a
 	jr z, CHD_DONE
-	cp UDG_DART
+	cp UDG_DART+1
 	jp nc, l4540h 		; $3E58
 	dec b
 
@@ -715,7 +715,7 @@ CHD_J_UP:
 	call GET_CHR
 	and a
 	jr z, CHD_J_RIGHT
-	cp UDG_DART
+	cp UDG_DART+1
 	jp nc, l4540h
 	inc b
 
@@ -731,7 +731,7 @@ CHD_J_RIGHT:
 	call GET_CHR
 	and a
 	jr z, CHD_J_LEFT
-	cp UDG_DART
+	cp UDG_DART+1
 	jp nc, l4540h
 	dec c
 
@@ -747,7 +747,7 @@ CHD_J_LEFT:
 	call GET_CHR
 	and a
 	jr z, CHD_J_DOWN
-	cp UDG_DART
+	cp UDG_DART+1
 	jp nc, l4540h
 	inc c
 
@@ -763,7 +763,7 @@ CHD_J_DOWN:
 	call GET_CHR
 	and a
 	jr z, CHD_DONE
-	cp UDG_DART
+	cp UDG_DART+1
 	jp nc, l4540h 		; $3E58
 	dec b
 
