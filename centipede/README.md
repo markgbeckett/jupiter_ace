@@ -112,7 +112,7 @@ The final result is not 100% accurate, but I think it is close enough, and sound
 
 Having implemented the spider enemy, I also fixed the bugs I had found in the original code, and reinstated joystick support -- though embedded in the main code rather that in an extra Forth word at the end of the dictionary.
 
-The [source code](centipede_m4.asm) of the modified version of the game is also available if anyone wants to study my changes or to make further enhancements to the game. It should assemble with most of the common cross-assemblers. I have used [z80asm](https://savannah.nongnu.org/projects/z80asm). Having assembled the source -- e.g. `z80asm -o centipede.bin centipede_m4.asm` -- you should load Centipede into an emulator, such as EightyOne, and then load the assembled binary file at memory address 0x3C5C.
+The [source code](centipede_m4.asm) of the modified version of the game is also available if anyone wants to study my changes or to make further enhancements to the game. It should assemble with most of the common cross-assemblers. I have used [z80asm](https://savannah.nongnu.org/projects/z80asm). Having assembled the source -- e.g. `z80asm -o centipede.bin centipede_m4.asm` -- you should load Centipede into an emulator, such as EightyOne, and then load the assembled binary file at memory address 0x3C5C, which is the beginning of the parameter field for the `DATA` word.
 
 The game employs basic security to prevent unauthorised copying and overloads the meaning of various words including `SAVE`. To work around this, you need to use `EXECUTE` and point to the code field of the original SAVE word. For example, enter:
 
@@ -123,4 +123,22 @@ The game employs basic security to prevent unauthorised copying and overloads th
 --in decimal mode.
 
 Finally, write a new tape image from EightyOne with your modified version of the game and enjoy.
+
+# Guilding the Lilly
+
+Having completed the updates to Centipede, Dave Curran asked if it would be possible to use a joystick without having to manually select it during the game. Ideally, if the player pressed Fire to start the game, then the joystick would be selected.
+
+I thought about this for a while. The issue is that, for some models, if no joystick interface is present, then port 1 will report the value 20h, which is the same as if Fire is pressed.
+
+To work around this, I decided to add a test, when the game starts, to read port 1 a few successive times to see if the value 0 was is ever read. If it is, I assume a joystick interface is present and it is possible the player will want to use a joystick to play the game. If 0 is never read, then I assume no joystick interface is present (though will still let the player manually select joystick controls while playing the game).
+
+The extra code (written in Forth) was relatively straightforward to write. However, I kept falling foul of Colin's security features. Whenever I tried to `REDEFINE` a word (using `13FD EXECUTE <WORD>`), the machine would crash. I assume this is an obscure bug which means you cannot redefine a word from the dictionary in ROM.
+
+In the end, I decided to also rewrite the Forth wrapper code, but without the security features, and to add the joystick check to that.
+
+The Forth source of the game is stored in [centipede.fs](centipede.fs). This is the Forth wrapper code used in the Minstrel 4th/ Minstrel 4D version of the game. Note that, while the Forth code makes space for the machine-code part of the game, it does not include the machine code.
+
+The Forth source is mostly as Colin wrote for the original game. However, Colin created a sequence of three title screens for the game, using both the Ace's mosaic graphics and inverse-video characters. These are not easy to encode in an ASCII file, so I have changed how these screens are displayed, using a short machine-code routine that reads a 1D array of bytes entered into the dictionary using `,C`. Also, the status messages that say "Press Enter to Start" are no longer displayed in inverse video: you could manually edit these, once entered into the Minstrel 4th, if you wanted. 
+
+You can load the Forth source into a Minstrel 4th (with the [USB keyboard interface](https://peacockmedia.software/RC2014/minstrelkb/)) or a Minstrel 4D, sending the source code over ther serial interface. On a Minstrel 4D, it will take around 20 minutes to load the whole program: though, you then need to load the machine code (e.g., using `3C5C 0 BLOAD`).
 
