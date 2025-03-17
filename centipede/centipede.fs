@@ -266,10 +266,10 @@ A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C, A0 C,
 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
 
-20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
-20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
-20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
-20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
+20 C, 50 C, 6F C, 72 C, 74 C, 65 C, 64 C, 20 C,
+62 C, 79 C, 20 C, 47 C, 65 C, 6F C, 72 C, 67 C,
+65 C, 20 C, 42 C, 65 C, 63 C, 6B C, 65 C, 74 C,
+74 C, 20 C, 32 C, 30 C, 32 C, 35 C, 20 C, 20 C,
 
 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C, 20 C,
@@ -422,6 +422,7 @@ CREATE NTS
 
 	TITLE3
 
+	
 	0 34 0 DO
 	    INTR
 	    INKEY D = IF
@@ -459,18 +460,15 @@ CREATE NTS
     C8 1F4 BEEP
 
     BEGIN
+	0
 	INKEY 0D = IF
 	    0 3C5C C!
-	    1
+	    DROP 1
 	ELSE ?JOYSTICK C@ IF
 		1 IN 20 = IF
 		    1 3C5C C!
-		    1
-		ELSE
-		    0
+		    DROP 1
 		THEN
-	    ELSE
-		0
 	    THEN
 	THEN
     UNTIL
@@ -487,7 +485,7 @@ CREATE NTS
 	CENTIPEDE ( MAIN GAME )
 
 	( END OF GAME, PAUSE BEFORE RESTARTING )
-	15 0 AT ." P R E S S  E N T E R          " ( 32 CHARS )
+	15 5 AT ." P R E S S  E N T E R          " ( 32 CHARS )
 
 	BEGIN
 	    0 ( ASSUME ENTER / FIRE NOT PRESSED )
