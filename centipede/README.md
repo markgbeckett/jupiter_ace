@@ -8,7 +8,7 @@ If you have read my [post about Valkyr](../valkyr-minstrel/README.md), you will 
 
 The Ace version of Centipede runs without issue on the Minstrel 4th and 4D, though does not have the enhanced sound support, because of the different port requirements of the sound card. I was also unable to get the game to work with a joystick. I therefore set about updating Colin Dooley's original, so that you play the game in all of its three-channel-audio glory using either a joystick or keyboard, on the Minstrel 4th/ 4D.
 
-In short, I have created a new version of the game that runs well on the Minstrel 4th/ 4D, supports the RC2014 sound card, and the Boldfield/ Tynemouth interface. Plus, it has some extra features as I reveal below.
+In short, I have created a new version of the game that runs well on the Minstrel 4th/ 4D, supports the RC2014 sound card, and the Boldfield/ Tynemouth joystick interface. Plus, it has some extra features as I reveal below.
 
 If you just want to play the game, follow the instructions in the next section. If you want to read about my experience of disassembling the game, have a look at the section below titled "Disassembling Centipede".
 
@@ -20,9 +20,9 @@ To play Centipede on your Minstrel 4th/ 4D, simply copy the tape image to the SD
 
 To play the game in an emulator (for example, EightyOne), choose the Soundbox version. If your emulator supports Soundbox audio, you will get enhanced sound.
 
-A reminder about the keyboard controls is provided at the beginning of the game: to fire, you press 'A', to move you press 'J' and 'L' to move left and right, 'I' and 'M' for up and down.
+A reminder about the keyboard controls is provided at the beginning of the game: to fire, press 'A'; to move left and right, press 'J' and 'L'; and for up and down, press 'I' and 'M'.
 
-Joystick controls, if you have a suitable interface, are also available. Press 'H' to switch to joystick controls, while playing the game. Press 'K' to switch back to keyboard controls.
+Joystick controls, if you have a suitable interface, are also available. Press 'Fire' rather than 'Enter' to start the game. You can also change controls during the game by pressing 'H' to switch to joystick controls or 'K' to switch back to keyboard controls.
 
 ## Disassembling Centipede
 
@@ -124,21 +124,21 @@ The game employs basic security to prevent unauthorised copying and overloads th
 
 Finally, write a new tape image from EightyOne with your modified version of the game and enjoy.
 
-# Guilding the Lilly
+## Guilding the Lilly
 
 Having completed the updates to Centipede, Dave Curran asked if it would be possible to use a joystick without having to manually select it during the game. Ideally, if the player pressed Fire to start the game, then the joystick would be selected.
 
 I thought about this for a while. The issue is that, for some models, if no joystick interface is present, then port 1 will report the value 20h, which is the same as if Fire is pressed.
 
-To work around this, I decided to add a test, when the game starts, to read port 1 a few successive times to see if the value 0 was is ever read. If it is, I assume a joystick interface is present and it is possible the player will want to use a joystick to play the game. If 0 is never read, then I assume no joystick interface is present (though will still let the player manually select joystick controls while playing the game).
+To work around this, I decided to add a test, when the game starts, to read port 1 a few successive times to see if the value 0 is ever read. If it is, I assume a joystick interface is present and it is possible the player will want to use a joystick to play the game. If 0 is never read, then I assume no joystick interface is present (though will still let the player manually select joystick controls while playing the game).
 
-The extra code (written in Forth) was relatively straightforward to write. However, I kept falling foul of Colin's security features. Whenever I tried to `REDEFINE` a word (using `13FD EXECUTE <WORD>`), the machine would crash. I assume this is an obscure bug which means you cannot redefine a word from the dictionary in ROM.
+The extra code (written in Forth) was relatively straightforward to write. However, I kept falling foul of Colin's security features. Whenever I tried to `REDEFINE` a word (you need to use `13FD EXECUTE <WORD>` as the `REDEFINE` is overloaded), the machine would crash. I assume this is an obscure bug which means you cannot redefine a word from the dictionary in ROM.
 
 In the end, I decided to also rewrite the Forth wrapper code, but without the security features, and to add the joystick check to that.
 
-The Forth source of the game is stored in [centipede.fs](centipede.fs). This is the Forth wrapper code used in the Minstrel 4th/ Minstrel 4D version of the game. Note that, while the Forth code makes space for the machine-code part of the game, it does not include the machine code.
+The Forth source of the game is stored in [centipede.fs](centipede.fs). This is the Forth wrapper code used in the Minstrel 4th/ Minstrel 4D version of the game. Note that, while the Forth code makes space for the machine-code part of the game, by `ALLOT`-ing space in the pameter field of `DATA`, it does not include the machine code. You need to load this separately -- for example, using `BLOAD`.
 
-The Forth source is mostly as Colin wrote for the original game. However, Colin created a sequence of three title screens for the game, using both the Ace's mosaic graphics and inverse-video characters. These are not easy to encode in an ASCII file, so I have changed how these screens are displayed, using a short machine-code routine that reads a 1D array of bytes entered into the dictionary using `,C`. Also, the status messages that say "Press Enter to Start" are no longer displayed in inverse video: you could manually edit these, once entered into the Minstrel 4th, if you wanted. 
+The Forth source is mostly as Colin wrote for the original game. However, Colin created a sequence of three title screens for the game, using both the Ace's mosaic graphics and inverse-video characters. These are not easy to encode in an ASCII file, so I have changed how these screens are displayed, using a short machine-code routine that reads a 1D array of bytes entered into the dictionary using `C,`. Also, the status messages that say "Press Enter to Start" are no longer displayed in inverse video: you could manually edit these, once entered into the Minstrel 4th, if you wanted. 
 
 You can load the Forth source into a Minstrel 4th (with the [USB keyboard interface](https://peacockmedia.software/RC2014/minstrelkb/)) or a Minstrel 4D, sending the source code over ther serial interface. On a Minstrel 4D, it will take around 20 minutes to load the whole program: though, you then need to load the machine code (e.g., using `3C5C 0 BLOAD`).
 
