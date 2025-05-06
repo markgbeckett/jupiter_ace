@@ -2,17 +2,17 @@
 
 It is possible to load programs, on emulator tape files, into your Minstrel 4th using your PC and a couple of utilities.
 
-This is not the only way to do this, but seems reliable for me.
+Here is an approach I have found to be reasonably reliable.
 
 First, grab a copy of the Castool utility which is distributed with the [MAME emulator](https://docs.mamedev.org/tools/castool.html). Castool will convert emulator tape files (e.g., Ace TAP files) into WAV audio format.
 
-Castool supports lots of different emulators and formats, but a typical invokation for an Ace file is:
+Castool supports lots of different emulators and formats, but a typical invocation for an Ace file is:
 
 ```
 castool convert jupiter <program>.tap <program>.wav
 ```
 
-Then, load the WAV file into [Audacity](https://www.audacityteam.org/), and apply a low-pass filter (use Ctrl-A to highlight the whole file, then select <Effect><EQ and Filters><Low-Pass Filter ...>) with a frequency set to 2000 Hz (and default rolloff of 6 dB).
+Then, load the WAV file into [Audacity](https://www.audacityteam.org/), and apply a low-pass filter (use Ctrl-A to highlight the whole file, then select (Effect)(EQ and Filters)(Low-Pass Filter ...)) with a frequency set to 2000 Hz (and default rolloff of 6 dB).
 
 Connect your PC audio out to the Ear on the Minstrel 4th (ideally, using a mono, 3.5mm jack, as was supplied with the original Ace). Check the audio settings for the audio device you are using, at the PC end, and make sure that any audio effects (such as Enhanced Audio or Spatial Sound) are disabled and set the volume to maximum.
 
