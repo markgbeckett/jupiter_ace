@@ -18,9 +18,8 @@ The default plot dimensions are a rectangle in the complex plane from -2-i to 0.
 
 Using this representation, we need to remember to rescale the working value after any multiplication. Therefore, to compute z(re)^2, we have to compute z(re)*z(re) / 8192. For example, in floating point arithmetic, 1.5^2 is 2.25. In our integer representation, 1.5 is represented by 12,288 and so 1.5^2 is calculated as 12,288 *12,288 / 8,192 = 18,432 (which is the representation for 2.25).
 
-Ace Forth has a very useful word `*/`, which multiplies the stack entries 3OS and 2OS and then divides by TOS. The key is that the intermediate value resulting from multiplying 2OS and 3OS is stored in a double-length (32-bit) integer, so we do not risk an overflow.
+Ace Forth has a very useful word `*/`, which multiplies the third and second stack entries (3OS and 2OS) and then divides by the top-of-stack entry (TOS). The key is that the intermediate value resulting from multiplying 2OS and 3OS is stored in a double-length (32-bit) integer, so we do not risk an overflow.
 
 Therefore, to square the number on the top of the stack, simply execute `DUP 8192 */`.
 
 The implementation is based on one provided on the [Rosetta Code website](https://rosettacode.org/wiki/Mandelbrot_set#Forth), ported to work on Ace Forth. I have added extensive comments to help others to understand how it works. It is quite a complicated implementation, involving lots of stack acrobatics. It may take a little perseverence to fully understand what is going on.
-
