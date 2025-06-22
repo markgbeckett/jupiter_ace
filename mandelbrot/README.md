@@ -2,6 +2,8 @@
 
 This is a Mandelbrot Set plotting routine, written in Ace FORTH, and using integer arithmetic. It uses the Ace's built-in `PLOT` routine to give a resolution of 64 by 44 pixels.
 
+![](mandelbrot.png "Sample output of the program")
+
 ## Running the Program
 
 To run the program, `LOAD mandelbrot` from the [TAP image](mandelbrot.tap) or the [WAV file](mandelbrot.wav). Alternatively, you can type in the [source code](mandelbrot.fs) directly or, on the Minstrel 4D, via the serial interface.
