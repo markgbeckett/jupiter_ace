@@ -25,7 +25,12 @@ LINK = #1D58	; Addr of name-length field of UFLOAT
 	include "case.asm" 	      	; CASE construct (Optional)
 	include "devtools.asm" 		; Additional tools for
 					; developers
-	
+
+	;; Uncomment the following to include support for Tynemouth Serial card
+	;; include "..\..\Minstrel4th-rom-patch\rom-modules\common-uart-ops.asm"
+	;; include "..\..\Minstrel4th-rom-patch\rom-modules\uart-dos.asm"
+	;; include "..\..\Minstrel4th-rom-patch\rom-modules\uart-xmodem.asm"
+
 	DISPLAY "Bytes left: ", #3BFF - $
 	
 

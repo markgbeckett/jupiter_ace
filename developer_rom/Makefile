@@ -10,6 +10,7 @@ ifeq ($(OS),Windows_NT)
 endif
 
 SRC = *.asm
+# SRC = *.asm ..\..\Minstrel4th-rom-patch\rom-modules\common-uart-ops.asm ..\..\Minstrel4th-rom-patch\rom-modules\uart-dos.asm ..\..\Minstrel4th-rom-patch\rom-modules\uart-xmodem.asm
 OBJS = patched.rom
 
 all: toflash.rom
