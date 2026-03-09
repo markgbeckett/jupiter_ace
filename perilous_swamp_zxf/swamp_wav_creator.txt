@@ -1,5 +1,7 @@
-ffmpeg -i swamp01_zxf4.wav -i swamp02_zxf4.wav -i swamp03_zxf4.wav -i swamp04_zxf4.wav \
--i swamp05_zxf4.wav -i swamp06_zxf4.wav -i swamp07_zxf4.wav -i swamp08_zxf4.wav \
--i swamp09_zxf4.wav -i swamp10_zxf4.wav -i swamp11_zxf4.wav \
--filter_complex '[0:0][1:0][2:0][3:0][4:0][5:0][6:0][7:0][8:0][9:0][10:0]concat=n=11:v=0:a=1[out]' \
+ffmpeg -i swamp_01.wav -i swamp_02.wav -i swamp_03.wav -i swamp_04.wav \
+-i swamp_05.wav -i swamp_06.wav -i swamp_07.wav -i swamp_08.wav \
+-i swamp_09.wav -i swamp_10.wav -i swamp_11.wav -i swamp_12.wav \
+-i swamp_13.wav -i swamp_14.wav -i swamp_15.wav -i swamp_16.wav \
+-i swamp_17.wav \
+-filter_complex '[0:0][1:0][2:0][3:0][4:0][5:0][6:0][7:0][8:0][9:0][10:0][11:0][12:0][13:0][14:0][15:0][16:0]concat=n=17:v=0:a=1[out]' \
 -map '[out]' perilous_swamp_zxf4.wav
