@@ -6,6 +6,7 @@ ffmpeg -i swamp_01.wav -i swamp_02.wav -i swamp_03.wav -i swamp_04.wav \
 -i swamp_21.wav -i swamp_22.wav -i swamp_23.wav -i swamp_24.wav \
 -i swamp_25.wav -i swamp_26.wav -i swamp_27.wav -i swamp_28.wav \
 -i swamp_29.wav -i swamp_30.wav -i swamp_31.wav -i swamp_32.wav \
--i swamp_33.wav -i swamp_34.wav -i swamp_35.wav \
--filter_complex '[0:0][1:0][2:0][3:0][4:0][5:0][6:0][7:0][8:0][9:0][10:0][11:0][12:0][13:0][14:0][15:0][16:0][17:0][18:0][19:0][20:0][21:0][22:0][23:0][24:0][25:0][26:0][27:0][28:0][29:0][30:0][31:0][32:0][33:0][34:0]concat=n=35:v=0:a=1[out]' \
+-i swamp_33.wav -i swamp_34.wav -i swamp_35.wav -i swamp_36.wav \
+-i swamp_37.wav -i swamp_38.wav \
+-filter_complex '[0:0][1:0][2:0][3:0][4:0][5:0][6:0][7:0][8:0][9:0][10:0][11:0][12:0][13:0][14:0][15:0][16:0][17:0][18:0][19:0][20:0][21:0][22:0][23:0][24:0][25:0][26:0][27:0][28:0][29:0][30:0][31:0][32:0][33:0][34:0][35:0][36:0][37:0]concat=n=38:v=0:a=1[out]' \
 -map '[out]' perilous_swamp_zxf4.wav
