@@ -4,6 +4,8 @@ This is a port of the ZX81 adventure game, Perilous Swamp, to Tree Forth of the 
 
 The current version is a basic port: it is a complete game, but lacks many of the special features of the original. I plan to continue adding to the game, to make it a more comprehensive port.
 
+![Perilous Swamp In-game Screenshot](perilous_swamp_in-game.png)
+
 ## Playing Perilous Swamp
 
 To play the game, you need a Minstrel 4th set up with [my port of the Tree Forth ROM](https://github.com/markgbeckett/zx81/tree/main/zx-forth).
