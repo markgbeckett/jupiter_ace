@@ -414,6 +414,7 @@ DECIMAL
     REPEAT
 ;
 
+
 -->
 
 ( SCREEN 21 )
@@ -708,6 +709,19 @@ DECIMAL
 	DROP
 	100 PAUSE
     AGAIN
+;
+
+: CHECKRING 2 RND IF ." HE HAD A MAGIC RING MARKED "
+	3 RND DUP 2 = IF
+	    ." ZAP" 3 ZAP ! DROP
+	ELSE DUP 1 = IF
+		." BAT" 3 BAT ! DROP
+	    ELSE
+		." XXX" XXX GET
+	    THEN
+	THEN
+	CR
+    THEN
 ;
 
 
