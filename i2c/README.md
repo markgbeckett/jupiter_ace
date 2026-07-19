@@ -1,4 +1,4 @@
-Inspired by a video on Tim's Retro corner (https://youtu.be/4sX05bnFuwc?si=C3DUPkzGvRP220mm), I have been experimenting with the I2C interface. The RC2014 interface on the Minstrel 4th provides various options for an I2C controller. I am using the [Small Computer Central SC137](https://smallcomputercentral.com/rcbus/sc100-series/sc137-i2c-master-module-rc2014/) from Steve Cousins. 
+Inspired by a video on Tim's Retro corner (https://youtu.be/4sX05bnFuwc?si=C3DUPkzGvRP220mm), I have been experimenting with the I2C interface on the Minstrel 4th. Thanks to the RC2014 bus on the Minstrel 4th, there are various options for an I2C controller. I am using the [Small Computer Central SC137](https://smallcomputercentral.com/rcbus/sc100-series/sc137-i2c-master-module-rc2014/) from Steve Cousins. 
 
 The SC137 is an excellent kit, with through-hole components, very clear instructions and example code to get you started.
 
