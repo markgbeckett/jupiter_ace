@@ -168,4 +168,9 @@ DECIMAL
     THEN
 ;
 
-    
+: GETTEMP
+    LM_SETUP LM_READ
+    SWAP 8TOFLOAT
+    ROT 128 AND IF 0.5 F+ THEN
+    CR ." Temperature (deg. C) " F. CR
+;
