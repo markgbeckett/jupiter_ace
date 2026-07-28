@@ -14,7 +14,7 @@ castool convert jupiter <program>.tap <program>.wav
 
 Then, load the WAV file into [Audacity](https://www.audacityteam.org/), and apply a low-pass filter (use Ctrl-A to highlight the whole file, then select (Effect)(EQ and Filters)(Low-Pass Filter ...)) with a frequency set to 2000 Hz (and default rolloff of 6 dB).
 
-Connect your PC audio out to the Ear on the Minstrel 4th (ideally, using a mono, 3.5mm jack, as was supplied with the original Ace). Check the audio settings for the audio device you are using, at the PC end, and make sure that any audio effects (such as Enhanced Audio or Spatial Sound) are disabled and set the volume to maximum.
+Connect your PC audio out to the Ear on the Minstrel 4th (ideally, using a mono, 3.5mm jack, as was supplied with the original Ace). Check the audio settings for the audio device you are using, at the PC end, and make sure that any audio effects (such as Enhanced Audio or Spatial Sound) are disabled and set the volume to high/ near-maximum.
 
 Finally, enter `LOAD <filename>`, and start playback. (Note: make sure you have selected the right playback device to avoid a loud surprise.) 
 
