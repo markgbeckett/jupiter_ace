@@ -33,7 +33,7 @@ The current library includes all the usual I2C operations (init, open, read, wri
 
 For the Ace Forth version, I have provided a TAP file, which you could load with (for example) the Tynemouth Serial Card (`TAPIN I2C_INTERFACE.TAP LOAD I2C`). I have also included a WAV file which you could load via the cassette interface (`LOAD I2C`). Finally, I have included the source code ([i2c_interface.fs](i2c_interface.fs)), so you can study that. You could also load the library into [the EightyOne emulator](https://sourceforge.net/projects/eightyone-sinclair-emulator/), which could be a useful environment to develop support for new peripherals. However, EightyOne does not emulate any I2C device support, so testing has to be done on real hardware.
 
-For the Tree Forth version, I have provided a WAV file in which the source code is spread across six screens. This will only work on the Minstrel 4th port of Tree Forth: if you wish to run on Minstrel 3 or ZX81, you will have to type in the source code (see below). To load the library into Tree Forth, switch to the split-screen view and make the console active (using Shift-1). Then enter:
+For the Tree Forth version, I have provided a [WAV file](i2c_interface_zxf4.fs) in which the source code is spread across six screens. This will only work on the Minstrel 4th port of Tree Forth: if you wish to run on a Minstrel 3 or ZX81, you will have to type in the source code (see below). To load the library into Tree Forth, switch to the split-screen view and make the console active (using Shift-1). Then enter:
 ```
 CON 1 LOAD
 ```
@@ -55,9 +55,9 @@ Once configured, the library should be fairly straightforward to use. There are 
 
 - `I2C_OPEN ( NN -- FL )` is used to initiate communications with a target peripheral, putting the I2C bus into a busy state. On entry, TOS should contain an 8-bit address (the 7-bit device id plus the read/ write bit). On exit, the stack contains `0` if the operation is successful or `-1` otherwise.
 
-- `I2C_WRITE ( NN -- FL )` is used to write a byte to a target peripheral, after successfully opening a conversation. The operation can accommodate clock stretching by the target peripheral. On entry, TOS contains the byte to send. On exit, the stack contains `0` if the operation is successful and acknowledged by the target, or `-1` otherwise.
+- `I2C_WRITE ( NN -- FL )` is used to write a byte to a target peripheral (assumes a conversation has been initiated with `I2C_OPEN`). The operation can accommodate clock stretching by the target peripheral. On entry, TOS contains the byte to send. On exit, the stack contains `0` if the operation is successful and acknowledged by the target, or `-1` otherwise.
 
-- `I2C_READ ( FL -- NN )` is used to read a byte from a target peripheral, after successfully opening a conversation. On entry, the TOS indicates whether the read operation should be acknowledged (TOS = 1) or not acknowledged (TOS = 0).
+- `I2C_READ ( FL -- NN )` is used to read a byte from a target peripheral (assumes a conversation has been initiated with `I2C_OPEN`). On entry, the TOS indicates whether the read operation should be acknowledged (TOS = 1) or not acknowledged (TOS = 0).
 
 - `I2C_CLOSE ( -- )` is used to end a conversation, freeing the bus.
 
@@ -67,7 +67,7 @@ There are also a few helper words, which are not strictly required for an I2C bu
 
 - `I2C_INIT ( -- )` will set the bus in the free state, with both SCL and SDA set to their quiescent levels. 
 
-- `?SC137_CHK ( -- )` will check if the SC137 control device is present and responding. On exit, TOS is zero if device detected, or -1 otherwise.  You could update this word to support your own control device.
+- `?SC137_CHK ( -- FL )` will check if the SC137 control device is present and responding. On exit, TOS is zero if device detected, or -1 otherwise.  You could update this word to support your own control device.
 
 ## Demonstration
 
@@ -75,6 +75,6 @@ The I2C library includes a simple demonstration to help you get started, based o
 
 These routines follow the usual approach of: opening communications with the device (with `I2C_OPEN`), selecting a register by writing a register id onto the bus (with `I2C_WRITE`), either reading or updating the register's contents (with `I2C_READ` or `I2C_WRITE`), and then closing the connection (with `I2C_STOP`). Note that once you have opened a dialogue with a device, you may issue multiple read and write instructions.
 
-You can remove the demonstrator from the library (e.g., to save memory) by entering `FORGET LM75A_7BIT` and then adding your own code.
+You can remove the demonstrator from the library (e.g., to free up memory) by entering `FORGET LM75A_7BIT` and then adding your own code.
 
 Enjoy!
