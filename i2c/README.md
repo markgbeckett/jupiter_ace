@@ -69,4 +69,12 @@ There are also a few helper words, which are not strictly required for an I2C bu
 
 - `?SC137_CHK ( -- )` will check if the SC137 control device is present and responding. On exit, TOS is zero if device detected, or -1 otherwise.  You could update this word to support your own control device.
 
+## Demonstration
+
+The I2C library includes a simple demonstration to help you get started, based on the LM75A temperature sensor. Two words are provided: `LM_SETUP` and `LM_READ` which show how to initialise the sensor into comparator mode and how to read a 9-bit temperature measurement, respectively.
+
+These routines follow the usual approach of: opening communications with the device (with `I2C_OPEN`), selecting a register by writing a register id onto the bus (with `I2C_WRITE`), either reading or updating the register's contents (with `I2C_READ` or `I2C_WRITE`), and then closing the connection (with `I2C_STOP`). Note that once you have opened a dialogue with a device, you may issue multiple read and write instructions.
+
+You can remove the demonstrator from the library (e.g., to save memory) by entering `FORGET LM75A_7BIT` and then adding your own code.
+
 Enjoy!
