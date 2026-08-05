@@ -6,7 +6,7 @@ Inspired by a video on Tim's Retro Corner (https://youtu.be/4sX05bnFuwc?si=C3DUP
 
 Thanks to the RC2014 bus on the Minstrel 4th, there are various options for an I2C controller. I am using the [Small Computer Central SC137](https://smallcomputercentral.com/rcbus/sc100-series/sc137-i2c-master-module-rc2014/) from Steve Cousins. The SC137 is an excellent kit, with through-hole components, very clear instructions, and example (Z80) code to help you to get started.
 
-![Small Computer Centre Sc137](sc137_card.jpg)
+![Small Computer Centre SC137](sc137_card.jpg)
 
 I also needed an I2C peripheral and, aiming to keep things simple, I selected a [Texas Instruments LM75A digital temperature sensor](https://www.ti.com/product/LM75A?utm_source=google&utm_medium=cpc&utm_campaign=ti-null-null-xref-cpc-pf-google-ww_en_cons&utm_content=xref&ds_k=LM75A&dcm=yes&gclsrc=aw.ds&gad_source=1&gad_campaignid=23167718368&gclid=Cj0KCQjw6_HSBhCpARIsANvVltbx4UwIXEwhoU4tSVX0ZtXN4xTsuBVeuN6lcSwTbR4VB1l1UBybTU0aAhjWEALw_wcB). Again, the LM75A is supported by good-quality documentation from Texas Instruments.
 
@@ -33,7 +33,7 @@ The current library includes all the usual I2C operations (init, open, read, wri
 
 For the Ace Forth version, I have provided a TAP file, which you could load with (for example) the Tynemouth Serial Card (`TAPIN I2C_INTERFACE.TAP LOAD I2C`). I have also included a WAV file which you could load via the cassette interface (`LOAD I2C`). Finally, I have included the source code ([i2c_interface.fs](i2c_interface.fs)), so you can study that. You could also load the library into [the EightyOne emulator](https://sourceforge.net/projects/eightyone-sinclair-emulator/), which could be a useful environment to develop support for new peripherals. However, EightyOne does not emulate any I2C device support, so testing has to be done on real hardware.
 
-For the Tree Forth version, I have provided a [WAV file](i2c_interface_zxf4.fs) in which the source code is spread across six screens. This will only work on the Minstrel 4th port of Tree Forth: if you wish to run on a Minstrel 3 or ZX81, you will have to type in the source code (see below). To load the library into Tree Forth, switch to the split-screen view and make the console active (using Shift-1). Then enter:
+For the Tree Forth version, I have provided a [WAV file](i2c_zxf4.wav) in which the source code is spread across six screens. This will only work on the Minstrel 4th port of Tree Forth: if you wish to run on a Minstrel 3 or ZX81, you will have to type in the source code (see below). To load the library into Tree Forth, switch to the split-screen view and make the console active (using Shift-1). Then enter:
 ```
 CON 1 LOAD
 ```
@@ -72,6 +72,9 @@ There are also a few helper words, which are not strictly required for an I2C bu
 ## Demonstration
 
 The I2C library includes a simple demonstration to help you get started, based on the LM75A temperature sensor. Two words are provided: `LM_SETUP` and `LM_READ` which show how to initialise the sensor into comparator mode and how to read a 9-bit temperature measurement, respectively.
+
+![LM75A Demonstrator](tree_forth_i2c_demo.jpg)
+
 
 These routines follow the usual approach of: opening communications with the device (with `I2C_OPEN`), selecting a register by writing a register id onto the bus (with `I2C_WRITE`), either reading or updating the register's contents (with `I2C_READ` or `I2C_WRITE`), and then closing the connection (with `I2C_STOP`). Note that once you have opened a dialogue with a device, you may issue multiple read and write instructions.
 
