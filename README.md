@@ -5,7 +5,9 @@ Some software I have developed for the [Jupiter Ace](http://www.jupiter-ace.co.u
 * `getting_started` - A quick introduction to using Forth on the Minstrel 4th (or Jupiter Ace).
 * `bubble_led` - Minstrel 4th version of Forth toolbox and example message scroller for the RC2014 Bubble Display module.
 * `case` - Many FORTH implementations include a CASE construct, which can be useful for choosing between different paths of execution based on a stack value. Sadly, Ace Forth does not, but it is relatively easy to add one, provided you can get to grips with the COMPILER and RUNS> words.
+* `centipede` - an enhanced version of Colin Dooley's port of the classic arcade game. With AY sound, joystick support and (only in this version) the spider feature, this is probably my favourite Ace/ Minstrel 4th game.
 * `clock_check` - The Minstrel 4th can be run with a clock speed of either 3.25 MHz or 6.5 MHz (selected by a jumper on the board). Sometimes it is useful to be able to check, from software, which clock speed has been set, and adapt accordingly. This simple machine-code routine lets you check.
+* `developer_rom` - Ace Forth with an expanded dictionary, providing some useful development tools, including port of Toni Baker's excellent Z80 disassembler (Minstrel 4th only, as requires the extended ROM addressing).
 * `examples` - Sample Forth programs to illustrate key FORTH programming concepts and techniques.
 * `maze` - In May 2021, the curator of the Jupiter Ace archive put out a call for help to recover a corrupted game known simply as Maze. Here is the recovered game, with commented source, and a blog of the recovery process.
 * `rc2014_source_card` - Inspired by the ZX Spectrum+ 128k's PLAY command, this is FORTH/ assembly language client for writing music for the RC2014 YM/AY Sound Card on your Minstrel 4th. Also, this folder includes a port of the Boldfield Soundbox utility for the RC2014 sound card.
@@ -15,3 +17,8 @@ Some software I have developed for the [Jupiter Ace](http://www.jupiter-ace.co.u
 * `3d_monster_maze` - Ace FORTH port of the classic ZX81 game.
 * `utilities` - Additional words (mostly from the Jupiter Ace manual), which probably should have been in the Ace FORTH ROM.
 * `valkyr-minstrel` - A version of the Jupiter Ace game, Valkyr, which will work on the Minstrel 4th (and supports enhanced sound via the RC2014 YM2149 sound card).
+* `hampsons_plane` - a tile-flipping, puzzle game, which the original author (Mike Hampson) wrote for his ZX81, to try to capture the fun of the Rubik's Cube!
+* `i2c` - a Forth library for interfacing your Minstrel 4th to I2C devices (version for both Ace Forth and Tree Forth).
+* `mandelbrot` - a Forth Mandelbrot set generator.
+* `mpf-i` - alternative ROM image that turns your Minstrel 4th into a MicroProfessor MPF-I, includes disassembler and ZX Printer support.
+* `z80_disassembler` - a port of Toni Baker's excellent Z80 disassembler with some extensions.
