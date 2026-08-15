@@ -129,6 +129,19 @@ CREATE MAZE WIDTH HEIGHT * 2 * ALLOT
     DROP DROP DROP
 ;
 
-    
-
-
+: PROCROW ( ROW -- )
+    WIDTH 1- 0 DO
+	I OVER SET@
+	I 1+ 3 PICK SET@
+	- IF ( DIFFERENT )
+	    DUP HEIGHT 1- = ( FINAL ROW )
+	    YESNO OR IF
+		DUP
+		I OVER SET@
+		I 1+ 3 PICK SET@
+		MERGESETS
+	    THEN
+	THEN
+    LOOP
+    DROP
+;
