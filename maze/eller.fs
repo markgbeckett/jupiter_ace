@@ -1,11 +1,38 @@
-DECIMAL 16 BASE C!
+DECIMAL 
 
-10 CONSTANT WIDTH
-10 CONSTANT HEIGHT
+16 CONSTANT WIDTH
+16 CONSTANT HEIGHT
+
+0 VARIABLE SEED
+
+: SEEDON ( -- NEXT_SEED )
+    SEED @ 75 U*
+    75 0 D+
+    OVER OVER U<
+    - -
+    1-
+    DUP
+    SEED !
+;
+
+: RND ( LIMIT -- VALUE )
+    SEEDON
+    U*
+    SWAP DROP
+;
+
+: RAND ( SEED -- )
+    ?DUP 0= IF
+	15403 @ ( READ LOW TWO BYTES OF FRAMES )
+    THEN
+    SEED !
+;
 
 : YESNO
-    3C2B C@ 1 AND
+    2 RND
 ;
+
+16 BASE C!
 
 : GR ( PATTERN<8> ASCII -- )
     8 * 2BFF + DUP
@@ -141,6 +168,74 @@ CREATE MAZE WIDTH HEIGHT * 2 * ALLOT
 		I 1+ 3 PICK SET@
 		MERGESETS
 	    THEN
+	THEN
+    LOOP
+    DROP
+;
+
+: JOINBOTTOM ( ROW -- )
+    WIDTH 0 DO ( ROW )
+	YESNO IF
+	    I OVER CLEARDOWN
+	THEN
+    LOOP
+    
+    0
+    WIDTH 0 DO
+	I 3 PICK SET@ ( ROW PREV CUR )
+	DUP ROT - IF ( ROW CUR )
+	    0
+	    WIDTH 0 DO 
+		OVER I ( ROW CUR 0 CUR COL )
+		5 PICK SET@ = IF ( ROW CUR 0 )
+		    I 4 PICK ?DOWN IF
+			DROP 1
+			LEAVE
+		    THEN
+		THEN
+	    LOOP
+
+	    ( ROW CUR FLAG )
+	    IF
+		I 3 PICK CLEARDOWN
+	    THEN
+	THEN
+    LOOP
+    
+    DROP DROP
+;
+
+: MAKEMAZE
+    RESETMAZE
+
+    CR SPACE
+    WIDTH 0 DO
+	2 EMIT
+    LOOP
+    CR
+
+    HEIGHT 0 DO
+	I ASSIGNSETS
+	I PROCROW
+	I 1+ HEIGHT - IF
+	    I JOINBOTTOM
+	THEN
+	
+	I PRROW
+    LOOP
+;
+
+: temp
+    0 
+    WIDTH 0 DO ( ROW PREV )
+	I 3 PICK SET@ ( ROW PREV CUR )
+	OVER OVER - IF ( ROW PREV CUR  )
+	    YESNO IF
+		I 4 PICK CLEARDOWN
+		SWAP DROP
+	    THEN
+	ELSE
+	    DROP
 	THEN
     LOOP
     DROP
