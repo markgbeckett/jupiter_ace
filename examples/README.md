@@ -46,6 +46,8 @@ CREATE MAZE WIDTH HEIGHT * 2 * ALLOT
 REDEFINE MAZE
 ```
 
+If you have a Tynemouth Software Serial card, you can also load the source code directly into the Minstrel 4th using a terminal program such as `tio`. If running the Minstrel 4th with a 3.5 MHz, I find setting the output character delay to 8 milliseconds and the output line delay to 800 milliseconds provides a reliable configuration for type-over-serial.
+
 ## AceSnow
 
 Inspired by Xsnow, which probably adorned the desktops of many Unix workstations in the 1990s, I have created Acesnow featuring realistic snowfall and a surprise visitor!
