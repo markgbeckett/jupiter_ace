@@ -65,7 +65,7 @@ These words are built up from various lower-level functions, which might sometim
 
 There are also a few helper words, which are not strictly required for an I2C bus, but which can be useful:
 
-- `I2C_INIT ( -- )` will set the bus in the free state, with both SCL and SDA set to their quiescent levels. 
+- `I2C_INIT ( -- )` will set the bus in the free state, with both SCL and SDA set to their quiescent levels.
 
 - `?SC137_CHK ( -- FL )` will check if the SC137 control device is present and responding. On exit, TOS is zero if device detected, or -1 otherwise.  You could update this word to support your own control device.
 
@@ -81,3 +81,71 @@ These routines follow the usual approach of: opening communications with the dev
 You can remove the demonstrator from the library (e.g., to free up memory) by entering `FORGET LM75A_7BIT` and then adding your own code.
 
 Enjoy!
+
+## LCD Interface
+
+As a second project, I decided to try to connect up and use a small liquid-crystal display. For example, as the SC137 interface supports two I2C devices, I could write a program to display the temperature read on the LM75A onto the LCD display and run that as a background task on Tree Forth.
+
+Thanks to the Arduino community, there are lots of inexpensive, liquid crystal displays with I2C interfaces available online. These generally seem to be based on the [Hitach HD44780 display](https://www.crystalfontz.com/controllers/uploaded/HD44780_July_1985_Advance_Copy_Datasheet.pdf?srsltid=AU7gw4VJmNuVdoOuc3iCEpBIoVZzyaWg1JgrznKIZWecxi9czdSR_Fd9) (or a clone if it), connected to a [Texas Instument PCF8474](https://www.ti.com/lit/ds/symlink/pcf8574.pdf). The PCF8574 provides the I2C interface, serialising the input to the native parallel interface. The HD44780 has 12 significant signals (including eight data lines). However, as it is designed to support both 4-bit and 8-bit microprocessors, it can be configured to work with the 8-bit signal supported by the I2C interface.
+
+Also, thanks to the Arduino community, a lot of the information online assumes you are using an Arduino and off-the-shelf software written for it. As I am planning to use Forth to control the display, I needed to delve a little deeper to find the information I needed.
+
+The first thing to note is that, depending on your chosen supplier, it may not be obvious what model of LCD and I2C interface you have. Mine (bought from an Amazon-based Arduino supplier) certainly has no visible branding or model information. However, based on this document from [Handson Technology](https://handsontec.com/dataspecs/module/I2C_1602_LCD.pdf), I am reasonably confident that most of these devices will be based on the Hitachi display and the Texas Instruments interface. Further, the I2C interface is likely to be addressable with id 0x27 or 0x3F.
+
+The Hitachi and Texas Instruments datasheet provide a lot of useful information, but they do not tell you how the two devices are interfaced together. It may be possible to infer this by studying the device connections. However, I consulted Dave Curran of Tynemouth Software and, based on that, determined the likely configuration; which was: I2C data bits 4--7 are mapped to bits 4--7 of the display's database (these are the pins that are used when the display is configured for four-bit communications). Then, bit 0 of the I2C interface is mapped to the Register Select line of the display, bit 1 to the Read/ Write line, bit 2 to the Enable pin, and bit 3 to the display backlight. The assigments is summarised below:
+
++----------------+--------------------+
+| I2C signal     | LCD display signal |
+|----------------+--------------------+
+| Bit 0	       	 | Register Select    |
+| Bit 1		 | Read/ write 	      |
+| Bit 2		 | Enable line	      |
+| Bit 3		 | Backlight	      |
+| Bit 4		 | D4		      |
+| Bit 5		 | D5		      |
+| Bit 6		 | D6		      |
+| Bit 7		 | D7  	       	      |
++----------------+--------------------+
+
+The next thing to note is that, when powered on, the display defaults to eight-bit mode and, to switch to 4-bit mode, you need to run through a software-based reset sequence, as described on page 129 of the Hitachi document linked from above.
+
+Based on this information, I have written a simple Forth library (currently, only in Ace Forth) to allow you to control such a display from your Minstrel 4th.
+
+The library uses the base I2C library to communicate with the display and uses the following constants to address the I2C interface:
+
+- `DISP_7BIT` -- the id of your I2C interface (default is 0x27, though might also be 0x3F).
+
+- `DISP_ADDR` -- the base (that is, write) address of the I2C interface (which is derived from the device id).
+
+If your I2C device is configured for a different address (e.g., 0x3F) you should first redefine the relevant constants, as follows:
+
+```
+DECIMAL 16 BASE C!
+3F CONSTANT DISP_7BIT
+REDEFINE DISP_7BIT
+DISP_7BIT 2 * CONSTANT DISP_ADDR
+REDEFINE DISP_ADDR
+```
+
+Having configured the library for your device, the following Forth words can be used to control the display:
+
+- `LCD_INIT ( -- )` - initialise the display into 4-bit mode. This command needs to be run first, before any other interactions with the display.
+
+- `LCD_PRINT ( ADDR -- )` - display the counted string stored in memory at `ADDR` onto the display. There is a sample message included in the library, which can be displayed using `MSG_GREETING LCD_PRINT`.
+
+- `LCD_CLS ( -- )` - to clear the display and move cursor to home position (top, left character cell).
+
+- `LCD_HOME ( -- )` - to move cursor to home position (top, left character cell).
+
+- `LCD_SET_CURSOR ( COL ROW -- )` - to set the cursor position for subsequent text (indexed from zero). For example, to move cursor to the start of the second row, enter `0 1 LCD_CURSOR_SET`.
+
+- `LCD_BL_OFF ( -- )` - to turn the backlight off.
+
+- `LCD_BL_ON ( -- )` - to turn the backlight on.
+
+The LCD support is currently very rudimentary. There is no validation of inputs nor does the code do fundamental checking -- e.g., if a display is even present. There are other words in the dictionary, not documented here, as they are currently not working as I had expected and I am continuing to investigate the display's interface.
+
+
+
+
+
