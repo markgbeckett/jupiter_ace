@@ -86,14 +86,14 @@ Enjoy!
 
 As a second project, I decided to try to connect up and use a small liquid-crystal display. For example, as the SC137 interface supports two I2C devices, I could write a program to display the temperature read on the LM75A onto the LCD display and run that as a background task on Tree Forth.
 
-Thanks to the Arduino community, there are lots of inexpensive, liquid crystal displays with I2C interfaces available online. These generally seem to be based on the [Hitach HD44780 display](https://www.crystalfontz.com/controllers/uploaded/HD44780_July_1985_Advance_Copy_Datasheet.pdf?srsltid=AU7gw4VJmNuVdoOuc3iCEpBIoVZzyaWg1JgrznKIZWecxi9czdSR_Fd9) (or a clone if it), connected to a [Texas Instument PCF8474](https://www.ti.com/lit/ds/symlink/pcf8574.pdf). The PCF8574 provides the I2C interface, serialising the input to the native parallel interface. The HD44780 has 12 significant signals (including eight data lines). However, as it is designed to support both 4-bit and 8-bit microprocessors, it can be configured to work with the 8-bit signal supported by the I2C interface.
+Thanks to the Arduino community, there are lots of inexpensive, liquid crystal displays with I2C interfaces available online. These generally seem to be based on the [Hitach HD44780 display](https://www.crystalfontz.com/controllers/uploaded/HD44780_July_1985_Advance_Copy_Datasheet.pdf?srsltid=AU7gw4VJmNuVdoOuc3iCEpBIoVZzyaWg1JgrznKIZWecxi9czdSR_Fd9) (or a clone if it), connected to a [Texas Instument PCF8474](https://www.ti.com/lit/ds/symlink/pcf8574.pdf). The PCF8574 provides the I2C interface, serialising the messages to/ from the native parallel interface. The HD44780 has 12 significant signals (including eight data lines). However, as the display is designed to support both 4-bit and 8-bit microprocessors, it can be configured to work with the 8-bit signal supported by the I2C interface (that ism four data lines and four control signals).
 
 Also, thanks to the Arduino community, a lot of the information online assumes you are using an Arduino and off-the-shelf software written for it. As I am planning to use Forth to control the display, I needed to delve a little deeper to find the information I needed.
 
 The first thing to note is that, depending on your chosen supplier, it may not be obvious what model of LCD and I2C interface you have. Mine (bought from an Amazon-based Arduino supplier) certainly has no visible branding or model information. However, based on this document from [Handson Technology](https://handsontec.com/dataspecs/module/I2C_1602_LCD.pdf), I am reasonably confident that most of these devices will be based on the Hitachi display and the Texas Instruments interface. Further, the I2C interface is likely to be addressable with id 0x27 or 0x3F.
 
 The Hitachi and Texas Instruments datasheet provide a lot of useful information, but they do not tell you how the two devices are interfaced together. It may be possible to infer this by studying the device connections. However, I consulted Dave Curran of Tynemouth Software and, based on that, determined the likely configuration; which was: I2C data bits 4--7 are mapped to bits 4--7 of the display's database (these are the pins that are used when the display is configured for four-bit communications). Then, bit 0 of the I2C interface is mapped to the Register Select line of the display, bit 1 to the Read/ Write line, bit 2 to the Enable pin, and bit 3 to the display backlight. The assigments is summarised below:
-
+```
 +----------------+--------------------+
 | I2C signal     | LCD display signal |
 |----------------+--------------------+
@@ -106,7 +106,7 @@ The Hitachi and Texas Instruments datasheet provide a lot of useful information,
 | Bit 6		 | D6		      |
 | Bit 7		 | D7  	       	      |
 +----------------+--------------------+
-
+```
 The next thing to note is that, when powered on, the display defaults to eight-bit mode and, to switch to 4-bit mode, you need to run through a software-based reset sequence, as described on page 129 of the Hitachi document linked from above.
 
 Based on this information, I have written a simple Forth library (currently, only in Ace Forth) to allow you to control such a display from your Minstrel 4th.
