@@ -98,13 +98,13 @@ The Hitachi and Texas Instruments datasheet provide a lot of useful information,
 | I2C signal     | LCD display signal |
 |----------------+--------------------+
 | Bit 0	       	 | Register Select    |
-| Bit 1		 | Read/ write 	      |
-| Bit 2		 | Enable line	      |
-| Bit 3		 | Backlight	      |
-| Bit 4		 | D4		      |
-| Bit 5		 | D5		      |
-| Bit 6		 | D6		      |
-| Bit 7		 | D7  	       	      |
+| Bit 1          | Read/ write        |
+| Bit 2	         | Enable line        |
+| Bit 3	         | Backlight          |
+| Bit 4	         | D4                 |
+| Bit 5	         | D5                 |
+| Bit 6	         | D6                 |
+| Bit 7	         | D7                 |
 +----------------+--------------------+
 ```
 The next thing to note is that, when powered on, the display defaults to eight-bit mode and, to switch to 4-bit mode, you need to run through a software-based reset sequence, as described on page 129 of the Hitachi document linked from above.
