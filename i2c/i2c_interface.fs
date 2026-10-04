@@ -211,7 +211,6 @@ DECIMAL
 	THEN
 
 	CR ." Temperature (deg. C) " F. CR
-	DROP
     THEN
 ;
 
@@ -467,8 +466,12 @@ ASCII H C,
     I2C_CLOSE
 ;
 
-:  16->32 ( n -- d )
-    DUP 0< IF -1 ELSE 0 THEN SWAP
+:  16->32 ( N -- D )
+    DUP 0< IF
+	-1
+    ELSE
+	0
+    THEN
 ;
 
 : LCD_PRINT_NUM ( NUM -- )
