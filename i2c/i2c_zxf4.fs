@@ -152,3 +152,15 @@ DISP_7BIT 2 * INTEGER DISP_ADDR
     DROP
     I2C_CLOSE
 ;
+
+: PRINT_TEMP
+    LCD_HOME
+    " TEMP + " LCD_PRINT
+    LAST_TEMP C@ # LCD_PRINT
+    LAST_TEMP 1 + C@ 80 AND IF
+      " .5" ELSE " .0" THEN
+    LCD_PRINT
+    " DEG C" LCD_PRINT
+;
+    
+    
